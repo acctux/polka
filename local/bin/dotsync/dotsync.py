@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -23,30 +22,20 @@ INDIVIDUAL_DIRS = [
 ]
 
 
-def safe_remove(path: Path):
-    if path.exists():
-        if path.is_dir() and not path.is_symlink():
-            shutil.rmtree(path)
-        else:
-            path.unlink(missing_ok=True)
-        log.info(f"Removed: {path}")
-
-
 def link_path(src: Path, dst: Path) -> bool:
     dst.parent.mkdir(parents=True, exist_ok=True)
-    relative_src = os.path.relpath(src, dst.parent)
-    if dst.is_symlink() and dst.readlink() == Path(relative_src):
+    rel = src.relative_to(dst.parent, walk_up=True)
+    if dst.is_symlink() and dst.readlink() == rel:
         return False
-    safe_remove(dst)
-    dst.symlink_to(relative_src, target_is_directory=src.is_dir())
-    log.info(f"Linked: {dst} → {relative_src}")
+    if dst.exists():
+        if dst.is_dir() and not dst.is_symlink():
+            shutil.rmtree(dst)
+        else:
+            dst.unlink(missing_ok=True)
+        log.info(f"Removed: {dst}")
+    dst.symlink_to(rel, target_is_directory=src.is_dir())
+    log.info(f"Linked: {dst} → {rel}")
     return True
-
-
-def should_skip(rel_path: Path, directories_to_link) -> bool:
-    if rel_path.as_posix().startswith(".git"):
-        return True
-    return any(rel_path.is_relative_to(Path(d)) for d in directories_to_link)
 
 
 def dotted_destination(src: Path, source_root: Path, target_root: Path) -> Path:
@@ -54,75 +43,51 @@ def dotted_destination(src: Path, source_root: Path, target_root: Path) -> Path:
     return target_root / Path("." + parts[0], *parts[1:])
 
 
-def link_dotfiles(dotfiles_dir: Path, home_dir: Path, dirs_to_link):
-    linked_count = skipped_count = 0
+def deploy_dotfiles(dotfiles_dir, home_dir, dirs_to_link, individual_dirs):
+    linked = skipped = 0
+    if not dotfiles_dir.is_dir():
+        log.error(f"Dotfiles directory does not exist: {dotfiles_dir}")
+        return
     for src in dotfiles_dir.rglob("*"):
-        if not src.is_file() or should_skip(
-            src.relative_to(dotfiles_dir), dirs_to_link
-        ):
-            skipped_count += 1
+        if not src.is_file():
+            skipped += 1
             continue
-        if link_path(src, dotted_destination(src, dotfiles_dir, home_dir)):
-            linked_count += 1
+        if src.relative_to(dotfiles_dir).as_posix().startswith(".git") or any(
+            src.relative_to(dotfiles_dir).is_relative_to(Path(d)) for d in dirs_to_link
+        ):
+            skipped += 1
+            continue
+        dst = dotted_destination(src, dotfiles_dir, home_dir)
+        if link_path(src, dst):
+            linked += 1
         else:
-            skipped_count += 1
-    return linked_count, skipped_count
-
-
-def link_directories(dotfiles_dir: Path, home_dir: Path, dirs_to_link):
-    linked_count = skipped_count = 0
-    for dir_rel in dirs_to_link:
-        src_dir = dotfiles_dir / dir_rel
-        if src_dir.is_dir():
-            if link_path(src_dir, dotted_destination(src_dir, dotfiles_dir, home_dir)):
-                linked_count += 1
-            else:
-                skipped_count += 1
+            skipped += 1
+    for d in dirs_to_link:
+        src = dotfiles_dir / d
+        if not src.is_dir():
+            log.error(f"{src} not found.")
+            continue
+        dst = dotted_destination(src, dotfiles_dir, home_dir)
+        if link_path(src, dst):
+            linked += 1
         else:
-            skipped_count += 1
-    return linked_count, skipped_count
-
-
-def link_individual_dirs(individual_dirs):
-    linked_count = skipped_count = 0
+            skipped += 1
     for src_dir, dst_dir in individual_dirs:
         if not src_dir.is_dir():
-            log.warning(f"Directory does not exist, skipping: {src_dir}")
-            skipped_count += 1
+            log.error(f"Directory does not exist: {src_dir}")
             continue
         for src_file in src_dir.rglob("*"):
-            if src_file.is_file():
-                rel_path = src_file.relative_to(src_dir)
-                dst_file = dst_dir / rel_path
-                if link_path(src_file, dst_file):
-                    linked_count += 1
-                else:
-                    skipped_count += 1
-    return linked_count, skipped_count
-
-
-def reload_hyprland():
+            if not src_file.is_file():
+                continue
+            dst_file = dst_dir / src_file.relative_to(src_dir)
+            if link_path(src_file, dst_file):
+                linked += 1
+            else:
+                skipped += 1
     if shutil.which("hyprctl"):
         subprocess.run(["hyprctl", "reload"], check=False)
         log.info("Hyprland reloaded")
-
-
-def deploy_dotfiles(dotfiles_dir: Path, home_dir: Path, dirs_to_link, individual_dirs):
-    if not dotfiles_dir.is_dir():
-        log.error(f"Error: {dotfiles_dir} does not exist!")
-    else:
-        linked_count = skipped_count = 0
-        lc, sc = link_dotfiles(dotfiles_dir, home_dir, dirs_to_link)
-        linked_count += lc
-        skipped_count += sc
-        lc, sc = link_directories(dotfiles_dir, home_dir, dirs_to_link)
-        linked_count += lc
-        skipped_count += sc
-        lc, sc = link_individual_dirs(individual_dirs)
-        linked_count += lc
-        skipped_count += sc
-        reload_hyprland()
-        log.info(f"Linked: {linked_count} | Skipped: {skipped_count}")
+    log.info(f"Linked:{linked} | Skipped: {skipped}")
 
 
 if __name__ == "__main__":
