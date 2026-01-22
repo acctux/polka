@@ -11,4 +11,4 @@ fi
 
 # Launch Alacritty and pass all selected files to the Python script
 # Convert newlines to spaces for proper argument passing
-alacritty -e python3 "$PY_SCRIPT" $(echo "$NEMO_SCRIPT_SELECTED_FILE_PATHS" | tr '\n' ' ')
+alacritty -e python "$PY_SCRIPT" $(echo "$NEMO_SCRIPT_SELECTED_FILE_PATHS" | tr '\n' ' ')

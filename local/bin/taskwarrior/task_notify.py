@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 import json
 import subprocess
-from typing import List, Tuple
 
 
 def notify(title: str, body: str, urgency: str = "normal") -> None:
@@ -14,7 +14,7 @@ def notify(title: str, body: str, urgency: str = "normal") -> None:
     )
 
 
-def export_tasks() -> List[dict]:
+def export_tasks() -> list[dict]:
     result = subprocess.run(
         ["task", "export"],
         capture_output=True,
@@ -27,7 +27,7 @@ def export_tasks() -> List[dict]:
         raise
 
 
-def get_pending_tasks(data: List[dict]) -> Tuple[List[Tuple[str, float]], bool]:
+def get_pending_tasks(data: list[dict]) -> tuple[list[tuple[str, float]], bool]:
     tasks = []
     urgent = False
     for task in data:
@@ -42,7 +42,7 @@ def get_pending_tasks(data: List[dict]) -> Tuple[List[Tuple[str, float]], bool]:
     return tasks, urgent
 
 
-def build_message(tasks: List[Tuple[str, float]]) -> str:
+def build_message(tasks: list[tuple[str, float]]) -> str:
     if not tasks:
         return "You have no pending tasks."
     return "\n".join(f"• {desc}" for desc, _ in tasks)
@@ -61,4 +61,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

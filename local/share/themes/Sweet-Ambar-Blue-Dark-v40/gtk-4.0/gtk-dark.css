@@ -673,18 +673,14 @@ button.osd {
 button.suggested-action {
   border: none;
   box-shadow: none;
-  color: #fff;
+  color: white;
   border-radius: 6px;
   background: linear-gradient(to right, #5433FF, #20BDFF, #A5FECB); }
-  button.suggested-action label {
-    color: #fff; }
   .selection-mode windowcontrols button, button.suggested-action.flat {
     box-shadow: none;
-    color: #fff;
+    color: white;
     border-radius: 6px;
     background: linear-gradient(to right, #5433FF, #20BDFF, #A5FECB); }
-    .selection-mode windowcontrols button label, button.suggested-action.flat label {
-      color: #fff; }
   button.suggested-action:hover {
     color: white;
     outline-color: rgba(255, 255, 255, 0.3);
@@ -789,18 +785,14 @@ button.suggested-action {
 button.destructive-action {
   border: none;
   box-shadow: none;
-  color: #fff;
+  color: white;
   border-radius: 6px;
   background: linear-gradient(to right, #fe8c00, #f83600); }
-  button.destructive-action label {
-    color: #fff; }
   button.destructive-action.flat {
     box-shadow: none;
-    color: #fff;
+    color: white;
     border-radius: 6px;
     background: linear-gradient(to right, #5433FF, #20BDFF, #A5FECB); }
-    button.destructive-action.flat label {
-      color: #fff; }
   button.destructive-action:hover {
     color: white;
     outline-color: rgba(255, 255, 255, 0.3);
@@ -1085,30 +1077,6 @@ notebook button, list button, .view button, iconview button, popover button {
     box-shadow: none; }
 notebook .linked > button, list .linked > button, .view .linked > button, iconview .linked > button, popover .linked > button {
   box-shadow: none; }
-
-toggle-group {
-  padding: 3px; }
-  toggle-group toggle {
-    padding: 0 4px; }
-    toggle-group toggle:checked {
-      background-color: #0072ff; }
-      toggle-group toggle:checked, toggle-group toggle:checked label {
-        color: #fefefe; }
-
-button.accent-button, button.accent-button:backdrop {
-  min-height: 24px;
-  min-width: 24px;
-  padding: 5px;
-  border-radius: 100%;
-  background: var(--accent-bg-color);
-  outline: none;
-  background-clip: content-box;
-  box-shadow: none;
-  border: none; }
-button.accent-button:hover {
-  box-shadow: 0 0 0 3px #292a32; }
-button.accent-button:checked, button.accent-button:checked:backdrop {
-  box-shadow: 0 0 0 3px var(--accent-bg-color); }
 
 /************
  * Calendar *
@@ -1654,12 +1622,27 @@ messagedialog, .messagedialog, .dialog {
     color: #F4F5F6;
     border-bottom-left-radius: 5px;
     border-bottom-right-radius: 5px; }
+  messagedialog.csd .dialog-action-area button, .messagedialog.csd .dialog-action-area button, .dialog.csd .dialog-action-area button {
+    padding: 7px 11px;
+    border-radius: 0;
+    border-left-style: solid;
+    border-right-style: none;
+    border-bottom-style: none;
+    background-color: transparent;
+    color: #F4F5F6;
+    box-shadow: none; }
+    messagedialog.csd .dialog-action-area button:hover, .messagedialog.csd .dialog-action-area button:hover, .dialog.csd .dialog-action-area button:hover {
+      background-color: rgba(0, 114, 255, 0.9);
+      color: white; }
+    messagedialog.csd .dialog-action-area button:first-child, .messagedialog.csd .dialog-action-area button:first-child, .dialog.csd .dialog-action-area button:first-child {
+      border-left-style: none;
+      border-bottom-left-radius: 4px; }
+    messagedialog.csd .dialog-action-area button:last-child, .messagedialog.csd .dialog-action-area button:last-child, .dialog.csd .dialog-action-area button:last-child {
+      border-bottom-right-radius: 4px; }
+    messagedialog.csd .dialog-action-area button.destructive-action, messagedialog.csd .dialog-action-area button.suggested-action, .messagedialog.csd .dialog-action-area button.destructive-action, .messagedialog.csd .dialog-action-area button.suggested-action, .dialog.csd .dialog-action-area button.destructive-action, .dialog.csd .dialog-action-area button.suggested-action {
+      color: white; }
 
-.messagedialog .message-area,
-.messagedialog .response-area,
-.dialog .dialog-action-area,
-.alert.floating .response-area,
-.alert.floating .body-scrolled-window {
+.messagedialog .message-area {
   padding: 26px; }
 
 filechooser .dialog-action-box {
@@ -2360,26 +2343,6 @@ GraniteWidgetsWelcome {
       .titlebar .linked > button:checked:backdrop label,
       headerbar .linked > button:checked:backdrop label {
         color: #ffe6e6; }
-  .titlebar viewswitcher.wide > button,
-  headerbar viewswitcher.wide > button {
-    color: #8b8b8b;
-    text-shadow: none;
-    box-shadow: none;
-    background: transparent;
-    border: none; }
-    .titlebar viewswitcher.wide > button:active, .titlebar viewswitcher.wide > button:hover,
-    headerbar viewswitcher.wide > button:active,
-    headerbar viewswitcher.wide > button:hover {
-      color: #0072ff;
-      outline-color: rgba(0, 114, 255, 0.3);
-      background-color: transparent;
-      text-shadow: none; }
-    .titlebar viewswitcher.wide > button:checked,
-    headerbar viewswitcher.wide > button:checked {
-      border-radius: 23px;
-      background: linear-gradient(to right, #00c6ff, #0072ff);
-      box-shadow: 0px 0px 5px rgba(0, 198, 255, 0.98);
-      color: white; }
   .selection-mode.titlebar button:backdrop.flat:active, .selection-mode.titlebar button:backdrop.flat:checked, .selection-mode.titlebar button:backdrop:active, .selection-mode.titlebar button:backdrop:checked,
   headerbar.selection-mode button:backdrop.flat:active,
   headerbar.selection-mode button:backdrop.flat:checked,
@@ -2635,10 +2598,9 @@ button:visited {
  * Lists *
  *********/
 list, listview {
+  color: #F4F5F6;
   background-color: #191a1f;
   border-color: black; }
-  list, list label, listview, listview label {
-    color: #F4F5F6; }
   list:backdrop, listview:backdrop {
     background-color: #1b1c21;
     border-color: #020202; }
@@ -2668,8 +2630,6 @@ row.activatable.button {
   color: #F4F5F6;
   background-color: #212328;
   text-shadow: none; }
-row .view, row iconview {
-  background-color: transparent; }
 
 columnview > listview > row {
   padding: 0; }
@@ -3075,8 +3035,7 @@ tabbar tabbox {
     border-radius: 0; }
   tabbar tabbox > tab,
   tabbar tabbox > tabboxchild > tab {
-    border-radius: 0;
-    transition: none; }
+    border-radius: 0; }
     tabbar tabbox > tab button.flat,
     tabbar tabbox > tabboxchild > tab button.flat {
       padding: 0;
@@ -6504,32 +6463,5 @@ ConversationListView .view .cell, ConversationListView iconview .cell {
     border-radius: 0;
     text-shadow: none;
     box-shadow: none; }
-
-.colorpad {
-  color: @colorpad_fg_color; }
-  .colorpad, .colorpad:backdrop, .colorpad:hover, .colorpad:hover:backdrop, .colorpad:active, .colorpad:active:backdrop, .colorpad:checked, .colorpad:checked:backdrop {
-    background-color: @colorpad_color; }
-  .colorpad:hover {
-    filter: brightness(93%); }
-  .colorpad:active {
-    filter: brightness(86%); }
-  .colorpad:checked {
-    filter: brightness(100%);
-    box-shadow: 0px 0px 0px 1.5px #0072ff, inset 0px -3px 0px 0px @colorpad_fg_color; }
-
-.colorsetter {
-  color: colorsetter_fg_color; }
-  .colorsetter, .colorsetter:backdrop, .colorsetter:hover, .colorsetter:hover:backdrop, .colorsetter:active, .colorsetter:active:backdrop, .colorsetter:checked, .colorsetter:checked:backdrop {
-    background-color: @colorsetter_color; }
-  .colorsetter:hover {
-    filter: brightness(93%); }
-  .colorsetter:active {
-    filter: brightness(86%); }
-  .colorsetter:checked {
-    filter: brightness(100%); }
-
-.overlay_toolbar, .overlay_toolbar_scrollable {
-  background: #25262d;
-  padding: 10px; }
 
 /*# sourceMappingURL=gtk-dark.css.map */

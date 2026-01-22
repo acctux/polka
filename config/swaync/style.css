@@ -53,7 +53,7 @@
 @define-color border_medium rgba(0, 114, 255, 0.6);
 @define-color icon_primary rgba(0, 255, 153, 0.7);
 @define-color slider_trough_bg rgba(165, 180, 252, 0.5);
-@define-color slider_thumb_bg rgb(16, 185, 129,0.9);
+@define-color slider_thumb_bg rgba(16, 185, 129, 0.9);
 @define-color bg-selected rgba(0, 114, 255, 0.7);
 * {
   font-family: "FiraMono Nerd Font", "SF Pro Text", sans-serif;
@@ -296,7 +296,6 @@ notificationwindow, blankwindow, blankwindow {
 .notification-group .notification-group-headers {
   /* Notification Group Headers */
 }
-/etc/pacman.d/mirrorlist
 .notification-group .notification-group-headers .notification-group-icon {
   color: var(--text-color);
   -gtk-icon-size: var(--notification-group-icon-size);
@@ -671,8 +670,6 @@ scale slider:hover {
 .widget-buttons-grid flowboxchild:nth-child(4) > button:hover {
   color: rgba(255, 238, 51, 0.9);
 }
-/**/
-/* /* Hypridle */ */
 /* .widget-buttons-grid flowboxchild:nth-child(8) > button label { */
 /*   padding-right: 3px; */
 /* } */
