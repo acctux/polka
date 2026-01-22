@@ -21,8 +21,8 @@ export NVD_BACKEND=direct
 # Graphics configuration
 export ELECTRON_OZONE_PLATFORM_HINT=auto
 # Authentication helpers (GUI prompts)
-# export SSH_ASKPASS=/usr/lib/seahorse/ssh-askpass
-# export SSH_ASKPASS_REQUIRE=prefer
+export SSH_ASKPASS=/usr/lib/seahorse/ssh-askpass
+export SSH_ASKPASS_REQUIRE=prefer
 # export SUDO_ASKPASS=/usr/lib/seahorse/ssh-askpass
 # export GIT_ASKPASS=/usr/lib/seahorse/ssh-askpass
 export SUDO_PROMPT="$(tput setaf 6 bold)Password:$(tput sgr0) "
