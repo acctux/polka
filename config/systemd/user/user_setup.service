@@ -1,0 +1,11 @@
+[Unit]
+Description=Open Alacritty running user_setup.py on login
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/alacritty -e python /home/nick/archinstall/user_setup.py
+Restart=no
+
+[Install]
+WantedBy=graphical-session.target

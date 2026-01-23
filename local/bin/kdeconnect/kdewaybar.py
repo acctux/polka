@@ -34,7 +34,7 @@ def is_reachable() -> bool:
         text=True,
         check=True,
     )
-    if "reachable" in result.stdout.lower():
+    if "paired and reachable" in result.stdout.lower():
         return True
     else:
         return False
