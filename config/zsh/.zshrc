@@ -1,6 +1,6 @@
 source /usr/share/zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-source <(fzf --zsh)
+eval "$(mcfly init zsh)"
 eval "$(starship init zsh)"
 eval "$(zoxide init --cmd cd zsh)"
 # eval "$(direnv hook zsh)"

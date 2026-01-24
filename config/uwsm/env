@@ -21,8 +21,6 @@ export NVD_BACKEND=direct
 # Graphics configuration
 export ELECTRON_OZONE_PLATFORM_HINT=auto
 # Authentication helpers (GUI prompts)
-export SSH_ASKPASS=/usr/lib/seahorse/ssh-askpass
-export SSH_ASKPASS_REQUIRE=prefer
 export SUDO_PROMPT="$(tput setaf 6 bold)Password:$(tput sgr0) "
 # Data dir
 export MPD_HOST=127.0.0.1
@@ -30,4 +28,4 @@ export TASKRC="$XDG_CONFIG_HOME/task/taskrc"
 export ZDOTDIR="$HOME/.config/zsh"
 export HISTFILE="$HOME/.config/zsh/zsh_history"
 export STARSHIP_CONFIG="$XDG_CONFIG_HOME/starship/starship.toml"
-
+export MCFLY_RESULTS=50

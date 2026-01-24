@@ -61,8 +61,6 @@ def fetch_last_email_subject(username, password):
         imap.select("INBOX")
         _, data = imap.search(None, "ALL")
         email_ids = data[0].split()
-        if not email_ids:
-            return "", ""
         _, msg_data = imap.fetch(email_ids[-1], "(BODY[HEADER.FIELDS (SUBJECT FROM)])")
         header_text = msg_data[0][1].decode()
         sender = next(
@@ -101,7 +99,15 @@ def main():
         creds["USERNAME"], creds["PASSWORD"]
     )
     if sender != old_sender or subject != old_subject:
-        subprocess.run(["notify-send", sender, subject, "--icon=thunderbird"])
+        cmd = [
+            "notify-send",
+            sender,
+            subject,
+            "--icon=thunderbird",
+            "-h",
+            "string:action-clicked:thunderbird",
+        ]
+        subprocess.run(cmd)
         write_last_email(sender, subject)
     imap.close()
     imap.logout()
@@ -110,3 +116,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -1,68 +1,64 @@
 #!/usr/bin/env python3
-
 import json
-import subprocess
-import psutil
-import re
 import os
+import re
+import subprocess
 
-ICON = ""
 MAX_LEN = 30
 
 
-def trim(name):
-    return name if len(name) <= MAX_LEN else name[: MAX_LEN - 1] + "…"
-
-
-def deluge_info():
-    if not any(
-        "deluge" in (p.info["name"] or "").lower()
-        for p in psutil.process_iter(attrs=["name"])
-    ):
-        return None
+def run(cmd, timeout=3):
     try:
         return subprocess.run(
-            ["deluge-console", "info"],
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
+            timeout=timeout,
             env={**os.environ, "PYTHONWARNINGS": "ignore"},
-            timeout=3,
         ).stdout
     except Exception:
-        return None
+        return ""
 
 
-def parse_downloads(output):
-    downloads, name = [], None
-    for line in output.splitlines():
+def trim(s):
+    return s if len(s) <= MAX_LEN else s[: MAX_LEN - 1] + "…"
+
+
+def parse_downloads(text):
+    downloads = []
+    name = None
+    for line in text.splitlines():
         if line.startswith("["):
-            raw = re.sub(r"\s+[a-fA-F0-9]{40}$", "", line.split("]", 1)[1].strip())
-            name = f"{trim(raw)}\t"
+            raw = line.split("]", 1)[1].strip()
+            name = trim(re.sub(r"\s+[a-fA-F0-9]{40}$", "", raw))
         elif name and "ETA:" in line:
             eta = line.split("ETA:", 1)[1].strip()
             if eta != "-":
-                downloads.append((name, f"ETA: {eta}"))
+                downloads.append((name, eta))
             name = None
     return downloads
 
 
 def main():
-    output = deluge_info()
-    if output is None:
+    cmd = ["systemctl", "--user", "is-active", "deluged"]
+    if run(cmd, 1).strip() != "active":
         print(json.dumps({"text": ""}))
         return
-    downloads = parse_downloads(output)
-    if downloads:
-        tooltip = "\n".join(f"{n}\n{s}" for n, s in downloads)
-        data = {"text": ICON, "tooltip": tooltip, "class": "downloading"}
-    else:
-        data = {
-            "text": ICON,
-            "tooltip": "No active downloads",
-            "class": "seeding" if "Deluge" in output else "idle",
-        }
-    print(json.dumps(data))
+    downloads = parse_downloads(run(["deluge-console", "info"]))
+    print(
+        json.dumps(
+            {
+                "text": "",
+                "tooltip": (
+                    "\n".join(f"{n}\nETA: {e}" for n, e in downloads)
+                    if downloads
+                    else "No active downloads"
+                ),
+                "class": "downloading" if downloads else "idle",
+            }
+        )
+    )
 
 
 if __name__ == "__main__":
