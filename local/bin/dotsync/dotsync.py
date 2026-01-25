@@ -8,20 +8,20 @@ log = get_logger("Polka")
 HOME = Path.home()
 CONFIG_DIR = HOME / ".config"
 SHARE_DIR = HOME / ".local" / "share"
-DOTFILES_DIR = HOME / "Polka"
-DIRECTORIES_TO_LINK = [
-    "config/systemd/user",
-    "config/nvim",
-    "local/bin",
-]
-BASE_DIR = HOME / "Lit/Docs/base"
-INDIVIDUAL_DIRS = [
-    (BASE_DIR / "fonts", SHARE_DIR / "fonts"),
-    (BASE_DIR / "task", CONFIG_DIR / "task"),
-    (BASE_DIR / "zsh", CONFIG_DIR / "zsh"),
+dots_dir = HOME / "Polka"
+dirs_to_link = ["config/systemd/user", "config/nvim", "local/bin"]
+base = HOME / "Lit/Docs/base"
+ind_dirs = [
+    ((base / "fonts"), (SHARE_DIR / "fonts")),
+    ((base / "task"), (CONFIG_DIR / "task")),
+    ((base / "zsh"), (CONFIG_DIR / "zsh")),
+    ((base / "git"), (CONFIG_DIR / "git")),
 ]
 
 
+############################
+# Helpers
+############################
 def link_path(src: Path, dst: Path) -> bool:
     dst.parent.mkdir(parents=True, exist_ok=True)
     rel = src.relative_to(dst.parent, walk_up=True)
@@ -38,56 +38,62 @@ def link_path(src: Path, dst: Path) -> bool:
     return True
 
 
-def dotted_destination(src: Path, source_root: Path, target_root: Path) -> Path:
-    parts = src.relative_to(source_root).parts
-    return target_root / Path("." + parts[0], *parts[1:])
+def dotted_destination(src: Path, source_dir: Path, target_dir: Path) -> Path:
+    """
+    Map DOTS_DIR/config/nvim/init.lua → ~/.config/nvim/init.lua
+    "." + parts[0]=config->.config"," *parts[1:] tuple
+    """
+    parts = src.relative_to(source_dir).parts
+    return target_dir / Path("." + parts[0], *parts[1:])
 
 
-def deploy_dotfiles(
+def file_candidates(
+    target_dir: Path,
     dotfiles_dir: Path,
-    home_dir: Path,
     dirs_to_link: list[str],
-    individual_dirs: list[tuple[Path, Path]],
+    ind_dirs: list[tuple[Path, Path]],
 ):
-    linked = 0
-    if not dotfiles_dir.is_dir():
-        dotfiles_dir = HOME / "Folka"
-        if not dotfiles_dir.is_dir():
-            log.error(f"Dotfiles directory does not exist: {dotfiles_dir}")
-            return
     for src in dotfiles_dir.rglob("*"):
-        if not src.is_file():
-            continue
-        if src.relative_to(dotfiles_dir).as_posix().startswith(".git") or any(
-            src.relative_to(dotfiles_dir).is_relative_to(d) for d in dirs_to_link
-        ):
-            continue
-        dst = dotted_destination(src, dotfiles_dir, home_dir)
-        if link_path(src, dst):
-            linked += 1
+        if src.is_file():
+            rel = src.relative_to(dotfiles_dir)
+            if rel.parts[0] == ".git":
+                continue
+            if any(rel.is_relative_to(Path(d)) for d in dirs_to_link):
+                continue
+            yield src, dotted_destination(src, dotfiles_dir, target_dir)
     for d in dirs_to_link:
         src = dotfiles_dir / d
-        if not src.is_dir():
-            log.error(f"{src} not found.")
+        if src.is_dir():
+            yield src, dotted_destination(src, dotfiles_dir, target_dir)
+    for src_dir, dst_dir in ind_dirs:
+        if not src_dir.is_dir():
             continue
-        dst = dotted_destination(src, dotfiles_dir, home_dir)
+        for src in src_dir.rglob("*"):
+            if src.is_file():
+                yield src, dst_dir / src.relative_to(src_dir)
+
+
+############################
+# Main
+############################
+def deploy_dotfiles(
+    HOME: Path,
+    dot_dir: Path,
+    dirs_to_link: list[str],
+    ind_dirs: list[tuple[Path, Path]],
+):
+    if not dot_dir.is_dir():
+        log.error(f"Dotfiles directory not found: {dot_dir}")
+        return
+    linked = 0
+    for src, dst in file_candidates(HOME, dot_dir, dirs_to_link, ind_dirs):
         if link_path(src, dst):
             linked += 1
-    for src_dir, dst_dir in individual_dirs:
-        if not src_dir.is_dir():
-            log.error(f"Directory does not exist: {src_dir}")
-            continue
-        for src_file in src_dir.rglob("*"):
-            if not src_file.is_file():
-                continue
-            dst_file = dst_dir / src_file.relative_to(src_dir)
-            if link_path(src_file, dst_file):
-                linked += 1
     if shutil.which("hyprctl"):
         subprocess.run(["hyprctl", "reload"], check=False)
         log.info("Hyprland reloaded")
-    log.info(f"Linked:{linked}")
+    log.info(f"Linked: {linked}")
 
 
 if __name__ == "__main__":
-    deploy_dotfiles(DOTFILES_DIR, HOME, DIRECTORIES_TO_LINK, INDIVIDUAL_DIRS)
+    deploy_dotfiles(HOME, dots_dir, dirs_to_link, ind_dirs)
