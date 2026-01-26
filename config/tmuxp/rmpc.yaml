@@ -1,14 +1,14 @@
 session_name: rmpc
 global_options:
   remain-on-exit: true
-  default-shell: /bin/sh
-  default-command: /bin/sh
+  default-shell: /bin/bash
+  default-command: /bin/bash
   status: off
 options:
   main-pane-width: 75%
 window_management: vertical
 shell_command_before:
-  - "systemctl --user is-active --quiet mpd-mpris.service || systemctl --user start mpd-mpris.service"
+  - "systemctl --user start mpd-mpris.service"
 windows:
   - window_name: Rmpc
     layout: main-vertical

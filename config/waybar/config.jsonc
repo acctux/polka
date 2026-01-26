@@ -160,7 +160,7 @@
     "tooltip": true,
     "on-click": "pavucontrol &",
     "on-click-middle": "playerctl play-pause",
-    "on-click-right": "alacritty -e ~/.local/bin/mpd/rmpclaunch.sh & disown"
+    "on-click-right": "kitty rmpc & disown"
   },
   "custom/deluge": {
     "format": "{}",

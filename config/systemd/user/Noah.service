@@ -1,0 +1,11 @@
+[Unit]
+Description=Open Alacritty running Noah on login
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/alacritty -e python /home/nick/Noah
+Restart=no
+
+[Install]
+WantedBy=graphical-session.target
