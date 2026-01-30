@@ -43,7 +43,7 @@ return {
           "%=", --[[ add your center components here in place of this comment ]]
         },
         lualine_x = {},
-        lualine_y = { "filetype", "progress" },
+        lualine_y = { "lsp_status", "progress" },
         lualine_z = {
           { "branch", separator = { right = "" }, left_padding = 2 },
         },

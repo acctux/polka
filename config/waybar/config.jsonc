@@ -7,6 +7,7 @@
     "battery",
     "custom/updates",
     "custom/tlp",
+    "custom/weather",
     "temperature",
     "custom/kb-switch",
     "custom/taskwarrior",
@@ -149,7 +150,7 @@
     "return-type": "json",
     "on-click-right": "~/.local/bin/fuzzel/vpnmenu.sh & disown",
     "on-click-middle": "firewall-config",
-    "on-click": "kitty impala & disown"
+    "on-click": "python ~/.local/bin/network/menu.py"
   },
   "custom/volume": {
     "exec": "~/.local/bin/mpd/mypulseaudio.py",
@@ -171,6 +172,14 @@
     "tooltip": true,
     "on-click": "deluge-gtk & disown",
     "on-click-right": "systemctl --user stop deluged.service"
+  },
+  "custom/weather": {
+    "format": "{}",
+    "tooltip": true,
+    "markup": "pango",
+    "interval": 3600,
+    "exec": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py",
+    "return-type": "json"
   },
   "custom/tlp": {
     "exec": "~/.local/bin/power/tlp_waybar.py",

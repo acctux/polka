@@ -17,7 +17,7 @@ CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --hide-prompt --prompt="OCR Acti
 
 case "$CHOICE" in
 "$CHOICE_1")
-  $HOME/Polka/local/bin/ocr/ocrcopy.sh
+  $HOME/.local/bin/ocr/ocrcopy.py
   ;;
 "$CHOICE_2")
   $HOME/Polka/local/bin/ocr/maimregion.sh

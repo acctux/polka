@@ -2,6 +2,12 @@ return {
   {
     "folke/snacks.nvim",
     opts = {
+      -- Terminal
+      terminal = {
+        win = {
+          height = 10, -- 👈 terminal height (rows)
+        },
+      },
       -- Picker
       picker = {
         layout = {

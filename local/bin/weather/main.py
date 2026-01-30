@@ -1,16 +1,71 @@
-import openmeteo_requests
+#!/home/nick/.local/bin/weather/.venv/bin/python
+
+import json
 import pandas as pd
 import requests_cache
 from retry_requests import retry
+import openmeteo_requests
 
-# Setup the Open-Meteo API client with cache and retry on error
+wmo_to_info = {
+    0: ("", "Clear sky"),
+    1: ("", "Mainly clear"),
+    2: ("", "Partly cloudy"),
+    3: ("", "Overcast"),
+    4: ("", "Fog"),
+    5: ("", "Depositing rime fog"),
+    6: ("", "Drizzle: Light"),
+    7: ("", "Drizzle: Moderate"),
+    8: ("", "Drizzle: Dense"),
+    10: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    11: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    12: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    13: ("", "Snow fall: Slight / Moderate / Heavy"),
+    14: ("", "Snow fall: Slight / Moderate / Heavy"),
+    15: ("", "Snow fall: Slight / Moderate / Heavy"),
+    16: ("", "Snow fall: Slight / Moderate / Heavy"),
+    17: ("", "Snow grains"),
+    18: ("", "Snow grains"),
+    19: ("", "Snow grains"),
+    20: ("", "Rain showers: Slight / Moderate / Violent"),
+    21: ("", "Thunderstorm: Slight or moderate"),
+    22: ("", "Snow showers: Slight / Heavy"),
+    23: ("", "Unknown / Other"),
+    24: ("", "Unknown / Other"),
+    25: ("", "Rain showers: Slight / Moderate / Violent"),
+    26: ("", "Rain showers: Slight / Moderate / Violent"),
+    27: ("", "Rain showers: Slight / Moderate / Violent"),
+    28: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    29: ("", "Snow grains"),
+    30: ("", "Fog"),
+    31: ("", "Fog"),
+    32: ("", "Fog"),
+    33: ("", "Fog"),
+    34: ("", "Fog"),
+    35: ("", "Fog"),
+    36: ("", "Snow showers: Slight / Heavy"),
+    37: ("", "Snow showers: Slight / Heavy"),
+    38: ("", "Snow showers: Slight / Heavy"),
+    39: ("", "Snow showers: Slight / Heavy"),
+    40: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    41: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    42: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    43: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    44: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    45: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    46: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    47: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    48: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+    49: ("", "Rain: Slight / Moderate / Heavy / Freezing Rain / Rain showers"),
+}
+
+
+def get_icon(code: float) -> str:
+    return wmo_to_info.get(int(code), ("", "Unknown / Other"))[0]
+
+
 cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
 retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
-openmeteo = openmeteo_requests.Client(session=retry_session)
-
-# Make sure all required weather variables are listed here
-# The order of variables in hourly or daily is important to assign them correctly below
-url = "https://api.open-meteo.com/v1/forecast"
+openmeteo = openmeteo_requests.Client(session=retry_session)  # type: ignore
 params = {
     "latitude": 34.1751,
     "longitude": -82.024,
@@ -22,10 +77,6 @@ params = {
         "precipitation_probability_max",
         "apparent_temperature_max",
         "apparent_temperature_min",
-        "precipitation_hours",
-        "snowfall_sum",
-        "showers_sum",
-        "rain_sum",
     ],
     "hourly": [
         "temperature_2m",
@@ -37,100 +88,90 @@ params = {
     "current": ["temperature_2m", "precipitation", "weather_code"],
     "timezone": "America/New_York",
     "timeformat": "unixtime",
-    "wind_speed_unit": "mph",
     "temperature_unit": "fahrenheit",
     "precipitation_unit": "inch",
-    "forecast_hours": 24,
 }
-responses = openmeteo.weather_api(url, params=params)
-
-# Process first location. Add a for-loop for multiple locations or weather models
-response = responses[0]
-print(f"Coordinates: {response.Latitude()}°N {response.Longitude()}°E")
-print(f"Elevation: {response.Elevation()} m asl")
-print(f"Timezone: {response.Timezone()}{response.TimezoneAbbreviation()}")
-print(f"Timezone difference to GMT+0: {response.UtcOffsetSeconds()}s")
-
-# Process current data. The order of variables needs to be the same as requested.
-current = response.Current()
-current_temperature_2m = current.Variables(0).Value()
-current_precipitation = current.Variables(1).Value()
-current_weather_code = current.Variables(2).Value()
-
-print(f"\nCurrent time: {current.Time()}")
-print(f"Current temperature_2m: {current_temperature_2m}")
-print(f"Current precipitation: {current_precipitation}")
-print(f"Current weather_code: {current_weather_code}")
-
-# Process hourly data. The order of variables needs to be the same as requested.
-hourly = response.Hourly()
-hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
-hourly_precipitation_probability = hourly.Variables(1).ValuesAsNumpy()
-hourly_precipitation = hourly.Variables(2).ValuesAsNumpy()
-hourly_weather_code = hourly.Variables(3).ValuesAsNumpy()
-hourly_apparent_temperature = hourly.Variables(4).ValuesAsNumpy()
-
-hourly_data = {
-    "date": pd.date_range(
-        start=pd.to_datetime(
-            hourly.Time() + response.UtcOffsetSeconds(), unit="s", utc=True
-        ),
-        end=pd.to_datetime(
-            hourly.TimeEnd() + response.UtcOffsetSeconds(), unit="s", utc=True
-        ),
-        freq=pd.Timedelta(seconds=hourly.Interval()),
-        inclusive="left",
-    )
-}
-
-hourly_data["temperature_2m"] = hourly_temperature_2m
-hourly_data["precipitation_probability"] = hourly_precipitation_probability
-hourly_data["precipitation"] = hourly_precipitation
-hourly_data["weather_code"] = hourly_weather_code
-hourly_data["apparent_temperature"] = hourly_apparent_temperature
-
-hourly_dataframe = pd.DataFrame(data=hourly_data)
-print("\nHourly data\n", hourly_dataframe)
-
-# Process daily data. The order of variables needs to be the same as requested.
+response = openmeteo.weather_api(
+    "https://api.open-meteo.com/v1/forecast", params=params
+)[0]
 daily = response.Daily()
-daily_weather_code = daily.Variables(0).ValuesAsNumpy()
-daily_sunrise = daily.Variables(1).ValuesInt64AsNumpy()
-daily_sunset = daily.Variables(2).ValuesInt64AsNumpy()
-daily_precipitation_sum = daily.Variables(3).ValuesAsNumpy()
-daily_precipitation_probability_max = daily.Variables(4).ValuesAsNumpy()
-daily_apparent_temperature_max = daily.Variables(5).ValuesAsNumpy()
-daily_apparent_temperature_min = daily.Variables(6).ValuesAsNumpy()
-daily_precipitation_hours = daily.Variables(7).ValuesAsNumpy()
-daily_snowfall_sum = daily.Variables(8).ValuesAsNumpy()
-daily_showers_sum = daily.Variables(9).ValuesAsNumpy()
-daily_rain_sum = daily.Variables(10).ValuesAsNumpy()
+daily_data = pd.DataFrame(
+    {
+        "date": pd.date_range(
+            start=pd.to_datetime(
+                daily.Time() + response.UtcOffsetSeconds(), unit="s", utc=True
+            ),
+            end=pd.to_datetime(
+                daily.TimeEnd() + response.UtcOffsetSeconds(), unit="s", utc=True
+            ),
+            freq=pd.Timedelta(seconds=daily.Interval()),
+            inclusive="left",
+        ),
+        "weather_code": daily.Variables(0).ValuesAsNumpy(),
+        "sunrise": daily.Variables(1).ValuesInt64AsNumpy(),
+        "sunset": daily.Variables(2).ValuesInt64AsNumpy(),
+        "precipitation_sum": daily.Variables(3).ValuesAsNumpy(),
+        "precipitation_probability_max": daily.Variables(4).ValuesAsNumpy(),
+        "apparent_temperature_max": daily.Variables(5).ValuesAsNumpy(),
+        "apparent_temperature_min": daily.Variables(6).ValuesAsNumpy(),
+    }
+)
+daily_data["weather_icon"] = daily_data["weather_code"].apply(get_icon)
+hourly = response.Hourly()
+hourly_data = pd.DataFrame(
+    {
+        "date": pd.date_range(
+            start=pd.to_datetime(
+                hourly.Time() + response.UtcOffsetSeconds(), unit="s", utc=True
+            ),
+            end=pd.to_datetime(
+                hourly.TimeEnd() + response.UtcOffsetSeconds(), unit="s", utc=True
+            ),
+            freq=pd.Timedelta(seconds=hourly.Interval()),
+            inclusive="left",
+        ),
+        "weather_code": hourly.Variables(3).ValuesAsNumpy(),
+    }
+)
+hourly_data["weather_icon"] = hourly_data["weather_code"].apply(get_icon)
+tooltip_lines = [
+    f"{row['weather_icon']} {row['apparent_temperature_max']:.0f}/{row['apparent_temperature_min']:.0f}°F, "
+    f"{int(row['precipitation_probability_max'])}%, {row['precipitation_sum']:.2f} in\t"
+    for _, row in daily_data.iterrows()
+]
 
-daily_data = {
-    "date": pd.date_range(
-        start=pd.to_datetime(
-            daily.Time() + response.UtcOffsetSeconds(), unit="s", utc=True
-        ),
-        end=pd.to_datetime(
-            daily.TimeEnd() + response.UtcOffsetSeconds(), unit="s", utc=True
-        ),
-        freq=pd.Timedelta(seconds=daily.Interval()),
-        inclusive="left",
-    )
+
+def get_class_grouped(code: float) -> str:
+    code = int(code)
+
+    if code in (0, 1):
+        return "clear"
+
+    if code in (2, 3):
+        return "cloudy"
+
+    if code in (45, 48) or (40 <= code <= 49):
+        return "fog"
+
+    if (51 <= code <= 55) or (61 <= code <= 65) or (80 <= code <= 82):
+        return "rain"
+
+    if (71 <= code <= 75) or (85 <= code <= 86):
+        return "snow"
+
+    if code >= 95:
+        return "thunder"
+
+    if code in (23, 24, 25, 26, 27):
+        return "mixed"
+
+    return "unknown"
+
+
+tooltip_text = "\n".join(tooltip_lines)
+waybar_output = {
+    "text": hourly_data.at[0, "weather_icon"],  # icon
+    "class": get_class_grouped(hourly_data.at[0, "weather_code"]),  # CSS class
+    "tooltip": tooltip_text,
 }
-
-daily_data["weather_code"] = daily_weather_code
-daily_data["sunrise"] = daily_sunrise
-daily_data["sunset"] = daily_sunset
-daily_data["precipitation_sum"] = daily_precipitation_sum
-daily_data["precipitation_probability_max"] = daily_precipitation_probability_max
-daily_data["apparent_temperature_max"] = daily_apparent_temperature_max
-daily_data["apparent_temperature_min"] = daily_apparent_temperature_min
-daily_data["precipitation_hours"] = daily_precipitation_hours
-daily_data["snowfall_sum"] = daily_snowfall_sum
-daily_data["showers_sum"] = daily_showers_sum
-daily_data["rain_sum"] = daily_rain_sum
-
-daily_dataframe = pd.DataFrame(data=daily_data)
-print("\nDaily data\n", daily_dataframe)
-
+print(json.dumps(waybar_output, ensure_ascii=False))

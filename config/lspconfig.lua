@@ -4,9 +4,8 @@ return {
   opts = {
     ---@type lspconfig.options
     servers = {
-      ty = {},  -- pyright LSP server setup
+      ty = {},
       ruff = {},
     },
   },
 }
-

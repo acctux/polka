@@ -41,7 +41,6 @@
 “How much more grievous are the consequences of anger than the causes of it.” - Marcus Aurelius
 “I am looking for an honest man.” - Diogenes
 “He has the most who is most content with the least.” - Diogenes
-“Other dogs bite only their enemies, whereas I bite also my friends in order to save them.” - Diogenes
 “First say to yourself what you would be; and then do what you have to do.” - Epictetus
 “Dont explain your philosophy. Embody it.” - Epictetus
 “No man is free, who is not master of himself.” - Epictetus
@@ -72,7 +71,7 @@
 “The greater the power, the more dangerous the abuse.” - Burke
 “Nobody made a greater mistake than he who did nothing because he could only do a little.” - Burke
 “Liberty is the breath of life to nations.” - George Bernard Shaw
-“If youre not prepared to be wrong, youll never come up with anything original.” - Ken Robinson
+“If you're not prepared to be wrong, you'll never come up with anything original.” - Ken Robinson
 “The strong do what they can and the weak suffer what they must.” - Thucydides
 “The truth is rarely pure and never simple.” - Oscar Wilde
 “Experience is simply the name we give our mistakes.” - Wilde
