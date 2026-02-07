@@ -23,6 +23,7 @@ export ELECTRON_OZONE_PLATFORM_HINT=auto
 # Authentication helpers (GUI prompts)
 export SUDO_PROMPT="$(tput setaf 6 bold)Password:$(tput sgr0) "
 export SSH_ASKPASS=/usr/lib/seahorse/ssh-askpass
+export SUDO_ASKPASS=/usr/sbin/zenity
 # Data dir
 export MPD_HOST=127.0.0.1
 export TASKRC="$XDG_CONFIG_HOME/task/taskrc"

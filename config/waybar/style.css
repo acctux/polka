@@ -70,6 +70,7 @@ tooltip label {
 #custom-nemo,
 #bluetooth,
 #custom-wifi,
+#custom-clipboard,
 #custom-tlp,
 #custom-nemo,
 #custom-telegram,
@@ -84,6 +85,7 @@ tooltip label {
 #custom-tlp,
 #custom-deluge,
 #custom-weather,
+#custom-clipboard,
 #custom-nemo,
 #custom-volume,
 #custom-steam,
@@ -129,6 +131,10 @@ tooltip label {
   padding-right: 4px;
   padding-left: 4px;
 }
+#custom-clipboard {
+  padding-right: 7px;
+  padding-left: 6px;
+}
 #temperature {
   padding-right: 4px;
   padding-left: 2px;
@@ -153,8 +159,8 @@ tooltip label {
   padding: 0 4px;
 }
 #custom-telegram {
-  padding-right: 10px;
-  padding-left: 3px;
+  padding-right: 8px;
+  padding-left: 4px;
 }
  #custom-kb-switch {
   padding: 0 5px;
@@ -214,6 +220,7 @@ button:hover,
 #custom-nemo:hover,
 #backlight:hover,
 #custom-tlp:hover,
+#custom-clipboard:hover,
 #custom-deluge:hover,
 #custom-telegram:hover,
 #bluetooth:hover,

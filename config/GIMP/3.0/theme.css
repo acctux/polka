@@ -7,6 +7,7 @@
 
 @import url("file:///usr/share/gimp/3.0/themes/System/gimp.css");
 @import url("file:///etc/gimp/3.0/gimp.css");
+@import url("file:///home/nick/.config/GIMP/3.0/gimp.css");
 
 * { -gtk-icon-style: symbolic; }
 

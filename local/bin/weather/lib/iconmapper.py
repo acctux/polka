@@ -15,7 +15,7 @@ WEATHER_ICONS = {
     20: ("Drizzel", "", ""),
     21: ("Rain not freezing", "", ""),
     22: ("Snow", "󰼶", ""),
-    23: ("Rain,or snow, or ice pellets", "󰙿", "󰙿"),
+    23: ("Rain, or snow, or ice pellets", "󰙿", "󰙿"),
     25: ("Showers of rain", "󰖗", "󰖗"),
     26: ("Shower(s) of snow, or of rain and snow", "󰙿", "󰙿"),
     28: ("fog", "󰖑", "󰖑"),
@@ -27,6 +27,13 @@ WEATHER_ICONS = {
     38: ("Slight or moderate blowing snow(above eye level)", "", ""),
     39: ("Heavy drifting snow(above eye level)", "", ""),
     40: ("fog", "", ""),
+    41: ("Fog or ice fog in patches", "", ""),
+    42: ("Fog or ice fog, sky visible", "", ""),
+    43: ("Fog or ice fog, sky invisible", "", ""),
+    44: ("Fog or ice fog, sky visible", "", ""),
+    45: ("Fog or ice fog, sky invisible", "", ""),
+    46: ("Fog or ice fog, sky visible", "", ""),
+    47: ("Fog or ice fog, sky invisible", "", ""),
     50: ("Drizzle, not freezing, intermittent)", "", ""),
     51: ("Drizzle, not freezing, continuous", "", ""),
     52: ("Drizzle, not freezing, intermittent)", "", ""),
@@ -78,7 +85,7 @@ def map_icons(
 ) -> pd.DataFrame:
     def pick_icon_and_description(row):
         weather_code = int(row["weather_code"])
-        _, day_icon, night_icon = weather_icons.get(weather_code, fallback_icon)
+        _, night_icon, day_icon = weather_icons.get(weather_code, fallback_icon)
         description = weather_icons.get(weather_code, fallback_icon)[0]
         if is_hourly and not row.get("is_day", True):
             return day_icon, description

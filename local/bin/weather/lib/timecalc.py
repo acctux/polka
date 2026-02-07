@@ -9,10 +9,13 @@ def add_daytime_flag(
     def is_daytime(row):
         return row["sunrise"] <= row["date"] < row["sunset"]
 
-    def to_dt_tz(df_row, tz):
-        return pd.to_datetime(df_row["sunrise"], unit="s", utc=True).dt.tz_convert(
-            ZoneInfo(tz)
-        )
+    def get_sun_string(current_time, sun_time, window_hours):
+        if pd.isna(sun_time):
+            return ""
+        window_end = current_time + pd.Timedelta(hours=window_hours)
+        if current_time <= sun_time < window_end:
+            return sun_time.strftime("%H:%M")
+        return ""
 
     daily_df["sunrise"] = pd.to_datetime(
         daily_df["sunrise"], unit="s", utc=True
@@ -27,16 +30,10 @@ def add_daytime_flag(
     )
     hourly_df["is_day"] = hourly_df.apply(is_daytime, axis=1)
     hourly_df["sunrise_str"] = hourly_df.apply(
-        lambda row: str(row["sunrise"].strftime("%H:%M"))
-        if row["date"] <= row["sunrise"] < row["date"] + pd.Timedelta(hours=1)
-        else "",
-        axis=1,
+        lambda r: get_sun_string(r["date"], r["sunrise"], step), axis=1
     )
     hourly_df["sunset_str"] = hourly_df.apply(
-        lambda row: str(row["sunset"].strftime("%H:%M"))
-        if row["date"] <= row["sunset"] < row["date"] + pd.Timedelta(hours=1)
-        else "",
-        axis=1,
+        lambda r: get_sun_string(r["date"], r["sunset"], step), axis=1
     )
     units = "in"
     if metric:
@@ -44,6 +41,8 @@ def add_daytime_flag(
         hourly_df["temperature_2m"] = (hourly_df["temperature_2m"] - 32) * 5 / 9
         daily_df["temperature_2m_max"] = (daily_df["temperature_2m_max"] - 32) * 5 / 9
         daily_df["temperature_2m_min"] = (daily_df["temperature_2m_min"] - 32) * 5 / 9
+        hourly_df["precipitation"] = hourly_df["precipitation"] * 2.54
+        daily_df["precipitation_sum"] = daily_df["precipitation_sum"] * 2.54
     hourly_df["units"] = units
     daily_df["units"] = units
     return hourly_df

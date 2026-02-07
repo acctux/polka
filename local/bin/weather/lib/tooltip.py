@@ -18,51 +18,58 @@ class WeatherEntry:
     precipitation: float = 0.0
 
     def format(self) -> str:
-        today = pd.Timestamp.now().strftime("%m-%d")  # Format today as 'MM-DD'
+        today = pd.Timestamp.now().strftime("%m-%d")
         label = self.label
         if self.label == today:
             label = "Today"
         precip_prob = f"{self.precip_prob}%" if self.precip_prob > 0 else ""
-        precip_sum = (
-            str(round(self.precipitation, 2)) if self.precipitation >= 0.01 else ""
-        )
-        if self.precipitation < 0.1:
-            precip_sum = precip_sum.lstrip("0")
-        precip_output = ""
-        if precip_sum:
-            precip_output = f"{precip_sum}{self.units_in_cm}"
-        rain_icon = "󰖌" if self.precip_prob > 0 else ""
+
+        precip_sum = ""
+        if 0.01 <= self.precipitation < 0.1:
+            if round(self.precipitation, 2) == 0.1:
+                precip = f"{round(self.precipitation, 1)}"
+                precip_sum = f"({precip}{self.units_in_cm})"
+            else:
+                precip = f"{round(self.precipitation, 2)}".lstrip("0")
+                precip_sum = f"({precip}{self.units_in_cm})"
+        elif 0.1 < self.precipitation:
+            precip = f"{round(self.precipitation, 1)}"
+            precip_sum = f"({precip}{self.units_in_cm})"
+
         temp_low = ""
         if self.temp_low:
             temp_low = round(self.temp_low)
             if self.temp_low > 0.01:
                 temp_low = round(self.temp_low)
+        daily_temp = f"{round(self.temp)}/{temp_low}"
+
         sun_icon = ""
         sun_time = ""
         if self.sunrise_str:
-            sun_icon = "󰖜".rjust(2)
-            sun_time = f"{self.sunrise_str}".rjust(4)
+            sun_icon = "󰖜"
+            sun_time = f"{self.sunrise_str}"
         if self.sunset_str:
-            sun_icon = "󰖛".rjust(2)
+            sun_icon = "󰖛"
             sun_time = f"{self.sunset_str}".rjust(4)
-        daily_temp = f"{round(self.temp)}/{temp_low}"
+
+        rain_icon = "󰖌" if self.precip_prob > 0 else ""
+
         is_hourly = ":" in self.label
         if is_hourly:
-            rain_icon = rain_icon.rjust(3)
             return (
                 f"{self.label:<5}"
-                f"<span size='18pt'>{self.icon.rjust(2)}</span>"
-                f"{str(round(self.temp)).rjust(6)}<span size='17pt'></span>{self.units}"
-                f"{rain_icon}{precip_prob.rjust(4)}{precip_output.rjust(6)}"
-                f"<span size='16pt'>{sun_icon} </span>{sun_time}"
+                f"<span size='21pt'>{self.icon.rjust(2)}</span>"
+                f"{str(round(self.temp)).rjust(5)}<span size='17pt'></span>{self.units}"
+                f"<span size='14pt'>{rain_icon.rjust(3)}</span>{precip_prob.rjust(4)}{precip_sum.rjust(7)}"
+                f"<span size='20pt'>{sun_icon.rjust(2)} </span>{sun_time.rjust(4)}"
             )
         else:
             rain_icon = rain_icon.rjust(4)
             return (
                 f"{label:<5}"
-                f"<span size='19pt'>{self.icon.rjust(2)}</span>"
-                f"{daily_temp.rjust(9)}<span size='17pt'></span>{self.units}"
-                f"{rain_icon}{precip_prob.rjust(4)}{precip_output.rjust(7)}"
+                f"<span size='23pt'>{self.icon.rjust(2)}</span>"
+                f"{daily_temp.rjust(8)}<span size='17pt'></span>{self.units}"
+                f"<span size='14pt'>{rain_icon.rjust(6)}</span>{precip_prob.rjust(5)}{precip_sum.rjust(9)}"
             )
 
 
@@ -74,16 +81,19 @@ def today_formatted() -> str:
     return t.strftime(f"%a, %b {t.day}{day_suffix}, %Y")
 
 
-def build_tooltip(daily_df, hourly_df, my_zone: str, hourly_step=2, celsius=False):
+def build_tooltip(daily_df, hourly_df, my_zone: str, celsius, hourly_step=2):
     def proc_entries(entries):
         return "\n".join([entry.format() for entry in entries])
 
     unit_str = "C" if celsius else "F"
     t = pd.Timestamp.now(ZoneInfo(my_zone))
     current_time = t.replace(minute=0, second=0, microsecond=0)
-    time_24h_later = current_time + pd.Timedelta(hours=48)
+    time_24h_later = current_time + pd.Timedelta(hours=24)  # 24 hours later
     current_time_str = t.strftime("%H:%M")
+
+    # Convert hourly_df to the desired timezone
     hourly_df["date"] = hourly_df["date"].dt.tz_convert(ZoneInfo(my_zone))
+    # Filter hourly_df for the next 24 hours from the current time
     hourly_entries = [
         WeatherEntry(
             label=row["date"].strftime("%H:%M"),
@@ -96,11 +106,13 @@ def build_tooltip(daily_df, hourly_df, my_zone: str, hourly_step=2, celsius=Fals
             precip_prob=int(row.get("precipitation_probability", 0)),
             precipitation=row.get("precipitation", 0.0),
         )
-        for i, (_, row) in enumerate(hourly_df.head(48).iterrows())
-        if current_time <= row["date"] < time_24h_later
-        and (row["date"].hour - current_time.hour) % hourly_step == 0
+        for i, (_, row) in enumerate(hourly_df.iterrows())
+        if current_time
+        <= row["date"]
+        < time_24h_later  # Only include rows within the next 24 hours
+        and (row["date"].hour - current_time.hour) % hourly_step
+        == 0  # Filter by step interval
     ]
-
     daily_entries = [
         WeatherEntry(
             label=row["date"].strftime("%m-%d"),
@@ -114,13 +126,13 @@ def build_tooltip(daily_df, hourly_df, my_zone: str, hourly_step=2, celsius=Fals
         )
         for _, row in daily_df.iterrows()
     ]
-
-    icon_size = 18
+    formatted_date = today_formatted()
+    icon_size = 20
     return (
-        f"<span size='{icon_size}pt'>󰨳</span><span size='14pt'>     {today_formatted()}</span>\n"
+        f"<span size='{icon_size}pt'>󰨳</span><span size='13pt'>  {formatted_date}</span>\n"
         "─────────────────────────────────────────\n"
         + f"{proc_entries(daily_entries)}\n"
-        + f"\n<span size='{icon_size}pt'></span>\t<span size='14pt'>    {current_time_str}</span>\n"
+        + f"\n<span size='{icon_size}pt'></span><span size='13pt'>  {current_time_str}</span>\n"
         "─────────────────────────────────────────\n"
         + f"{proc_entries(hourly_entries)}"
     )

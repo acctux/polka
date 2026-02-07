@@ -1,91 +1,74 @@
 #!/usr/bin/env python3
+import json
 import subprocess
-from datetime import date, timedelta
-from typing import Optional
+from datetime import datetime, timedelta
 
-#############################################
-# Interval-based tasks (from last added)
-# Format: (description, interval_days, due_days)
-#############################################
 INTERVAL_TASKS = [
     ("pay credit card", 7, 3),
 ]
 
-#############################################
-# Exact-date tasks (recurring yearly)
-# Format: (description: str, add_dates [(month, day),(month, day)], due_days)
-#############################################
 DATED_TASKS = [
     ("Valentines Day", [(2, 1)], 14),
     ("Anniversary", [(2, 1)], 14),
+    ("Baby's birthday", [(9, 1)], 14),
+    ("Larry's b-day", [(12, 1)], 3),
 ]
 
 
-def run(cmd: list[str]) -> str:
-    try:
-        return subprocess.check_output(
-            cmd,
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
-    except subprocess.CalledProcessError:
-        return ""
+def get_lines():
+    result = subprocess.run("task export", capture_output=True, text=True, shell=True)
+    data = json.loads(result.stdout)
+    return data
 
 
-def task_exists(description: str) -> bool:
-    count = run(
-        [
-            "task",
-            f"description.is:{description}",
-            "status:pending",
-            "count",
-        ]
-    )
-    return int(count) > 0
+def parse_completed(tasks):
+    tasks_list = []
+    lines = get_lines()
+    for task in lines:
+        if task.get("status") in ["completed", "pending"]:
+            created_date = task.get("entry", "")
+            completed_date = task.get("end", "")
+            age = task.get("urgency", 0)
+            due = task.get("due", "")
+            status = task.get("status", "")
+            description = task.get("description", "").strip()
+            task_dict = {
+                "Created": created_date,
+                "Completed": completed_date,
+                "Age": age,
+                "Due": due,
+                "Status": status,
+                "Description": description,
+            }
+            tasks_list.append(task_dict)
+    return tasks_list
 
 
-def last_added_date(description: str) -> Optional[date]:
-    result = run(
-        [
-            "task",
-            f"description.is:{description}",
-            "status:pending,completed",
-            "limit:1",
-            "rc.report.minimal.columns:entry",
-            "rc.report.minimal.labels:",
-            "minimal",
-        ]
-    )
-    if not result:
-        return None
-    return date.fromisoformat(result.split("T")[0])
+def make_interval_task(description: str, due_amount: int, due_unit: str):
+    subprocess.run(["task", "add", description, f"due:{due_amount}{due_unit}"])
 
 
-def add_task(description: str, due_days: Optional[int] = None) -> None:
-    cmd = ["task", "add", description]
-    if due_days is not None:
-        cmd.append(f"due:{due_days}d")
-    subprocess.run(
-        cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
+def handle_intervals(today, task_dict, interval_tasks):
+    existing_descriptions = {task["Description"] for task in task_dict}
+    for description, interval_days, due_days in interval_tasks:
+        if description in existing_descriptions:
+            continue
+        make_interval_task(description, interval_days, "days")
 
 
-def main() -> None:
-    today = date.today()
-    for description, interval_days, due_days in INTERVAL_TASKS:
-        last = last_added_date(description)
-        next_run = last + timedelta(days=interval_days) if last else today
-        if next_run == today and not task_exists(description):
-            add_task(description, due_days)
-    for description, add_dates, due_days in DATED_TASKS:
-        for month, day in add_dates:
-            if (
-                today.month == month
-                and today.day == day
-                and not task_exists(description)
-            ):
-                add_task(description, due_days)
+def handle_dated_tasks(today, completed_dict, dated_tasks):
+    existing_descriptions = {task["Description"] for task in task_dict}
+    for description, date_tuples, due_days in dated_tasks:
+        if description not in existing_descriptions:
+            for month, day in date_tuples:
+                task_date = today.replace(month=month, day=day)
+                if task_date < today <= task_date + timedelta(days=due_days):
+                    days_til_due = task_date + timedelta(days=due_days) - today
+                    make_interval_task(description, days_til_due.days, "d")
 
 
 if __name__ == "__main__":
-    main()
+    task_dict = parse_completed(INTERVAL_TASKS)
+    today = datetime.today().date()
+    handle_intervals(today, task_dict, INTERVAL_TASKS)
+    handle_dated_tasks(today, task_dict, DATED_TASKS)

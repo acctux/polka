@@ -4,14 +4,7 @@ import subprocess
 
 
 def notify(title: str, body: str, urgency: str = "normal") -> None:
-    subprocess.run(
-        [
-            "notify-send",
-            f"--urgency={urgency}",
-            title,
-            body,
-        ]
-    )
+    subprocess.run(["notify-send", f"--urgency={urgency}", title, body])
 
 
 def export_tasks() -> list[dict]:

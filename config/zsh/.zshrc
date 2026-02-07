@@ -28,3 +28,10 @@ pvim() {
 }
 # Created by `pipx` on 2026-01-26 17:20:46
 export PATH="$PATH:/home/nick/Polka/local/bin"
+function y() {
+	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+	command yazi "$@" --cwd-file="$tmp"
+	IFS= read -r -d '' cwd < "$tmp"
+	[ "$cwd" != "$PWD" ] && [ -d "$cwd" ] && builtin cd -- "$cwd"
+	rm -f -- "$tmp"
+}

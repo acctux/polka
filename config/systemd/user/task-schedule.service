@@ -3,4 +3,4 @@ Description=Run Taskwarrior daily scheduling script
 
 [Service]
 Type=oneshot
-ExecStart=%h/Polka/local/bin/taskwarrior/task-schedule.py
+ExecStart=%h/.local/bin/taskwarrior/task-schedule.py

@@ -16,10 +16,10 @@
   "modules-right": [
     "custom/timer",
     "custom/steam",
-    "custom/nemo",
     "custom/kdeconnect",
     "custom/deluge",
     "custom/telegram",
+    "custom/clipboard",
     "bluetooth",
     "custom/wifi",
     "backlight",
@@ -144,9 +144,17 @@
     "on-click": "hyprctl switchxkblayout at-translated-set-2-keyboard next",
     "on-click-right": "rofimoji & disown"
   },
+  "custom/clipboard": {
+    "signal": 9,
+    "interval": 1,
+    "return-type": "json",
+    "format": "{}",
+    "tooltip": true,
+    "on-click": "~/.local/bin/clipboard/clippy.py"
+  },
   "custom/wifi": {
     "format": "{}",
-    "exec": "~/.local/bin/waybar/network.py",
+    "exec": "~/.local/bin/network/netbar.py",
     "interval": 2,
     "return-type": "json",
     "on-click-right": "~/.local/bin/fuzzel/vpnmenu.sh & disown",
@@ -177,8 +185,9 @@
   "custom/weather": {
     "format": "{}",
     "tooltip": true,
-    "interval": 1800,
+    "interval": 600,
     "exec": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py",
+    "on-click": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py --metric",
     "return-type": "json"
   },
   "custom/tlp": {
@@ -189,15 +198,6 @@
     "on-click-right": "~/.local/bin/power/tlp_waybar.py up",
     "on-scroll-up": "~/.local/bin/power/tlp_waybar.py up",
     "on-scroll-down": "~/.local/bin/power/tlp_waybar.py down"
-  },
-  "custom/nemo": {
-    "exec": "~/.local/bin/folders/nemo_scroll.py",
-    "return-type": "json",
-    "interval": 1,
-    "on-click": "~/.local/bin/folders/nemo_scroll.py exec",
-    "on-click-right": "~/.local/bin/folders/nemo_scroll.py toggle",
-    "on-scroll-up": "~/.local/bin/folders/nemo_scroll.py up",
-    "on-scroll-down": "~/.local/bin/folders/nemo_scroll.py down"
   },
   "custom/timer": {
     "format": "{}",

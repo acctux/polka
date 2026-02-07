@@ -3,7 +3,7 @@ set -e
 
 if ! systemctl --user is-active --quiet deluged.service; then
   systemctl --user start deluged.service
-  sleep 1.5
+  sleep 2
 fi
 
 for _ in {1..30}; do

@@ -2,10 +2,8 @@
 data.location=$XDG_CONFIG_HOME/task
 verbose=affected,blank,context,edit,header,footnote,label,new-id,project,special,sync,recur
 uda.priority.values=H,M,,L
-color.alternate=yellow
-# taskwarrior-tui reads color attributes from the following to display the same colors of tasks as the CLI
-color.tagged=black on rgb444
 
+include dark-blue-256.theme
 # Remove age, tags from task next report.
 # taskwarrior-tui reads the labels and columns from these options to display tasks the same way taskwarrior does
 report.next.labels=ID,Active,Age,Deps,P,Project,Tag,Recur,S,Due,Until,Description,Urg
