@@ -143,11 +143,11 @@ def handle_vpn(config):
             return
         elif choice == "Disconnect":
             subprocess.run(
-                ["sudo", "-A", f"{HOME}/.local/bin/protonvpn/protonconnect.py"]
+                ["sudo", "-A", f"{HOME}/.local/bin/network/protonconnect.py"]
             )
         else:
             subprocess.run(
-                ["sudo", "-A", f"{HOME}/.local/bin/protonvpn/protonconnect.py", choice]
+                ["sudo", "-A", f"{HOME}/.local/bin/network/protonconnect.py", choice]
             )
 
 
