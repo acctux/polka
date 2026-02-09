@@ -1,31 +1,6 @@
 gui:
   nerdFontsVersion: "3"
   sidePanelWidth: 0.25
-  theme:
-    activeBorderColor:
-      - green
-    inactiveBorderColor:
-      - default
-    searchingActiveBorderColor:
-      - cyan
-    optionsTextColor:
-      - blue
-    selectedLineBgColor:
-      - blue
-    inactiveViewSelectedLineBgColor:
-      - bold
-    cherryPickedCommitFgColor:
-      - blue
-    cherryPickedCommitBgColor:
-      - cyan
-    markedBaseCommitFgColor:
-      - blue
-    markedBaseCommitBgColor:
-      - yellow
-    unstagedChangesColor:
-      - red
-    defaultFgColor:
-      - default
 git:
   pagers:
     - pager: delta --dark --paging=never
