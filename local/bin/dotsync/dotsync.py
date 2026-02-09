@@ -5,10 +5,28 @@ from pathlib import Path
 import logging
 import sys
 
+##########################################
+# CONFIG
+##########################################
+HOME = Path.home()
+CONFIG_DIR = HOME / ".config"
+SHARE_DIR = HOME / ".local" / "share"
+DOTS_P = HOME / "Lit" / "polka"
+BASE = HOME / "Lit/Docs/base"
+##########################################
+dirs_to_link = ["config/systemd/user", "local/bin"]
+ind_dirs = [
+    ((BASE / "fonts"), (SHARE_DIR / "fonts")),
+    ((BASE / "task"), (CONFIG_DIR / "task")),
+    ((BASE / "zsh"), (CONFIG_DIR / "zsh")),
+    ((BASE / "git"), (CONFIG_DIR / "git")),
+    ((BASE / "gh"), (CONFIG_DIR / "git")),
+]
+
 
 ##########################################
 # LOG
-###########################################
+##########################################
 class ColorFormatter(logging.Formatter):
     COLORS = {
         logging.INFO: "\033[34m",
@@ -37,20 +55,7 @@ def get_logger(name: str) -> logging.Logger:
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-
 log = get_logger("Polka")
-HOME = Path.home()
-CONFIG_DIR = HOME / ".config"
-SHARE_DIR = HOME / ".local" / "share"
-dots_dir = HOME / "Lit" / "polka"
-dirs_to_link = ["config/systemd/user", "config/nvim", "local/bin"]
-base = HOME / "Lit/Docs/base"
-ind_dirs = [
-    ((base / "fonts"), (SHARE_DIR / "fonts")),
-    ((base / "task"), (CONFIG_DIR / "task")),
-    ((base / "zsh"), (CONFIG_DIR / "zsh")),
-    ((base / "git"), (CONFIG_DIR / "git")),
-]
 
 
 ############################
@@ -126,4 +131,4 @@ def deploy_dotfiles(
 
 
 if __name__ == "__main__":
-    deploy_dotfiles(HOME, dots_dir, dirs_to_link, ind_dirs)
+    deploy_dotfiles(HOME, DOTS_P, dirs_to_link, ind_dirs)

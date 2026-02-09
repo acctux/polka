@@ -6,7 +6,7 @@ import dbus
 from pathlib import Path
 
 HOME = Path.home()
-FUZZEL_CONFIG = HOME / ".config/fuzzel/vpnmenu.ini"
+FUZZEL_CONFIG = HOME / ".config/fuzzel/netmenu.ini"
 SLEEP_TIME = 2
 MAIN_CHOICES = ["WiFi", "VPN", "Cancel"]
 
@@ -199,8 +199,7 @@ def main():
     while True:
         choice = run_fuzzel(MAIN_CHOICES, config=FUZZEL_CONFIG)
         if choice == "WiFi":
-            nm = NetworkManager()
-            handle_wifi(nm, sleep_time=SLEEP_TIME, config=FUZZEL_CONFIG)
+            handle_wifi(NetworkManager(), sleep_time=SLEEP_TIME, config=FUZZEL_CONFIG)
         elif choice == "VPN":
             handle_vpn(config=FUZZEL_CONFIG)
         elif choice in ("Cancel", ""):

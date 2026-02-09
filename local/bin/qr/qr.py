@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+import time
 import subprocess
 import logging
 from pathlib import Path
 import sys
-import re
-import dbus
+
+CACHE_FILE = Path.home() / ".cache/zbar_region.png"
 
 
 def get_logger():
@@ -16,103 +17,62 @@ def get_logger():
     return logger
 
 
-logger = get_logger()
-CACHE_FILE = Path.home() / ".cache/zbar_region.png"
+log = get_logger()
 
 
-def capture_region():
+def capture_region(cache) -> str | None:
+    region = run_cmd(["slurp"]).stdout.strip()
+    if region:
+        subprocess.run(["grim", "-g", region, str(cache)], check=True)
+
+
+def parse_qr(cache) -> tuple[str, str]:
+    ssid = password = ""
+    for item in (
+        run_cmd(["zbarimg", "--quiet", str(cache)])
+        .stdout.strip()
+        .removeprefix("WIFI:")
+        .strip(";")
+    ).split(";"):
+        if ":" in item:
+            key, value = item.split(":", 1)
+            if key == "S":
+                ssid = value
+            elif key == "P":
+                password = value
+    return ssid, password
+
+
+def run_cmd(cmd):
     try:
-        return subprocess.run(
-            ["slurp"], capture_output=True, text=True, check=True
-        ).stdout.strip()
-    except subprocess.CalledProcessError:
-        logger.error("Region capture failed.")
-        return None
+        return subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        log.error(f"Failed : {e.stderr.strip()}")
 
 
-def take_screenshot(region):
-    try:
-        subprocess.run(["grim", "-g", region, str(CACHE_FILE)], check=True)
-    except subprocess.CalledProcessError:
-        logger.error("Screenshot capture failed.")
-
-
-def decode_barcode():
-    try:
-        return subprocess.run(
-            ["zbarimg", "--quiet", str(CACHE_FILE)],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-    except subprocess.CalledProcessError:
-        logger.error("Decoding failed.")
-        return None
-
-
-def handle_decoded(decoded):
-    if decoded.startswith("https://"):
-        subprocess.run(["xdg-open", decoded], check=True)
-        logger.info(f"Opening URL: {decoded}")
-    elif re.match(r"^WIFI:T:(WPA|WEP);S:(.*);P:(.*);;$", decoded):
-        connect_to_wifi(decoded)
-    else:
-        subprocess.run(["wl-copy"], input=decoded.encode())
-        logger.info(f"Copied to clipboard: {decoded}")
-
-
-def connect_to_wifi(decoded):
-    match = re.match(r"^WIFI:T:(WPA|WEP);S:(.*);P:(.*);;$", decoded)
-    if not match:
-        logger.error("Invalid Wi-Fi QR code format.")
-        return
-    ssid, password = match.group(2), match.group(3)
-    try:
-        bus = dbus.SystemBus()
-        iwd = bus.get_object("org.freedesktop.iwd", "/org/freedesktop/iwd")
-        networks = iwd.GetNetworks(dbus_interface="org.freedesktop.iwd.Manager")
-        network_to_connect = None
-        if networks:
-            for network in networks:
-                network_ssid = bytes(network.get("SSID")).decode("utf-8")
-                if network_ssid == ssid:
-                    network_to_connect = network
-                    break
-        if not network_to_connect:
-            logger.error(f"Network {ssid} not found.")
-            return
-        device = iwd.GetDevice(dbus_interface="org.freedesktop.iwd.Device")
-        if device:
-            device.ConnectToNetwork(
-                network_to_connect,
-                password,
-                dbus_interface="org.freedesktop.iwd.Device",
-            )
-            logger.info(f"Connecting to {ssid}...")
-    except dbus.DBusException as e:
-        logger.error(f"DBus error while connecting to Wi-Fi: {e}")
-
-
-def clean_up():
-    try:
-        if CACHE_FILE.exists():
-            CACHE_FILE.unlink()
-            logger.info("Cache file cleaned up.")
-        else:
-            logger.warning("Cache file not found for cleanup.")
-    except Exception as e:
-        logger.error(f"Error cleaning up: {e}")
+def connect_wifi_iwd(ssid: str, password: str = "", scan_sleep: int = 4):
+    run_cmd(["iwctl", "station", "wlan0", "scan"])
+    time.sleep(scan_sleep)
+    cmd = ["iwctl", "station", "wlan0", "connect", ssid]
+    if password:
+        cmd.extend(["--passphrase", password])
+    run_cmd(cmd)
+    log.info(f"Connected to {ssid} via iwd")
 
 
 def main():
-    region = capture_region()
-    if region:
-        take_screenshot(region)
-        result = decode_barcode()
-        if result:
-            handle_decoded(result.split(":", 1)[1] if ":" in result else result)
-    clean_up()
+    capture_region(CACHE_FILE)
+    ssid, password = parse_qr(CACHE_FILE)
+    if ssid:
+        connect_wifi_iwd(ssid, password)
+        if CACHE_FILE.exists():
+            try:
+                CACHE_FILE.unlink()
+                log.info("Cache file cleaned up.")
+            except Exception as e:
+                log.error(f"Error cleaning up: {e}")
 
 
 if __name__ == "__main__":
     main()
+
