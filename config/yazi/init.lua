@@ -1,6 +1,20 @@
 require("recycle-bin"):setup({
 	trash_dir = "~/.local/share/Trash/files", -- Uncomment to use specific directory
 })
+
+-- You can configure your bookmarks by lua language
+local bookmarks = {
+	{ tag = "Desktop", path = os.getenv("HOME") .. "/Desktop/", key = "d" },
+	{ tag = "Mounted", path = "/run/media/nick/", key = "m" },
+}
+require("yamb"):setup({
+	bookmarks = bookmarks, -- Direct assignment of bookmarks
+	jump_notify = true,
+	cli = "fzf",
+	keys = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+	path = os.getenv("HOME") .. "/.config/yazi/bookmark",
+})
+
 require("gvfs"):setup({
 	-- (Optional) Allowed keys to select device.
 	which_keys = "1234567890qwertyuiopasdfghjklzxcvbnm-=[]\\;',./!@#$%^&*()_+{}|:\"<>?",

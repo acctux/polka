@@ -8,6 +8,7 @@ vim.lsp.enable("tailwindcss")
 vim.lsp.enable("jsonls")
 vim.lsp.enable("lua_ls")
 vim.lsp.enable("bashls")
+vim.lsp.enable("tombi")
 local toggle_inlay_hints = function()
   if vim.lsp.inlay_hint.is_enabled() then
     vim.lsp.inlay_hint.enable(false)
