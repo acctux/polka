@@ -1,78 +1,89 @@
 #!/usr/bin/env python3
-import time
 import subprocess
+import time
 import logging
 from pathlib import Path
 import sys
-
-CACHE_FILE = Path.home() / ".cache/zbar_region.png"
+import re
 
 
 def get_logger():
     logger = logging.getLogger("QR")
     handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+    formatter = logging.Formatter("\033[34m%(levelname)s: %(message)s\033[0m")
+    handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
+
     return logger
 
 
 log = get_logger()
+CACHE_FILE = Path.home() / ".cache/zbar_region.png"
 
 
-def capture_region(cache) -> str | None:
-    region = run_cmd(["slurp"]).stdout.strip()
-    if region:
-        subprocess.run(["grim", "-g", region, str(cache)], check=True)
+def run_cmd(cmd, output=True, text=True, check=True, input=None):
+    try:
+        return subprocess.run(
+            cmd,
+            check=check,
+            capture_output=output,
+            text=text,
+            input=input,
+        )
+    except subprocess.CalledProcessError as e:
+        log.error(f"Failed: {e.stderr.strip()}")
+        return None
 
 
-def parse_qr(cache) -> tuple[str, str]:
+def handle_decoded(decoded):
+    if ":" in decoded:
+        decoded = decoded.split(":", 1)[1]
+    if decoded.startswith("https://"):
+        log.info(f"Opening URL: {decoded}")
+        run_cmd(["xdg-open", decoded], output=False, check=True)
+    elif re.match(r"^WIFI:T:(WPA|WEP);S:(.*);P:(.*);;$", decoded):
+        log.info(f"Connecting to: {decoded}")
+        connect_wifi(decoded)
+    else:
+        log.info(f"Copying: {decoded}")
+        run_cmd(["wl-copy"], input=decoded.encode(), output=False, check=True)
+
+
+def connect_wifi(decoded, scan_sleep=4):
     ssid = password = ""
-    for item in (
-        run_cmd(["zbarimg", "--quiet", str(cache)])
-        .stdout.strip()
-        .removeprefix("WIFI:")
-        .strip(";")
-    ).split(";"):
+    for item in decoded.split(";"):
+        item = item.strip()
         if ":" in item:
             key, value = item.split(":", 1)
             if key == "S":
-                ssid = value
+                ssid = value.strip()
             elif key == "P":
-                password = value
-    return ssid, password
-
-
-def run_cmd(cmd):
-    try:
-        return subprocess.run(cmd, check=True, capture_output=True, text=True)
-    except subprocess.CalledProcessError as e:
-        log.error(f"Failed : {e.stderr.strip()}")
-
-
-def connect_wifi_iwd(ssid: str, password: str = "", scan_sleep: int = 4):
-    run_cmd(["iwctl", "station", "wlan0", "scan"])
+                password = value.strip()
+    log.info(f"Connecting to {ssid}")
+    run_cmd(["iwctl", "station", "wlan0", "scan"], output=False, check=True)
     time.sleep(scan_sleep)
     cmd = ["iwctl", "station", "wlan0", "connect", ssid]
     if password:
         cmd.extend(["--passphrase", password])
-    run_cmd(cmd)
+    run_cmd(cmd, output=False, check=True)
     log.info(f"Connected to {ssid} via iwd")
 
 
 def main():
-    capture_region(CACHE_FILE)
-    ssid, password = parse_qr(CACHE_FILE)
-    if ssid:
-        connect_wifi_iwd(ssid, password)
-        if CACHE_FILE.exists():
-            try:
-                CACHE_FILE.unlink()
-                log.info("Cache file cleaned up.")
-            except Exception as e:
-                log.error(f"Error cleaning up: {e}")
+    if region := run_cmd(["slurp"], output=True, text=True).stdout.strip():
+        run_cmd(["grim", "-g", region, str(CACHE_FILE)], output=False, check=True)
+        if decoded := run_cmd(
+            ["zbarimg", "--quiet", str(CACHE_FILE)], output=True, text=True, check=True
+        ):
+            handle_decoded(decoded.stdout.strip())
+    if CACHE_FILE.exists():
+        try:
+            CACHE_FILE.unlink()
+            log.info("Cache cleaned.")
+        except Exception as e:
+            log.error(f"Error: {e}")
 
 
 if __name__ == "__main__":
     main()
-
