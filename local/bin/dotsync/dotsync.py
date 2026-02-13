@@ -66,6 +66,8 @@ def link_path(src: Path, dst: Path) -> bool:
     if dst.is_symlink() and dst.readlink() == rel:
         return False
     else:
+        if dst.is_dir():
+            shutil.rmtree(dst)
         dst.unlink(missing_ok=True)
     if dst.exists():
         if dst.is_dir() and not dst.is_symlink():
