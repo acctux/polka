@@ -14,16 +14,12 @@ SSH_KEY = Path.home() / ".config/kdeconnect/privateKey.pem"
 ANDROID_USER = "kdeconnect"
 ANDROID_DIR = "/storage/emulated/0"
 SD_DIR = "/storage/0000-0000"
-PHONE_ICON = "$HOME/.local/share/icons/WhiteSur-dark/places/scalable/folder-android.svg"
+PHONE_ICON = "/usr/share/icons/WhiteSur-dark/places/scalable/folder-android.svg"
 
 
 def run(cmd, check=False):
     result = subprocess.run(
-        cmd,
-        shell=True,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     if check and result.returncode != 0:
         raise subprocess.CalledProcessError(result.returncode, cmd)

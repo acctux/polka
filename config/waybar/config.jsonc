@@ -235,7 +235,7 @@
     "interval": 30,
     "hide-empty-text": true,
     "on-click": "~/.local/bin/android/mountkde.py",
-    "on-click-middle": "kdeconnect-app",
+    "on-click-middle": "/home/nick/.local/bin/android/scrcpy.sh",
     "on-click-right": "kdeconnect-sms"
   },
   "custom/steam": {

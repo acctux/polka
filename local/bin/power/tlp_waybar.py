@@ -10,9 +10,9 @@ class TLPScroller:
     INDEX_FILE = CACHE_DIR / "tlp_scroll_index"
     STATE_FILE = CACHE_DIR / "tlp_scroll_state"
     COMMANDS = [
-        ("󰌪", "sudo python3 $HOME/Polka/local/bin/power/tlp.py batmode"),
-        ("", "sudo python3 $HOME/Polka/local/bin/power/tlp.py default"),
-        ("", "sudo python3 $HOME/Polka/local/bin/power/tlp.py none"),
+        ("󰌪", ["tuned-adm", "profile", "powersave"]),
+        ("", ["tuned-adm", "profile", "balanced"]),
+        ("", ["tuned-adm", "profile", "latency-performance"]),
     ]
 
     @classmethod
@@ -43,7 +43,7 @@ class TLPScroller:
     @classmethod
     def load_state(cls) -> int:
         cls.ensure_cache_dir()
-        # Use -1 to indicate “no state saved yet”
+        # -1=indicate “no state saved yet”
         return cls.read_int_file(cls.STATE_FILE, default=-1)
 
     @classmethod
@@ -64,7 +64,7 @@ class TLPScroller:
     def exec_current(cls) -> None:
         index = cls.load_index()
         _, command = cls.COMMANDS[index]
-        subprocess.Popen(f"kitty bash -c '{command}'", shell=True)
+        subprocess.run(command)
         cls.save_state(index)
 
     @classmethod
