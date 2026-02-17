@@ -8,6 +8,8 @@ from dataclasses import dataclass
 import openmeteo_requests
 import requests_cache
 from retry_requests import retry
+from datetime import datetime, timedelta
+import pickle
 
 WEATHER_ICONS = {
     0: ("clear", "", ""),
@@ -89,23 +91,20 @@ LONGITUDE = -82.024
 HOURLY_STEP = 2
 TIMEZONE = "America/New_York"
 CACHE_FILE = Path(".metric_cache")
+WEATHER_CACHE_FILE = Path(".weather_cache.pkl")
+WEATHER_CACHE_MAX_AGE = timedelta(hours=1)
 
 
 def open_meteo(lat, lon):
     def create_retry_session():
-        cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
-        retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
-        return retry_session
+        return retry(
+            requests_cache.CachedSession(".cache", expire_after=3600),
+            retries=5,
+            backoff_factor=0.2,
+        )
 
     def df_daily(response):
         daily = response.Daily()
-        daily_weather_code = daily.Variables(0).ValuesAsNumpy()
-        daily_precipitation_sum = daily.Variables(1).ValuesAsNumpy()
-        daily_sunrise = daily.Variables(2).ValuesInt64AsNumpy()
-        daily_sunset = daily.Variables(3).ValuesInt64AsNumpy()
-        daily_temperature_2m_max = daily.Variables(4).ValuesAsNumpy()
-        daily_temperature_2m_min = daily.Variables(5).ValuesAsNumpy()
-        daily_precipitation_probability_max = daily.Variables(6).ValuesAsNumpy()
         daily_data = {
             "date": pd.date_range(
                 start=pd.to_datetime(
@@ -116,25 +115,19 @@ def open_meteo(lat, lon):
                 ),
                 freq=pd.Timedelta(seconds=daily.Interval()),
                 inclusive="left",
-            )
+            ),
+            "weather_code": daily.Variables(0).ValuesAsNumpy(),
+            "precipitation_sum": daily.Variables(1).ValuesAsNumpy(),
+            "sunrise": daily.Variables(2).ValuesInt64AsNumpy(),
+            "sunset": daily.Variables(3).ValuesInt64AsNumpy(),
+            "temperature_2m_max": daily.Variables(4).ValuesAsNumpy(),
+            "temperature_2m_min": daily.Variables(5).ValuesAsNumpy(),
+            "precipitation_probability_max": daily.Variables(6).ValuesAsNumpy(),
         }
-        daily_data["weather_code"] = daily_weather_code
-        daily_data["precipitation_sum"] = daily_precipitation_sum
-        daily_data["sunrise"] = daily_sunrise
-        daily_data["sunset"] = daily_sunset
-        daily_data["temperature_2m_max"] = daily_temperature_2m_max
-        daily_data["temperature_2m_min"] = daily_temperature_2m_min
-        daily_data["precipitation_probability_max"] = (
-            daily_precipitation_probability_max
-        )
         return pd.DataFrame(data=daily_data)
 
     def df_hourly(response):
         hourly = response.Hourly()
-        hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
-        hourly_precipitation_probability = hourly.Variables(1).ValuesAsNumpy()
-        hourly_precipitation = hourly.Variables(2).ValuesAsNumpy()
-        hourly_weather_code = hourly.Variables(3).ValuesAsNumpy()
         hourly_data = {
             "date": pd.date_range(
                 start=pd.to_datetime(
@@ -145,16 +138,16 @@ def open_meteo(lat, lon):
                 ),
                 freq=pd.Timedelta(seconds=hourly.Interval()),
                 inclusive="left",
-            )
+            ),
+            "temperature_2m": hourly.Variables(0).ValuesAsNumpy(),
+            "precipitation_probability": hourly.Variables(1).ValuesAsNumpy(),
+            "precipitation": hourly.Variables(2).ValuesAsNumpy(),
+            "weather_code": hourly.Variables(3).ValuesAsNumpy(),
         }
-        hourly_data["temperature_2m"] = hourly_temperature_2m
-        hourly_data["precipitation_probability"] = hourly_precipitation_probability
-        hourly_data["precipitation"] = hourly_precipitation
-        hourly_data["weather_code"] = hourly_weather_code
         return pd.DataFrame(data=hourly_data)
 
     session = create_retry_session()
-    openmeteo = openmeteo_requests.Client(session)
+    client = openmeteo_requests.Client(session)
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -173,31 +166,33 @@ def open_meteo(lat, lon):
             "precipitation",
             "weather_code",
         ],
-        "timezone": "America/New_York",
+        "timezone": TIMEZONE,
         "wind_speed_unit": "mph",
         "temperature_unit": "fahrenheit",
         "precipitation_unit": "inch",
     }
+    response = client.weather_api(
+        "https://api.open-meteo.com/v1/forecast", params=params
+    )[0]
+    return df_daily(response), df_hourly(response)
 
-    def fetch_weather(lat, lon):
-        responses = openmeteo.weather_api(
-            "https://api.open-meteo.com/v1/forecast", params=params
-        )
-        response = responses[0]
-        daily_df = df_daily(response)
-        hourly_df = df_hourly(response)
-        return daily_df, hourly_df
 
-    daily_df, hourly_df = fetch_weather(lat, lon)
+def get_weather_cached(lat, lon):
+    now = datetime.now()
+    if WEATHER_CACHE_FILE.exists():
+        with open(WEATHER_CACHE_FILE, "rb") as f:
+            cache_time, daily_df, hourly_df = pickle.load(f)
+        if now - cache_time < WEATHER_CACHE_MAX_AGE:
+            return daily_df, hourly_df
+    daily_df, hourly_df = open_meteo(lat, lon)
+    with open(WEATHER_CACHE_FILE, "wb") as f:
+        pickle.dump((now, daily_df, hourly_df), f)
     return daily_df, hourly_df
 
 
 def add_daytime_flag(
     hourly_df: pd.DataFrame, daily_df: pd.DataFrame, tz: str, step: int, metric
 ) -> pd.DataFrame:
-    def is_daytime(row):
-        return row["sunrise"] <= row["date"] < row["sunset"]
-
     def get_sun_string(current_time, sun_time, window_hours):
         if pd.isna(sun_time):
             return ""
@@ -217,7 +212,9 @@ def add_daytime_flag(
     hourly_df = hourly_df.merge(
         sun_times, left_on="local_date", right_index=True, how="left"
     )
-    hourly_df["is_day"] = hourly_df.apply(is_daytime, axis=1)
+    hourly_df["is_day"] = (hourly_df["sunrise"] <= hourly_df["date"]) & (
+        hourly_df["date"] < hourly_df["sunset"]
+    )
     hourly_df["sunrise_str"] = hourly_df.apply(
         lambda r: get_sun_string(r["date"], r["sunrise"], step), axis=1
     )
@@ -245,8 +242,9 @@ def map_icons(
 ) -> pd.DataFrame:
     def pick_icon_and_description(row):
         weather_code = int(row["weather_code"])
-        _, night_icon, day_icon = weather_icons.get(weather_code, fallback_icon)
-        description = weather_icons.get(weather_code, fallback_icon)[0]
+        description, night_icon, day_icon = weather_icons.get(
+            weather_code, fallback_icon
+        )
         if is_hourly and not row.get("is_day", True):
             return day_icon, description
         return night_icon, description
@@ -270,32 +268,21 @@ class WeatherEntry:
     precip_prob: int = 0
     precipitation: float = 0.0
 
-    def format(self) -> str:
-        today = pd.Timestamp.now().strftime("%m-%d")
+    def format(self, now: pd.Timestamp) -> str:
+        today = now.strftime("%m-%d")
         label = self.label
         if self.label == today:
             label = "Today"
         precip_prob = f"{self.precip_prob}%" if self.precip_prob > 0 else ""
-
         precip_sum = ""
-        if 0.01 <= self.precipitation < 0.1:
-            if round(self.precipitation, 2) == 0.1:
-                precip = f"{round(self.precipitation, 1)}"
-                precip_sum = f"({precip}{self.units_in_cm})"
-            else:
+        if self.precipitation >= 0.01:
+            if self.precipitation < 0.1:
                 precip = f"{round(self.precipitation, 2)}".lstrip("0")
-                precip_sum = f"({precip}{self.units_in_cm})"
-        elif 0.1 < self.precipitation:
-            precip = f"{round(self.precipitation, 1)}"
+            else:
+                precip = f"{round(self.precipitation, 1)}"
             precip_sum = f"({precip}{self.units_in_cm})"
-
-        temp_low = ""
-        if self.temp_low:
-            temp_low = round(self.temp_low)
-            if self.temp_low > 0.01:
-                temp_low = round(self.temp_low)
+        temp_low = round(self.temp_low) if self.temp_low is not None else ""
         daily_temp = f"{round(self.temp)}/{temp_low}"
-
         sun_icon = ""
         sun_time = ""
         if self.sunrise_str:
@@ -304,9 +291,7 @@ class WeatherEntry:
         if self.sunset_str:
             sun_icon = "󰖛"
             sun_time = f"{self.sunset_str}".rjust(4)
-
         rain_icon = "󰖌" if self.precip_prob > 0 else ""
-
         is_hourly = ":" in self.label
         if is_hourly:
             return (
@@ -326,23 +311,23 @@ class WeatherEntry:
             )
 
 
-def today_formatted() -> str:
-    t = pd.Timestamp.now()
-    day_suffix = {1: "st", 2: "nd", 3: "rd"}.get(t.day % 10, "th")
-    if 10 <= t.day % 100 <= 20:
+def today_formatted(now: pd.Timestamp) -> str:
+    day_suffix = {1: "st", 2: "nd", 3: "rd"}.get(now.day % 10, "th")
+    if 10 <= now.day % 100 <= 20:
         day_suffix = "th"
-    return t.strftime(f"%a, %b {t.day}{day_suffix}, %Y")
+    return now.strftime(f"%a, %b {now.day}{day_suffix}, %Y")
 
 
-def build_tooltip(daily_df, hourly_df, my_zone: str, celsius, hourly_step=2):
+def build_tooltip(
+    daily_df, hourly_df, my_zone: str, celsius, now: pd.Timestamp, hourly_step=2
+):
     def proc_entries(entries):
-        return "\n".join([entry.format() for entry in entries])
+        return "\n".join([entry.format(now) for entry in entries])
 
     unit_str = "C" if celsius else "F"
-    t = pd.Timestamp.now(ZoneInfo(my_zone))
-    current_time = t.replace(minute=0, second=0, microsecond=0)
+    current_time = now.replace(minute=0, second=0, microsecond=0)
     time_24h_later = current_time + pd.Timedelta(hours=24)  # 24 hours later
-    current_time_str = t.strftime("%H:%M")
+    current_time_str = now.strftime("%H:%M")
     hourly_df["date"] = hourly_df["date"].dt.tz_convert(ZoneInfo(my_zone))
     hourly_entries = [
         WeatherEntry(
@@ -353,10 +338,10 @@ def build_tooltip(daily_df, hourly_df, my_zone: str, celsius, hourly_step=2):
             sunset_str=row["sunset_str"],
             units=unit_str,
             units_in_cm=row["units"],
-            precip_prob=int(row.get("precipitation_probability", 0)),
-            precipitation=row.get("precipitation", 0.0),
+            precip_prob=int(row["precipitation_probability"]),
+            precipitation=row["precipitation"],
         )
-        for i, (_, row) in enumerate(hourly_df.iterrows())
+        for _, row in hourly_df.iterrows()
         if current_time <= row["date"] < time_24h_later
         and (row["date"].hour - current_time.hour) % hourly_step == 0
     ]
@@ -368,12 +353,12 @@ def build_tooltip(daily_df, hourly_df, my_zone: str, celsius, hourly_step=2):
             temp=row["temperature_2m_max"],
             temp_low=row["temperature_2m_min"],
             units=unit_str,
-            precip_prob=int(row.get("precipitation_probability_max", 0)),
-            precipitation=row.get("precipitation_sum", 0.0),
+            precip_prob=int(row["precipitation_probability_max"]),
+            precipitation=row["precipitation_sum"],
         )
         for _, row in daily_df.iterrows()
     ]
-    formatted_date = today_formatted()
+    formatted_date = today_formatted(now)
     icon_size = 20
     return (
         f"<span size='{icon_size}pt'>󰨳</span><span size='13pt'>  {formatted_date}</span>\n"
@@ -386,43 +371,23 @@ def build_tooltip(daily_df, hourly_df, my_zone: str, celsius, hourly_step=2):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Weather script settings.")
-    parser.add_argument(
-        "--metric",
-        action="store_true",
-        help="Use metric units (Celsius, cm, etc.)",
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--metric", action="store_true")
     args = parser.parse_args()
     if args.metric:
         if CACHE_FILE.exists():
             CACHE_FILE.unlink()
-            METRIC = False
         else:
-            with CACHE_FILE.open("w") as file:
-                file.write("True")
-            METRIC = True
-    else:
-        if CACHE_FILE.exists():
-            METRIC = True
-        else:
-            METRIC = False
-
-    return METRIC
+            CACHE_FILE.write_text("1")
+    return CACHE_FILE.exists()
 
 
 def main():
     METRIC = parse_args()
-    daily_df, hourly_df = open_meteo(
-        lat=LATITUDE,
-        lon=LONGITUDE,
-    )
-    # print(f"{hourly_df.head(48)}")
+    daily_df, hourly_df = get_weather_cached(lat=LATITUDE, lon=LONGITUDE)
+    now = pd.Timestamp.now(tz=TIMEZONE)
     hourly_df = add_daytime_flag(
-        hourly_df,
-        daily_df,
-        tz=TIMEZONE,
-        step=HOURLY_STEP,
-        metric=METRIC,
+        hourly_df, daily_df, tz=TIMEZONE, step=HOURLY_STEP, metric=METRIC
     )
     hourly_df = map_icons(hourly_df, is_hourly=True)
     daily_df = map_icons(daily_df, is_hourly=False)
@@ -432,8 +397,10 @@ def main():
         my_zone=TIMEZONE,
         celsius=METRIC,
         hourly_step=HOURLY_STEP,
+        now=now,
     )
-    current = hourly_df.iloc[0]
+    idx = (hourly_df["date"] - now).abs().idxmin()
+    current = hourly_df.loc[idx]
     output = {
         "text": current.icon,
         "tooltip": tooltip,

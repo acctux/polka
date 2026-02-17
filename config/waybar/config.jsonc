@@ -185,7 +185,7 @@
   "custom/weather": {
     "format": "{}",
     "tooltip": true,
-    "interval": 600,
+    "interval": 60,
     "exec": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py",
     "on-click": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py --metric",
     "return-type": "json"
@@ -245,7 +245,8 @@
     "exec": "~/.local/bin/steam/steam.sh",
     "interval": 10,
     "hide-empty-text": true,
-    "on-click": "steam"
+    "on-click": "steam",
+    "on-click-right": "killall steam"
   },
   "custom/telegram": {
     "format": "{}",

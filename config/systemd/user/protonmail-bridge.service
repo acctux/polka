@@ -5,7 +5,7 @@ Requires=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/protonmail-bridge --no-window
+ExecStart=/usr/sbin/protonmail-bridge-core -n
 Restart=on-failure
 RestartSec=5
 
