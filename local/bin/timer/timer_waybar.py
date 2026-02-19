@@ -55,7 +55,7 @@ def case_running(state: dict) -> dict[str, Any]:
         icon = "󰨀"
 
     return {
-        "text": f"{icon} {text}",
+        "text": f" {icon} {text} ",
         "tooltip": f"Running — {text} remaining{unit}",
         "class": f"{icon}",
         "alt": "timer",

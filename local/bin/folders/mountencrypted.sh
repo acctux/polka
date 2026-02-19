@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-CIPHER="$HOME/Documents/Encrypted"
-PLAIN="$HOME/Documents/Decrypted"
+CIPHER="$HOME/Desktop/Encrypted"
+PLAIN="$HOME/Desktop/Decrypted"
 
 initialize_gocrypt() {
   PASSFILE=$(mktemp)

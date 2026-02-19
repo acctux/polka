@@ -11,7 +11,7 @@ CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --hide-prompt --config="$HOME/.c
 
 case "$CHOICE" in
 "$CHOICE_1")
-  python "$HOME/Polka/local/bin/timer/set_timer.py"
+  python "$HOME/.local/bin/timer/set_timer.py"
   ;;
 "$CHOICE_2")
   CURRENT_TZ=$(timedatectl show --property=Timezone --value)

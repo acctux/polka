@@ -3,17 +3,15 @@
 CHOICE_1="OCR Screenshot"
 CHOICE_2="Set Screenshot Region"
 CHOICE_3="Screenshot Folder"
-CHOICE_4="Start Youtube Daemon"
-CHOICE_5="Stop Youtube Daemon"
+CHOICE_4="Mount GoCrypt"
 
 MENU="$CHOICE_1
 $CHOICE_2
 $CHOICE_3
 $CHOICE_4
-$CHOICE_5
 Cancel"
 
-CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --hide-prompt --prompt="OCR Action:")
+CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --lines=6 --width=20 --hide-prompt --prompt="OCR Action:")
 
 case "$CHOICE" in
 "$CHOICE_1")
@@ -24,6 +22,9 @@ case "$CHOICE" in
   ;;
 "$CHOICE_3")
   nemo $HOME/Polka/local/bin/maimpdf/screens
+  ;;
+"$CHOICE_4")
+  $HOME/.local/bin/folders/mountencrypted.sh
   ;;
 "Cancel" | "")
   exit 0

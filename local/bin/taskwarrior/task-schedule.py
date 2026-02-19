@@ -50,10 +50,26 @@ def make_interval_task(description: str, due_amount: int, due_unit: str):
 
 def handle_intervals(today, task_dict, interval_tasks):
     existing_descriptions = {task["Description"] for task in task_dict}
+    today = datetime.combine(today, datetime.min.time())
     for description, interval_days, due_days in interval_tasks:
         if description in existing_descriptions:
-            continue
-        make_interval_task(description, interval_days, "days")
+            completed_dates = [
+                datetime.strptime(task["Completed"], "%Y%m%dT%H%M%SZ")
+                for task in task_dict
+                if task["Description"] == description and task["Completed"]
+            ]
+            if completed_dates:
+                latest_completed = max(completed_dates)
+                next_due_date = latest_completed + timedelta(days=interval_days)
+                if next_due_date <= today:
+                    print(f"Scheduling next occurrence of task: {description}")
+                    make_interval_task(description, interval_days, "days")
+            else:
+                print(f"No completed task found for {description}, scheduling it.")
+                make_interval_task(description, interval_days, "days")
+        else:
+            print(f"Task {description} not found in existing tasks, creating it.")
+            make_interval_task(description, interval_days, "days")
 
 
 def handle_dated_tasks(today, completed_dict, dated_tasks):
@@ -69,6 +85,7 @@ def handle_dated_tasks(today, completed_dict, dated_tasks):
 
 if __name__ == "__main__":
     task_dict = parse_completed(INTERVAL_TASKS)
+    print(task_dict)
     today = datetime.today().date()
     handle_intervals(today, task_dict, INTERVAL_TASKS)
     handle_dated_tasks(today, task_dict, DATED_TASKS)

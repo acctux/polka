@@ -306,8 +306,8 @@ class WeatherEntry:
             return (
                 f"{label:<5}"
                 f"<span size='23pt'>{self.icon.rjust(2)}</span>"
-                f"{daily_temp.rjust(8)}<span size='17pt'></span>{self.units}"
-                f"<span size='14pt'>{rain_icon.rjust(6)}</span>{precip_prob.rjust(5)}{precip_sum.rjust(9)}"
+                f"{daily_temp.rjust(9)}<span size='17pt'></span>{self.units}"
+                f"<span size='14pt'>{rain_icon.rjust(5)}</span>{precip_prob.rjust(5)}{precip_sum.rjust(9)}"
             )
 
 
