@@ -143,14 +143,48 @@ def handle_wifi(nm: NetworkManager, sleep_time: int, config):
             print("Failed to get password or canceled.")
 
 
-def run_cmd(cmd: list[str], use_sudo: bool = False) -> subprocess.CompletedProcess:
-    if use_sudo:
+def run_cmd(cmd: list[str], sudo: bool = False) -> subprocess.CompletedProcess:
+    if sudo:
         cmd = ["sudo", "-A"] + cmd
-    return subprocess.run(cmd, capture_output=True, text=True)
+    print(f"Running command: {' '.join(cmd)}")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error ({result.returncode}): {result.stderr.strip()}")
+    else:
+        print(f"Command succeeded: {' '.join(cmd)}")
+    return result
+
+
+def switch_named_config(target: str) -> None:
+    target_map = {
+        "ipv4": "/etc/namedipv4.conf",
+        "ipv6": "/etc/namedipv6.conf",
+    }
+    desired = target_map.get(target)
+    if not desired:
+        print(f"Invalid target for named config: {target}")
+        return
+    print(f"Switching named config to {target} ({desired})")
+    current = Path("/etc/named.conf")
+    try:
+        if current.exists() and current.read_text() == Path(desired).read_text():
+            print("named.conf already using correct config")
+            return
+    except Exception as e:
+        print(f"Could not compare configs: {e}")
+    copy_result = run_cmd(["cp", desired, "/etc/named.conf"], sudo=True)
+    if copy_result.returncode != 0:
+        print("Failed to copy named config")
+        return
+    restart_result = run_cmd(["systemctl", "restart", "named"], sudo=True)
+    if restart_result.returncode == 0:
+        print("named restarted successfully")
+    else:
+        print("named restart failed")
 
 
 def get_active_interfaces() -> list[str]:
-    result = run_cmd(["wg", "show"], use_sudo=True)
+    result = run_cmd(["wg", "show"], sudo=True)
     if result.returncode != 0:
         return []
     interfaces = []
@@ -163,36 +197,43 @@ def get_active_interfaces() -> list[str]:
 
 
 def disconnect_current_interface() -> None:
-    current = [name for name in get_active_interfaces()]
+    current = get_active_interfaces()
     if current:
         for iface in current:
-            run_cmd(["wg-quick", "down", iface], use_sudo=True)
-            print(f"\nDisconnected successfully from {iface}")
-    else:
-        print("No active interfaces found to disconnect.")
+            run_cmd(["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=0"], sudo=True)
+            run_cmd(["sysctl", "-w", "net.ipv6.conf.default.disable_ipv6=0"], sudo=True)
+            run_cmd(["wg-quick", "down", iface], sudo=True)
+        switch_named_config("ipv6")
 
 
 def handle_vpn(config):
     list_path = Path("/run/wireguard/connections.list")
-    if list_path.exists():
-        with open(list_path, "r") as f:
-            vpns = f.read().strip().splitlines()
-        vpns = vpns + ["──────", "Disconnect"]
-        choice = run_fuzzel(vpns, config)
-        if not choice:
-            sys.exit(1)
-        if choice == "Back":
-            return
-        elif choice == "Disconnect":
-            disconnect_current_interface()
-            sys.exit(0)
-        else:
-            disconnect_current_interface()
-            result = run_cmd(["wg-quick", "up", choice], use_sudo=True)
-            if result.returncode != 0:
-                sys.exit(1)
-            print(f"\nConnected to {choice}")
-            sys.exit(0)
+    if not list_path.exists():
+        return
+    with open(list_path, "r") as f:
+        vpns = f.read().strip().splitlines()
+    vpns = vpns + ["──────", "Disconnect"]
+    choice = run_fuzzel(vpns, config)
+    if not choice:
+        sys.exit(1)
+    if choice == "Disconnect":
+        disconnect_current_interface()
+        sys.exit(0)
+    disconnect_current_interface()
+    switch_named_config("ipv4")
+    result = run_cmd(["wg-quick", "up", choice], sudo=True)
+    run_cmd(["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=1"], sudo=True)
+    run_cmd(["sysctl", "-w", "net.ipv6.conf.default.disable_ipv6=1"], sudo=True)
+    if result.returncode != 0:
+        result = run_cmd(
+            ["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=0"], sudo=True
+        )
+        result = run_cmd(
+            ["sysctl", "-w", "net.ipv6.conf.default.disable_ipv6=0"], sudo=True
+        )
+        switch_named_config("ipv6")
+        sys.exit(1)
+    sys.exit(0)
 
 
 def main():
