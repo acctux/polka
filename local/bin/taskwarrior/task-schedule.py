@@ -9,8 +9,10 @@ INTERVAL_TASKS = [
 
 DATED_TASKS = [
     ("Valentines Day", [(2, 1)], 14),
+    ("Doctor's Appointment", [(4, 2)], 10),
     ("Anniversary", [(2, 1)], 14),
     ("Baby's birthday", [(9, 1)], 14),
+    ("Dad's birthday", [(2, 1)], 14),
     ("Larry's b-day", [(12, 1)], 3),
 ]
 

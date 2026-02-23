@@ -142,7 +142,8 @@
     "format": "{}",
     "tooltip": false,
     "on-click": "hyprctl switchxkblayout at-translated-set-2-keyboard next",
-    "on-click-right": "rofimoji & disown"
+    "on-click-right": "~/.local/bin/keyboard/osk_handle.sh",
+    "on-click-middle": "rofimoji & disown"
   },
   "custom/clipboard": {
     "signal": 9,
