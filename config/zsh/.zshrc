@@ -21,12 +21,6 @@ alias cx='chmod +x'
 alias lg='lazygit'
 alias loggy='sudo systemctl restart logid'
 alias dotsync='/home/nick/.local/bin/dotsync/dotsync.py'
-pvim() {
-  cd ~/Lit/Noah || return
-  source .venv/bin/activate
-  nvim
-}
-# Created by `pipx` on 2026-01-26 17:20:46
 export PATH="$PATH:/home/nick/Polka/local/bin"
 function y() {
 	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd

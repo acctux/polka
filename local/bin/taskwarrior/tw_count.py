@@ -29,7 +29,7 @@ def build_output(tasks, urgent):
     if not tasks:
         return {"text": ""}
     count = len(tasks)
-    tooltip = f"Active:{count}\n" + "\n".join(f"•{t}" for t in tasks)
+    tooltip = f"Active:{count}\n" + "\n".join(f"•{t}\t" for t in tasks)
     return {
         "text": str(count),
         "tooltip": tooltip,
@@ -44,4 +44,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

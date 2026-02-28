@@ -125,22 +125,25 @@ def handle_wifi(nm: NetworkManager, sleep_time: int, config):
         for network in networks:
             sig_strength = handle_strength(network[1])
             options.append(f"{network[0]} {sig_strength}")
-        max_length = max(len(option) for option in options)
-        separator = "_" * (max_length + 3)
-        lines = options + [separator, "Scan", "Back"]
-        selected_network = run_fuzzel(lines, config)
-        if selected_network in ("Back", ""):
-            break
-        if selected_network == "Scan":
-            print("Rescanning networks...")
-            nm.scan_networks(sleep_time)
-            continue
-        password = get_wifi_password_via_zenity(selected_network)
-        if password:
-            nm.connect_to_network(selected_network, password)
-            print(f"Connected to {selected_network}")
+        if options:
+            max_length = max(len(option) for option in options)
+            separator = "_" * (max_length + 3)
+            lines = options + [separator, "Scan", "Back"]
+            selected_network = run_fuzzel(lines, config)
+            if selected_network in ("Back", ""):
+                break
+            if selected_network == "Scan":
+                print("Rescanning networks...")
+                nm.scan_networks(sleep_time)
+                continue
+            password = get_wifi_password_via_zenity(selected_network)
+            if password:
+                nm.connect_to_network(selected_network, password)
+                print(f"Connected to {selected_network}")
+            else:
+                print("Failed to get password or canceled.")
         else:
-            print("Failed to get password or canceled.")
+            nm.scan_networks(sleep_time)
 
 
 def run_cmd(cmd: list[str], sudo: bool = False) -> subprocess.CompletedProcess:
@@ -156,9 +159,10 @@ def run_cmd(cmd: list[str], sudo: bool = False) -> subprocess.CompletedProcess:
 
 
 def switch_named_config(target: str) -> None:
+    script_dir = Path(__file__).resolve().parent
     target_map = {
-        "ipv4": "/etc/namedipv4.conf",
-        "ipv6": "/etc/namedipv6.conf",
+        "ipv4": f"{script_dir}/namedipv4.conf",
+        "ipv6": f"{script_dir}/namedipv6.conf",
     }
     desired = target_map.get(target)
     if not desired:
@@ -172,7 +176,7 @@ def switch_named_config(target: str) -> None:
             return
     except Exception as e:
         print(f"Could not compare configs: {e}")
-    copy_result = run_cmd(["cp", desired, "/etc/named.conf"], sudo=True)
+    copy_result = run_cmd(["cp", desired, str(current)], sudo=True)
     if copy_result.returncode != 0:
         print("Failed to copy named config")
         return

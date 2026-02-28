@@ -717,12 +717,13 @@ scale slider:hover {
 }
 /* ── 6. Button Grid ─────────────────────────────────────────────── */
 .widget-buttons-grid > flowbox {
-  border-bottom: 1px solid @border_medium;
   padding: 0 0 2px;
   margin: 0;
   background: none;
 }
 .widget-buttons-grid > flowbox > flowboxchild {
+  border-radius: 0px;
+  border-bottom: 1px solid @border_medium;
   background-color: transparent;
 }
 .widget-buttons-grid > flowbox > flowboxchild > button {
@@ -734,17 +735,17 @@ scale slider:hover {
     border 1s ease;
 }
 
-.widget-buttons-grid flowboxchild:nth-child(-n + 5) > button {
+.widget-buttons-grid flowboxchild:nth-child(-n + 8) > button {
   border: 1px solid transparent;
   font-size: 1.4rem;
-  margin: 0 2px;
+  margin: 3px;
   background-color: transparent;
   border-radius: 30px;
-  padding: 2px;
+  padding: 3px 4px;
   min-width: 6px;
   min-height: 2px;
 }
-.widget-buttons-grid flowboxchild:nth-child(-n + 5) > button:hover {
+.widget-buttons-grid flowboxchild:nth-child(-n + 8) > button:hover {
   border: 1px solid var(--noti-border-color);
   color: @module_hover_bg;
 }
@@ -778,9 +779,13 @@ scale slider:hover {
 /* ── Targeted Icon Padding Fixes ───────────────────── */
 
 /* Wi-Fi + Hyprsunset */
-.widget-buttons-grid flowboxchild:nth-child(3) > button:hover,
-.widget-buttons-grid flowboxchild:nth-child(4) > button:hover {
+/* Only button 3 */
+.widget-buttons-grid flowboxchild:nth-child(3) > button:hover, .widget-buttons-grid flowboxchild:nth-child(4) > button:hover {
   color: rgba(255, 238, 51, 0.9);
+}
+/* Buttons 4–8 */
+.widget-buttons-grid flowboxchild:nth-child(n+5):nth-child(-n+8) > button:hover {
+  color: var(--noti-border-color);
 }
 /* .widget-buttons-grid flowboxchild:nth-child(8) > button label { */
 /*   padding-right: 3px; */

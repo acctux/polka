@@ -269,7 +269,7 @@ class WeatherEntry:
     precipitation: float = 0.0
 
     def format(self, now: pd.Timestamp) -> str:
-        today = now.strftime("%m-%d")
+        today = now.strftime("%a")
         label = self.label
         if self.label == today:
             label = "Today"
@@ -302,12 +302,11 @@ class WeatherEntry:
                 f"<span size='20pt'>{sun_icon.rjust(2)} </span>{sun_time.rjust(4)}"
             )
         else:
-            rain_icon = rain_icon.rjust(4)
             return (
                 f"{label:<5}"
                 f"<span size='23pt'>{self.icon.rjust(2)}</span>"
                 f"{daily_temp.rjust(9)}<span size='17pt'></span>{self.units}"
-                f"<span size='14pt'>{rain_icon.rjust(5)}</span>{precip_prob.rjust(5)}{precip_sum.rjust(9)}"
+                f"<span size='14pt'>{rain_icon.rjust(5)}</span>{precip_prob.rjust(4)}{precip_sum.rjust(10)}"
             )
 
 
@@ -347,7 +346,7 @@ def build_tooltip(
     ]
     daily_entries = [
         WeatherEntry(
-            label=row["date"].strftime("%m-%d"),
+            label=row["date"].strftime("%a"),
             icon=row["icon"],
             units_in_cm=row["units"],
             temp=row["temperature_2m_max"],

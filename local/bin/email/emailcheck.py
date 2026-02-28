@@ -8,7 +8,7 @@ import imaplib2
 HOME = Path.home()
 CREDENTIAL_FILE = HOME / ".ssh" / "bridge_creds.txt"
 LAST_EMAIL_FILE = Path.home() / ".cache" / "last_email.txt"
-SLEEP_TIME = 20
+SLEEP_TIME = 40
 
 
 def zenity_prompt(title, text, hide=False):

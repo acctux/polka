@@ -3,4 +3,8 @@ Description=Run Taskwarrior daily scheduling script
 
 [Service]
 Type=oneshot
+Environment="TASKRC=%h/.config/task/taskrc"
 ExecStart=%h/.local/bin/taskwarrior/task-schedule.py
+
+[Install]
+WantedBy=default.target

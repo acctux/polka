@@ -94,6 +94,34 @@
         {
           "label": "󰍁",
           "command": "pidof hyprlock || hyprlock"
+        },
+        {
+          "label": "󱚼",
+          "type": "toggle",
+          "active": true,
+          "command": "sh -c '~/.config/swaync/scripts/toggle_wifi.sh'",
+          "update-command": "sh -c '~/.config/swaync/scripts/update_wifi.sh'"
+        },
+        {
+          "label": "󰂲",
+          "type": "toggle",
+          "active": true,
+          "command": "sh -c '~/.config/swaync/scripts/toggle_bluetooth.sh'",
+          "update-command": "sh -c '~/.config/swaync/scripts/update_bluetooth.sh'"
+        },
+        {
+          "label": "󱏧",
+          "type": "toggle",
+          "active": true,
+          "command": "sh -c 'swaync-client -d -sw'",
+          "update-command": "sh -c 'set +e;swaync-client -D'"
+        },
+        {
+          "label": "",
+          "type": "toggle",
+          "active": true,
+          "command": "sh -c '~/.config/swaync/scripts/toggle_hypridle.sh'",
+          "update-command": "sh -c '~/.config/swaync/scripts/update_hypridle.sh'"
         }
       ]
     }

@@ -18,14 +18,18 @@ CACHE_FILE = CACHE_DIR / "wallpaper_with_quote.png"
 LAST_WALL_FILE = CACHE_DIR / ".last_wallpaper"
 TEMP_RESIZED = CACHE_DIR / "wallpaper_resized.png"
 FONT_SIZE = 11
-TEXT_COLOR = Color("rgba(229, 231, 235, 0.55)")
+TEXT_COLOR = Color("rgba(229, 231, 235, 0.65)")
 SHADOW_COLOR = Color("rgba(16, 16, 19, 1)")
 BOTTOM_PADDING = 1250
 SIDE_PADDING = 200
 TRANSITION_DURATION = 4
 screen_w = 1920
 screen_h = 1080
-transition_type=[]
+# This works, just unhash
+transition_type = [
+    # "--transition-type",
+    # "wipe",
+]
 
 
 # ====================== Functions ======================
@@ -131,13 +135,12 @@ def set_wallpaper(
                 "swww",
                 "img",
                 str(image_path),
-                # "--transition-type",
-                # "wipe",
                 "--transition-duration",
                 str(transition_duration),
                 "--transition-fps",
                 "144",
-            ],
+            ]
+            + transition_type,
             check=True,
         )
         return True

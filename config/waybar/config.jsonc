@@ -261,6 +261,7 @@
     "format": "",
     "tooltip": false,
     "on-click": "fuzzel --config=$HOME/.config/fuzzel/left-menu.ini",
+    "on-click-right": "~/.local/bin/fuzzel/mymenu.sh",
     "on-click-middle": "~/.local/bin/wall/wall.py & disown"
   }
 }

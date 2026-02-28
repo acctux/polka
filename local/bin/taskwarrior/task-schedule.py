@@ -4,23 +4,31 @@ import subprocess
 from datetime import datetime, timedelta
 
 INTERVAL_TASKS = [
-    ("pay credit card", 7, 3),
+    ("pay credit card", 2, 1),
 ]
 
 DATED_TASKS = [
-    ("Valentines Day", [(2, 1)], 14),
+    ("Valentines Day", [(2, 14)], 14),
     ("Doctor's Appointment", [(4, 2)], 10),
     ("Anniversary", [(2, 1)], 14),
-    ("Baby's birthday", [(9, 1)], 14),
+    ("Baby's birthday", [(9, 14)], 14),
     ("Dad's birthday", [(2, 1)], 14),
     ("Larry's b-day", [(12, 1)], 3),
 ]
 
 
 def get_lines():
-    result = subprocess.run("task export", capture_output=True, text=True, shell=True)
-    data = json.loads(result.stdout)
-    return data
+    result = subprocess.run(
+        ["/usr/sbin/task", "export"], capture_output=True, text=True
+    )
+    print("Return code:", result.returncode)
+    print("STDOUT:", result.stdout)
+    print("STDERR:", result.stderr)
+    if result.returncode != 0:
+        raise RuntimeError(f"Task export failed: {result.stderr}")
+    if not result.stdout.strip():
+        raise RuntimeError("Task export returned empty output")
+    return json.loads(result.stdout)
 
 
 def parse_completed(tasks):
@@ -52,7 +60,7 @@ def make_interval_task(description: str, due_amount: int, due_unit: str):
 
 def handle_intervals(today, task_dict, interval_tasks):
     existing_descriptions = {task["Description"] for task in task_dict}
-    today = datetime.combine(today, datetime.min.time())
+    today = datetime.today()
     for description, interval_days, due_days in interval_tasks:
         if description in existing_descriptions:
             completed_dates = [
@@ -61,8 +69,12 @@ def handle_intervals(today, task_dict, interval_tasks):
                 if task["Description"] == description and task["Completed"]
             ]
             if completed_dates:
+                print(completed_dates)
                 latest_completed = max(completed_dates)
+                print(latest_completed)
                 next_due_date = latest_completed + timedelta(days=interval_days)
+                print(next_due_date)
+                print(today)
                 if next_due_date <= today:
                     print(f"Scheduling next occurrence of task: {description}")
                     make_interval_task(description, interval_days, "days")
@@ -80,7 +92,7 @@ def handle_dated_tasks(today, completed_dict, dated_tasks):
         if description not in existing_descriptions:
             for month, day in date_tuples:
                 task_date = today.replace(month=month, day=day)
-                if task_date < today <= task_date + timedelta(days=due_days):
+                if task_date - timedelta(days=due_days) < today <= task_date:
                     days_til_due = task_date + timedelta(days=due_days) - today
                     make_interval_task(description, days_til_due.days, "d")
 
