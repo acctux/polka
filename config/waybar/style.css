@@ -131,6 +131,12 @@ tooltip label {
   padding-right: 4px;
   padding-left: 4px;
 }
+#battery.warning {
+  background-color: inherit;
+}
+#battery.critical {
+  background-color: #ff3232;
+}
 #custom-clipboard {
   padding-right: 7px;
   padding-left: 6px;
