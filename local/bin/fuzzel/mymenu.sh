@@ -11,7 +11,7 @@ $CHOICE_3
 $CHOICE_4
 Cancel"
 
-CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --lines=5 --width=19 --hide-prompt --prompt="OCR Action:" --config="$HOME/.config/fuzzel/timemenu.ini" --anchor=top-left)
+CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --hide-prompt --config="$HOME/.config/fuzzel/fav-menu.ini")
 
 case "$CHOICE" in
 "$CHOICE_1")
