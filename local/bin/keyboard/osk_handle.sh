@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CACHE_FILE="$HOME/.wvkbd-deskintl_last_signal"
+CACHE_FILE="$HOME/.cache/wvkbd-deskintl_last_signal"
 main() {
   if ! systemctl --user is-active --quiet wvkbd-deskintl.service; then
     systemctl --user start wvkbd-deskintl.service

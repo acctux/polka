@@ -91,7 +91,7 @@ LONGITUDE = -82.024
 HOURLY_STEP = 2
 TIMEZONE = "America/New_York"
 CACHE_FILE = Path(".metric_cache")
-WEATHER_CACHE_FILE = Path(".weather_cache.pkl")
+WEATHER_CACHE_FILE = Path(".cache/weather_cache.pkl")
 WEATHER_CACHE_MAX_AGE = timedelta(hours=1)
 
 
