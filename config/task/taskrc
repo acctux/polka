@@ -1,5 +1,5 @@
 ### taskwarrior configuration options
-data.location=$XDG_CONFIG_HOME/task
+data.location=/home/nick/.config/task
 verbose=affected,blank,context,edit,header,footnote,label,new-id,project,special,sync,recur
 uda.priority.values=H,M,,L
 

@@ -87,7 +87,7 @@ def handle_intervals(today, task_dict, interval_tasks):
 
 
 def handle_dated_tasks(today, completed_dict, dated_tasks):
-    existing_descriptions = {task["Description"] for task in task_dict}
+    existing_descriptions = {task["Description"] for task in completed_dict}
     for description, date_tuples, due_days in dated_tasks:
         if description not in existing_descriptions:
             for month, day in date_tuples:

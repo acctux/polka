@@ -25,7 +25,6 @@ SIDE_PADDING = 200
 TRANSITION_DURATION = 4
 screen_w = 1920
 screen_h = 1080
-# This works, just unhash
 transition_type = [
     # "--transition-type",
     # "wipe",

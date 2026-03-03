@@ -2,7 +2,7 @@
 import subprocess
 from pathlib import Path
 
-SERVICES = ["kdeconnectd", "waybar", "swaync", "swww-daemon"]
+SERVICES = ["kdeconnectd", "waybar", "swaync", "swww-daemon", "hypridle"]
 HYPRLAND_CONF = Path.home() / ".config/hypr/gamemode/init.conf"
 ORIGINAL_TEXT = """\
 source = ~/.config/hypr/gamemode/default.conf

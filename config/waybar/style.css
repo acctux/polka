@@ -136,6 +136,7 @@ tooltip label {
 }
 #battery.critical {
   background-color: #ff3232;
+  color: #ffee33;
 }
 #custom-clipboard {
   padding-right: 7px;
