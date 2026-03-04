@@ -30,10 +30,10 @@ case "$CHOICE" in
   $HOME/.local/bin/qr/qr.py
   ;;
 "$CHOICE_5")
-  python3 $HOME/Lit/polka/local/bin/wine/prefix.py
+  python $HOME/Lit/polka/local/bin/wine/prefix.py
   ;;
 "$CHOICE_6")
-  python3 $HOME/Lit/polka/local/bin/wine/runwine.py
+  python $HOME/Lit/polka/local/bin/wine/runwine.py
   ;;
 "Cancel" | "")
   exit 0

@@ -1,105 +1,119 @@
 #!/usr/bin/env python3
-import json
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from pathlib import Path
+from pydantic.dataclasses import dataclass
+import yaml
 
-INTERVAL_TASKS = [
-    ("pay credit card", 2, 1),
-]
-
-DATED_TASKS = [
-    ("Valentines Day", [(2, 14)], 14),
-    ("Doctor's Appointment", [(4, 2)], 10),
-    ("Anniversary", [(2, 1)], 14),
-    ("Baby's birthday", [(9, 14)], 14),
-    ("Dad's birthday", [(2, 1)], 14),
-    ("Larry's b-day", [(12, 1)], 3),
-]
+CONFIG_FILE = Path(__file__).parent / "schedconf.yaml"
 
 
-def get_lines():
-    result = subprocess.run(
-        ["/usr/sbin/task", "export"], capture_output=True, text=True
-    )
-    print("Return code:", result.returncode)
-    print("STDOUT:", result.stdout)
-    print("STDERR:", result.stderr)
+@dataclass(frozen=True)
+class IntervalTask:
+    interval_days: int
+    due_days: int
+
+
+@dataclass(frozen=True)
+class DatedTask:
+    dates: list[tuple[int, int]]
+    due_days: int
+
+
+@dataclass
+class Task:
+    description: str
+    status: str | None
+    completed: datetime | None
+
+
+def load_config():
+    if not CONFIG_FILE.exists():
+        return {}, {}
+    with open(CONFIG_FILE, "r") as f:
+        data = yaml.safe_load(f) or {}
+    interval_tasks = {
+        k: IntervalTask(**v) for k, v in data.get("interval_tasks", {}).items()
+    }
+    dated_tasks = {
+        k: DatedTask(dates=[tuple(d) for d in v["dates"]], due_days=v["due_days"])
+        for k, v in data.get("dated_tasks", {}).items()
+    }
+    return interval_tasks, dated_tasks
+
+
+def run_task(*args):
+    result = subprocess.run(["task", *args], capture_output=True, text=True)
     if result.returncode != 0:
-        raise RuntimeError(f"Task export failed: {result.stderr}")
-    if not result.stdout.strip():
-        raise RuntimeError("Task export returned empty output")
-    return json.loads(result.stdout)
+        print(f"[ERROR] task command failed: {' '.join(args)}\n{result.stderr.strip()}")
+    return result.stdout
 
 
-def parse_completed(tasks):
-    tasks_list = []
-    lines = get_lines()
-    for task in lines:
-        if task.get("status") in ["completed", "pending"]:
-            created_date = task.get("entry", "")
-            completed_date = task.get("end", "")
-            age = task.get("urgency", 0)
-            due = task.get("due", "")
-            status = task.get("status", "")
-            description = task.get("description", "").strip()
-            task_dict = {
-                "Created": created_date,
-                "Completed": completed_date,
-                "Age": age,
-                "Due": due,
-                "Status": status,
-                "Description": description,
-            }
-            tasks_list.append(task_dict)
-    return tasks_list
+def parse_date(value):
+    return datetime.strptime(value, "%Y%m%dT%H%M%SZ") if value else None
 
 
-def make_interval_task(description: str, due_amount: int, due_unit: str):
-    subprocess.run(["task", "add", description, f"due:{due_amount}{due_unit}"])
+def export_tasks():
+    raw = yaml.safe_load(run_task("export") or "[]")
+    return [
+        Task(
+            t.get("description", "").strip(), t.get("status"), parse_date(t.get("end"))
+        )
+        for t in raw
+        if t.get("status") in {"completed", "pending"}
+    ]
 
 
-def handle_intervals(today, task_dict, interval_tasks):
-    existing_descriptions = {task["Description"] for task in task_dict}
-    today = datetime.today()
-    for description, interval_days, due_days in interval_tasks:
-        if description in existing_descriptions:
-            completed_dates = [
-                datetime.strptime(task["Completed"], "%Y%m%dT%H%M%SZ")
-                for task in task_dict
-                if task["Description"] == description and task["Completed"]
-            ]
-            if completed_dates:
-                print(completed_dates)
-                latest_completed = max(completed_dates)
-                print(latest_completed)
-                next_due_date = latest_completed + timedelta(days=interval_days)
-                print(next_due_date)
-                print(today)
-                if next_due_date <= today:
-                    print(f"Scheduling next occurrence of task: {description}")
-                    make_interval_task(description, interval_days, "days")
-            else:
-                print(f"No completed task found for {description}, scheduling it.")
-                make_interval_task(description, interval_days, "days")
-        else:
-            print(f"Task {description} not found in existing tasks, creating it.")
-            make_interval_task(description, interval_days, "days")
+def add_task(desc, due):
+    due_str = due.strftime("%Y-%m-%d")
+    print(f"[DEBUG] Adding task '{desc}' due {due_str}")
+    result = subprocess.run(
+        ["task", "add", desc, f"due:{due_str}"], capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        print(f"[DEBUG] Taskwarrior output: {result.stdout.strip()}")
+    else:
+        print(f"[ERROR] task failed: {result.stderr.strip()}")
 
 
-def handle_dated_tasks(today, completed_dict, dated_tasks):
-    existing_descriptions = {task["Description"] for task in completed_dict}
-    for description, date_tuples, due_days in dated_tasks:
-        if description not in existing_descriptions:
-            for month, day in date_tuples:
-                task_date = today.replace(month=month, day=day)
-                if task_date - timedelta(days=due_days) < today <= task_date:
-                    days_til_due = task_date + timedelta(days=due_days) - today
-                    make_interval_task(description, days_til_due.days, "d")
+def handle_interval_tasks(today, tasks, interval_tasks):
+    for desc, cfg in interval_tasks.items():
+        exists = any(
+            t.description == desc
+            and (t.completed is None or t.completed.date() >= today)
+            for t in tasks
+        )
+        if exists:
+            continue
+        add_task(desc, today + timedelta(days=cfg.due_days))
+
+
+def handle_dated_tasks(today, tasks, dated_tasks):
+    for desc, cfg in dated_tasks.items():
+        exists = any(
+            t.description == desc
+            and (t.completed is None or t.completed.date() >= today)
+            for t in tasks
+        )
+        if exists:
+            continue
+        for month, day in cfg.dates:
+            try:
+                event = date(today.year, month, day)
+            except ValueError:
+                continue
+            window_start = event - timedelta(days=cfg.due_days)
+            if window_start <= today <= event:
+                add_task(desc, event)
+
+
+def main():
+    interval_tasks, dated_tasks = load_config()
+    today = date.today()
+    tasks = export_tasks()
+    handle_interval_tasks(today, tasks, interval_tasks)
+    handle_dated_tasks(today, tasks, dated_tasks)
 
 
 if __name__ == "__main__":
-    task_dict = parse_completed(INTERVAL_TASKS)
-    print(task_dict)
-    today = datetime.today().date()
-    handle_intervals(today, task_dict, INTERVAL_TASKS)
-    handle_dated_tasks(today, task_dict, DATED_TASKS)
+    main()

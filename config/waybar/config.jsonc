@@ -217,7 +217,8 @@
     "format": "<span size='9pt'> </span>{}",
     "interval": 300,
     "signal": 8,
-    "on-click": "kitty taskwarrior-tui"
+    "on-click": "kitty taskwarrior-tui",
+    "on-click-right": "~/.local/bin/taskwarrior/add-sched.py"
   },
   "custom/updates": {
     "format": "{}<span size='4pt'> </span>",

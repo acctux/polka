@@ -1,0 +1,56 @@
+interval_tasks:
+  pay credit card:
+    interval_days: 1
+    due_days: 1
+  interval test:
+    interval_days: 1
+    due_days: 1
+  testing:
+    interval_days: 1
+    due_days: 1
+dated_tasks:
+  Valentines Day:
+    dates:
+    - - 2
+      - 14
+    due_days: 14
+  Doctor's Appointment:
+    dates:
+    - - 4
+      - 2
+    due_days: 10
+  Anniversary:
+    dates:
+    - - 2
+      - 1
+    due_days: 14
+  Baby's birthday:
+    dates:
+    - - 9
+      - 14
+    due_days: 14
+  Test 4:
+    dates:
+    - - 3
+      - 4
+    due_days: 1
+  Dad's birthday:
+    dates:
+    - - 2
+      - 1
+    due_days: 14
+  Larry's b-day:
+    dates:
+    - - 12
+      - 4
+    due_days: 3
+  dated test:
+    dates:
+    - - 3
+      - 5
+    due_days: 2
+  tomorrow:
+    dates:
+    - - 3
+      - 4
+    due_days: 1
