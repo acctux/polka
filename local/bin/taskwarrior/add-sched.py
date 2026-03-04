@@ -4,7 +4,7 @@ from pathlib import Path
 from pydantic.dataclasses import dataclass
 import yaml
 
-CONFIG_FILE = Path(__file__).parent / "schedconf.yaml"
+CONFIG_FILE = Path(__file__).parent / "taskconf.yaml"
 FUZ_CONFIG = Path.home() / ".config/fuzzel/task.ini"
 
 
