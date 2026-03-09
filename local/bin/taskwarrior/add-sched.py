@@ -103,42 +103,48 @@ def delete_task(interval, dated):
     if not interval and not dated:
         run_cmd(["zenity", "--info", "--text=No tasks to delete."])
         return
-    cmd = (
-        [
-            "zenity",
-            "--list",
-            "--title=Delete Task",
-            "--text=Select task to delete",
-            "--column=Type",
-            "--column=Description",
-            "--height=400",
-            "--width=600",
-        ]
-        + [
-            ["Interval", f"{name} (every {t.interval_days}d, due {t.due_days}d)"]
-            for name, t in interval.items()
-        ]
-        + [
+
+    rows = []
+
+    # Build rows for zenity
+    for name, t in interval.items():
+        rows.extend(
+            [
+                "Interval",
+                name,
+            ]
+        )
+
+    for name, t in dated.items():
+        rows.extend(
             [
                 "Dated",
-                f"{name} ({', '.join(f'{m:02d}-{d:02d}' for m, d in t.dates)}, due {t.due_days}d)",
+                name,
             ]
-            for name, t in dated.items()
-        ]
-    )
+        )
+
     cmd = [
-        item
-        for sublist in cmd
-        for item in (sublist if isinstance(sublist, list) else [sublist])
-    ]
+        "zenity",
+        "--list",
+        "--title=Delete Task",
+        "--text=Select task to delete",
+        "--column=Type",
+        "--column=Task",
+        "--print-column=ALL",
+        "--separator=|",
+        "--height=400",
+        "--width=600",
+    ] + rows
+
     choice = run_cmd(cmd)
     if not choice:
         return
-    task_type, name_with_info = choice.split("|")
-    name = name_with_info.split(" (")[0]
+
+    task_type, name = choice.split("|", 1)
+
     if task_type == "Interval":
         interval.pop(name, None)
-    else:
+    elif task_type == "Dated":
         dated.pop(name, None)
 
 

@@ -1,13 +1,7 @@
 interval_tasks:
-  pay credit card:
-    interval_days: 1
-    due_days: 1
-  interval test:
-    interval_days: 1
-    due_days: 1
-  testing:
-    interval_days: 1
-    due_days: 1
+  Pay Credit Card:
+    interval_days: 7
+    due_days: 2
 dated_tasks:
   Valentines Day:
     dates:
@@ -29,11 +23,6 @@ dated_tasks:
     - - 9
       - 14
     due_days: 14
-  Test 4:
-    dates:
-    - - 3
-      - 4
-    due_days: 1
   Dad's birthday:
     dates:
     - - 2
@@ -44,13 +33,3 @@ dated_tasks:
     - - 12
       - 4
     due_days: 3
-  dated test:
-    dates:
-    - - 3
-      - 5
-    due_days: 2
-  tomorrow:
-    dates:
-    - - 3
-      - 4
-    due_days: 1

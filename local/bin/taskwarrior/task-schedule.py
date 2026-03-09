@@ -80,7 +80,10 @@ def handle_interval_tasks(today, tasks, interval_tasks):
     for desc, cfg in interval_tasks.items():
         exists = any(
             t.description == desc
-            and (t.completed is None or t.completed.date() >= today)
+            and (
+                t.completed is None
+                or t.completed.date() >= today - timedelta(days=cfg.interval_days)
+            )
             for t in tasks
         )
         if exists:
