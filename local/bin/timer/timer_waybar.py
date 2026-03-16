@@ -3,19 +3,14 @@
 import json
 import sys
 import time
+import subprocess
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 
-# ----------------------------------------------------------------------
-# Config
-# ----------------------------------------------------------------------
 STATE_FILE = Path.home() / ".cache" / "timer_state.json"
 
 
-# ----------------------------------------------------------------------
-# Helpers
-# ----------------------------------------------------------------------
 def format_seconds(secs: int) -> str:
     secs = max(0, int(secs))
     h, r = divmod(secs, 3600)
@@ -33,9 +28,6 @@ def load_state() -> dict:
         return {}
 
 
-# ----------------------------------------------------------------------
-# State cases — based on REAL current logic
-# ----------------------------------------------------------------------
 def case_no_timer() -> dict[str, Any]:
     return {"text": ""}
 
@@ -53,7 +45,6 @@ def case_running(state: dict) -> dict[str, Any]:
         icon = "󱦟"
     else:
         icon = "󰨀"
-
     return {
         "text": f" {icon} {text} ",
         "tooltip": f"Running — {text} remaining{unit}",
@@ -74,6 +65,11 @@ def case_paused(state: dict) -> dict[str, Any]:
 
 
 def case_finished() -> dict[str, Any]:
+    subprocess.Popen(
+        ["paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     return {
         "text": "󰀨 DONE!",
         "tooltip": "Timer finished!",
@@ -82,50 +78,43 @@ def case_finished() -> dict[str, Any]:
     }
 
 
-# ----------------------------------------------------------------------
-# Main loop
-# ----------------------------------------------------------------------
-last_output = None
+def main():
+    last_output = None
+    while True:
+        state = load_state()
+        has_duration = bool(state.get("duration"))
+        is_paused = state.get("paused_at") is not None
+        is_running_state = "start_time" in state and state.get("paused_at") is None
+        just_finished = False
+        if is_running_state:
+            elapsed = (
+                datetime.now(timezone.utc) - datetime.fromisoformat(state["start_time"])
+            ).total_seconds()
+            if elapsed >= state["duration"]:
+                just_finished = True
+        if not has_duration:
+            output = case_no_timer()
+        elif just_finished:
+            output = case_finished()
+        elif is_paused:
+            output = case_paused(state)
+        elif is_running_state:
+            output = case_running(state)
+        else:
+            output = {"text": "Timer ?", "class": "error"}
+        # Print only on change
+        output_json = json.dumps(output)
+        if output_json != last_output:
+            print(output_json)
+            sys.stdout.flush()
+            last_output = output_json
+        if is_running_state:
+            elapsed = (
+                datetime.now(timezone.utc) - datetime.fromisoformat(state["start_time"])
+            ).total_seconds()
+        sleep_time = 1
+        time.sleep(sleep_time)
 
-while True:
-    state = load_state()
 
-    has_duration = bool(state.get("duration"))
-    is_paused = state.get("paused_at") is not None
-    is_running_state = "start_time" in state and state.get("paused_at") is None
-
-    just_finished = False
-    if is_running_state:
-        elapsed = (
-            datetime.now(timezone.utc) - datetime.fromisoformat(state["start_time"])
-        ).total_seconds()
-        if elapsed >= state["duration"]:
-            just_finished = True
-
-    # Dispatch
-    if not has_duration:
-        output = case_no_timer()
-    elif just_finished:
-        output = case_finished()
-    elif is_paused:
-        output = case_paused(state)
-    elif is_running_state:
-        output = case_running(state)
-    else:
-        output = {"text": "Timer ?", "class": "error"}  # corrupted
-
-    # Print only on change
-    output_json = json.dumps(output)
-    if output_json != last_output:
-        print(output_json)
-        sys.stdout.flush()
-        last_output = output_json
-
-    remaining = 0
-    if is_running_state:
-        elapsed = (
-            datetime.now(timezone.utc) - datetime.fromisoformat(state["start_time"])
-        ).total_seconds()
-        remaining = max(0, int(state["duration"] - elapsed))
-    sleep_time = 1
-    time.sleep(sleep_time)
+if __name__ == "__main__":
+    main()

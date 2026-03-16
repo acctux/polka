@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ICON=""
-ANDROID_MOUNT="$HOME/Phone/Internal"
+ANDROID_MOUNT="/run/media/$(whoami)/Phone/Internal" # Dynamic path based on the username
 DISCONNECTED="{\"text\": \"\"}"
 CONNECTED="{\"text\": \"$ICON\", \"tooltip\": \"Phone connected\", \"class\": \"connected\"}"
 MOUNTED="{\"text\": \"$ICON\", \"tooltip\": \"Phone mounted\", \"class\": \"mounted\"}"
@@ -16,6 +16,7 @@ is_phone_mounted() {
   fi
   return 0
 }
+
 is_reachable() {
   if kdeconnect-cli -l | grep -iq "paired and reachable"; then
     return 0
@@ -23,10 +24,12 @@ is_reachable() {
     return 1
   fi
 }
+
 if is_reachable; then
   STATE="$CONNECTED"
   if is_phone_mounted; then
     STATE="$MOUNTED"
   fi
 fi
+
 echo "$STATE"

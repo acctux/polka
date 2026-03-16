@@ -110,7 +110,7 @@ def unmount_storage():
 
 
 def mount_kde():
-    if ANDROID_MOUNT.is_mount():
+    if ANDROID_MOUNT.is_dir():
         unmount_storage()
         return
     device_id = select_device()

@@ -111,7 +111,8 @@
     "format": "{:%H:%M}",
     "interval": 60,
     "on-click": "gsimplecal",
-    "on-click-right": "~/.local/bin/fuzzel/time_menu.sh"
+    "on-click-right": "~/.local/bin/fuzzel/time_menu.sh",
+    "on-click-middle": "kitty ikhal interactive & disown"
   },
   "custom/empty": {
     "tooltip": false,

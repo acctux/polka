@@ -19,6 +19,7 @@ alias grep='grep --color=auto'
 alias mkdir='mkdir -pv'
 alias cx='chmod +x'
 alias lg='lazygit'
+alias st='systemctl-tui'
 alias loggy='sudo systemctl restart logid'
 alias dotsync='/home/nick/.local/bin/dotsync/dotsync.py'
 export PATH="$PATH:/home/nick/Polka/local/bin"
