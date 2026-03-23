@@ -68,14 +68,24 @@ class HzScroller:
         icon, _, _ = cls.COMMANDS[index]
         active_index = cls.load_state()
         waybar_class = "active" if index == active_index else "inactive"
-        tooltip = "unknown"
+        tooltip_parts = []
+
+        try:
+            active_output = subprocess.check_output(
+                ["tuned-adm", "active"], text=True
+            ).strip()
+            profile = active_output.split(":", 1)[1].strip()
+            tooltip_parts.append(f"Current: {icon} {profile}\t")
+        except Exception:
+            tooltip_parts.append("Tuned: unknown")
         try:
             output = subprocess.check_output(["hyprctl", "monitors"], text=True)
             match = re.search(r"@(\d+)\.", output)
             if match:
-                tooltip = f"{match.group(1)}Hz"
+                tooltip_parts.append(f"Refresh rate: {match.group(1)}Hz")
         except Exception:
-            pass
+            tooltip_parts.append("unknown Hz")
+        tooltip = "\n".join(tooltip_parts)
         print(json.dumps({"text": icon, "tooltip": tooltip, "class": waybar_class}))
 
     @classmethod
@@ -106,4 +116,3 @@ class HzScroller:
 
 if __name__ == "__main__":
     HzScroller.run(sys.argv[1:])
-
