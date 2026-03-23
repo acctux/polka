@@ -8,7 +8,6 @@ KANSHI_CONFIG = Path.home() / "Lit/polka/config/kanshi/config"
 
 
 def set_hz(target_hz: str):
-    """Set refresh rate in the undocked profile of the kanshi config."""
     if not KANSHI_CONFIG.exists():
         print(f"{KANSHI_CONFIG} does not exist!")
         return
@@ -17,18 +16,18 @@ def set_hz(target_hz: str):
     def replace_mode(match):
         return f"mode 1920x1080@{target_hz}Hz"
 
-    def update_undocked_profile(match):
+    def update_undocked(match):
         header, body = match.group(1), match.group(2)
         if "undocked" in header:
             body = re.sub(r"mode\s+1920x1080@\d+Hz", replace_mode, body)
         return header + body
 
     new_text = re.sub(
-        r"(profile\s+\w+\s*{)(.*?})", update_undocked_profile, text, flags=re.DOTALL
+        r"(profile\s+\w+\s*{)(.*?})", update_undocked, text, flags=re.DOTALL
     )
-
     KANSHI_CONFIG.write_text(new_text)
     print(f"Set refresh rate to {target_hz}Hz in {KANSHI_CONFIG}")
+
     try:
         subprocess.run(["systemctl", "--user", "restart", "kanshi.service"], check=True)
         print("kanshi.service restarted successfully.")
@@ -37,7 +36,6 @@ def set_hz(target_hz: str):
 
 
 def set_profile(profile: str):
-    """Switch tuned profile."""
     try:
         subprocess.run(["tuned-adm", "profile", profile], check=True)
         print(f"Switched tuned profile to '{profile}'")
@@ -46,16 +44,11 @@ def set_profile(profile: str):
 
 
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in {"batmode", "default"}:
-        print(f"Usage: {sys.argv[0]} {{batmode|default}}")
+    if len(sys.argv) != 3:
+        print(f"Usage: {sys.argv[0]} <profile> <hz>")
         sys.exit(1)
-
-    if sys.argv[1] == "batmode":
-        set_profile("powersave")
-        set_hz("60")
-    else:
-        set_profile("balanced")
-        set_hz("144")
+    set_profile(sys.argv[1])
+    set_hz(sys.argv[2])
 
 
 if __name__ == "__main__":
