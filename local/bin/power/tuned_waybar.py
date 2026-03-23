@@ -3,17 +3,19 @@ import json
 import sys
 import subprocess
 from pathlib import Path
+import re
 
 
-class TLPScroller:
+class HzScroller:
     CACHE_DIR = Path.home() / ".cache"
-    INDEX_FILE = CACHE_DIR / "tlp_scroll_index"
-    STATE_FILE = CACHE_DIR / "tlp_scroll_state"
+    INDEX_FILE = CACHE_DIR / "hz_scroll_index"
+    STATE_FILE = CACHE_DIR / "hz_scroll_state"
     COMMANDS = [
-        ("󰌪", ["tuned-adm", "profile", "powersave"]),
-        ("", ["tuned-adm", "profile", "balanced"]),
-        ("", ["tuned-adm", "profile", "latency-performance"]),
+        ("󰌪", "60Hz", "batmode"),
+        ("", "144Hz", "default"),
     ]
+
+    TLP_SCRIPT = Path.home() / "Lit/polka/local/bin/power/tuned.py"
 
     @classmethod
     def ensure_cache_dir(cls):
@@ -43,7 +45,6 @@ class TLPScroller:
     @classmethod
     def load_state(cls) -> int:
         cls.ensure_cache_dir()
-        # -1=indicate “no state saved yet”
         return cls.read_int_file(cls.STATE_FILE, default=-1)
 
     @classmethod
@@ -61,19 +62,32 @@ class TLPScroller:
         cls.save_index(index)
 
     @classmethod
-    def exec_current(cls) -> None:
-        index = cls.load_index()
-        _, command = cls.COMMANDS[index]
-        subprocess.run(command)
-        cls.save_state(index)
-
-    @classmethod
     def output_waybar(cls) -> None:
         index = cls.load_index()
-        icon, _ = cls.COMMANDS[index]
+        icon, label, _ = cls.COMMANDS[index]
         active_index = cls.load_state()
         waybar_class = "active" if index == active_index else "inactive"
-        print(json.dumps({"text": icon, "class": waybar_class}))
+
+        # get actual Hz from hyprctl
+        try:
+            output = subprocess.check_output(["hyprctl", "monitors"], text=True)
+            match = re.search(r"@(\d+)\.", output)
+            tooltip = f"{match.group(1)}Hz" if match else "unknown"
+        except Exception:
+            tooltip = "unknown"
+
+        print(json.dumps({"text": icon, "tooltip": tooltip, "class": waybar_class}))
+
+    @classmethod
+    def exec_current(cls) -> None:
+        index = cls.load_index()
+        _, _, mode = cls.COMMANDS[index]
+        if cls.TLP_SCRIPT.exists():
+            try:
+                subprocess.run([str(cls.TLP_SCRIPT), mode], check=True)
+                cls.save_state(index)
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to execute {cls.TLP_SCRIPT}: {e}")
 
     @classmethod
     def run(cls, args) -> None:
@@ -88,4 +102,5 @@ class TLPScroller:
 
 
 if __name__ == "__main__":
-    TLPScroller.run(sys.argv[1:])
+    HzScroller.run(sys.argv[1:])
+

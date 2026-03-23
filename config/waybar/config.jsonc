@@ -6,7 +6,7 @@
     "custom/logo",
     "battery",
     "custom/updates",
-    "custom/tlp",
+    "custom/tuned",
     "temperature",
     "custom/kb-switch",
     "custom/taskwarrior",
@@ -193,14 +193,14 @@
     "on-click": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py --metric",
     "return-type": "json"
   },
-  "custom/tlp": {
-    "exec": "~/.local/bin/power/tlp_waybar.py",
+  "custom/tuned": {
+    "exec": "~/.local/bin/power/tuned_waybar.py",
     "return-type": "json",
     "interval": 1,
-    "on-click": "~/.local/bin/power/tlp_waybar.py exec",
-    "on-click-right": "~/.local/bin/power/tlp_waybar.py up",
-    "on-scroll-up": "~/.local/bin/power/tlp_waybar.py up",
-    "on-scroll-down": "~/.local/bin/power/tlp_waybar.py down"
+    "on-click": "~/.local/bin/power/tuned_waybar.py exec",
+    "on-click-right": "~/.local/bin/power/tuned_waybar.py up",
+    "on-scroll-up": "~/.local/bin/power/tuned_waybar.py up",
+    "on-scroll-down": "~/.local/bin/power/tuned_waybar.py down"
   },
   "custom/timer": {
     "format": "{}",

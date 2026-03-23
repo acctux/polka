@@ -71,7 +71,7 @@ tooltip label {
 #bluetooth,
 #custom-wifi,
 #custom-clipboard,
-#custom-tlp,
+#custom-tuned,
 #custom-nemo,
 #custom-telegram,
 #custom-kb-switch,
@@ -82,7 +82,7 @@ tooltip label {
 /* === Border Radius === */
 #custom-wifi,
 #custom-nemo,
-#custom-tlp,
+#custom-tuned,
 #custom-deluge,
 #custom-weather,
 #custom-clipboard,
@@ -101,7 +101,7 @@ tooltip label {
 #battery {
   color: #33ccff;
 }
-#custom-tlp.active,
+#custom-tuned.active,
 #custom-updates,
 #bluetooth.connected,
 #custom-deluge.downloading,
@@ -194,7 +194,7 @@ tooltip label {
   padding-right: 7px;
   padding-left: 5px;
 }
-#custom-tlp {
+#custom-tuned {
   padding-right: 7px;
   padding-left: 5px;
 }
@@ -226,7 +226,7 @@ button:hover,
 #custom-steam:hover,
 #custom-nemo:hover,
 #backlight:hover,
-#custom-tlp:hover,
+#custom-tuned:hover,
 #custom-clipboard:hover,
 #custom-deluge:hover,
 #custom-telegram:hover,
