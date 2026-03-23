@@ -28,17 +28,12 @@ def load_state() -> dict:
         return {}
 
 
-def case_no_timer() -> dict[str, Any]:
-    return {"text": ""}
-
-
 def case_running(state: dict) -> dict[str, Any]:
     start_time = datetime.fromisoformat(state["start_time"])
     elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
     remaining = max(0, int(state["duration"] - elapsed))
     text = format_seconds(remaining)
     unit = load_state().get("unit")
-    # Optional: flash when < 1 minute
     if unit == "minutes":
         icon = "󰔛"
     elif unit == "hours":
@@ -49,18 +44,15 @@ def case_running(state: dict) -> dict[str, Any]:
         "text": f" {icon} {text} ",
         "tooltip": f"Running — {text} remaining{unit}",
         "class": f"{icon}",
-        "alt": "timer",
     }
 
 
 def case_paused(state: dict) -> dict[str, Any]:
-    remaining = int(state["duration"])
-    text = format_seconds(remaining)
+    text = format_seconds(int(state["duration"]))
     return {
         "text": f"⏸ {text}",
         "tooltip": f"Paused — {text} left",
         "class": "paused",
-        "alt": "timer",
     }
 
 
@@ -74,7 +66,6 @@ def case_finished() -> dict[str, Any]:
         "text": "󰀨 DONE!",
         "tooltip": "Timer finished!",
         "class": "finished urgent",
-        "alt": "timer",
     }
 
 
@@ -93,7 +84,7 @@ def main():
             if elapsed >= state["duration"]:
                 just_finished = True
         if not has_duration:
-            output = case_no_timer()
+            output = {"text": ""}
         elif just_finished:
             output = case_finished()
         elif is_paused:

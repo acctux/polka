@@ -6,9 +6,9 @@ import time
 
 KEYWORDS = ["linux-", "python-", "nvidia-", "fuse", "systemd"]
 MAX_TOOLTIP_LINES = 24
-THRESHOLD = 10
-THRESHOLD_YELLOW = 20
-THRESHOLD_RED = 50
+THRESHOLD = 50
+THRESHOLD_YELLOW = 75
+THRESHOLD_RED = 100
 
 
 def check_lock_files():

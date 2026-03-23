@@ -22,6 +22,7 @@ alias lg='lazygit'
 alias st='systemctl-tui'
 alias loggy='sudo systemctl restart logid'
 alias dotsync='/home/nick/.local/bin/dotsync/dotsync.py'
+alias gamemode='/home/nick/.local/bin/power/gamemode.py'
 export PATH="$PATH:/home/nick/Polka/local/bin"
 function y() {
 	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd

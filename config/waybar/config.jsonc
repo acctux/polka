@@ -15,6 +15,7 @@
   ],
   "modules-right": [
     "custom/timer",
+    "custom/empty",
     "custom/steam",
     "custom/kdeconnect",
     "custom/deluge",
