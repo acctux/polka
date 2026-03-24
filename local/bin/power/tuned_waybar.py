@@ -75,7 +75,10 @@ class HzScroller:
                 ["tuned-adm", "active"], text=True
             ).strip()
             profile = active_output.split(":", 1)[1].strip()
-            tooltip_parts.append(f"Current: {icon} {profile}\t")
+            icon_for_profile = next(
+                (ic for ic, p, _ in cls.COMMANDS if p == profile), icon
+            )
+            tooltip_parts.append(f"Current: {icon_for_profile} {profile}\t")
         except Exception:
             tooltip_parts.append("Tuned: unknown")
         try:
@@ -116,3 +119,4 @@ class HzScroller:
 
 if __name__ == "__main__":
     HzScroller.run(sys.argv[1:])
+

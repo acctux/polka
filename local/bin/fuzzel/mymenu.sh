@@ -6,8 +6,7 @@ CHOICE_3="Mount GoCrypt"
 CHOICE_4="Capture QR Code"
 CHOICE_5="Create Wine Prefix"
 CHOICE_6="Run Wine Exe"
-CHOICE_7="Toggle Hz"
-CHOICE_8="Toggle Game Mode"
+CHOICE_7="Toggle Game Mode"
 
 MENU="$CHOICE_1
 $CHOICE_2
@@ -16,7 +15,6 @@ $CHOICE_4
 $CHOICE_5
 $CHOICE_6
 $CHOICE_7
-$CHOICE_8
 Cancel"
 
 LINE_COUNT=$(echo "$MENU" | wc -l)
@@ -43,9 +41,6 @@ case "$CHOICE" in
   python $HOME/Lit/polka/local/bin/wine/runwine.py
   ;;
 "$CHOICE_7")
-  python $HOME/Lit/polka/local/bin/power/hz.py
-  ;;
-"$CHOICE_8")
   python $HOME/Lit/polka/local/bin/power/gamemode.py
   ;;
 "Cancel" | "")
