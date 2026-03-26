@@ -1,10 +1,10 @@
 [Unit]
-Description=swww wallpaper daemon
+Description=awww wallpaper daemon
 After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]
-ExecStart=/usr/sbin/swww-daemon
+ExecStart=/usr/sbin/awww-daemon
 Restart=on-failure
 Type=simple
 

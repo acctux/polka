@@ -55,7 +55,7 @@ tooltip label {
   border-right: 1px solid #33ccff;
 }
 #custom-notification,
-#clock {
+#custom-weather {
   border-left: 1px solid #33ccff;
 }
 /* === Shared Font Sizes === */
@@ -65,7 +65,6 @@ tooltip label {
 #custom-notification,
 #custom-steam,
 #backlight,
-#custom-weather,
 #custom-kdeconnect,
 #custom-nemo,
 #bluetooth,
@@ -84,7 +83,6 @@ tooltip label {
 #custom-nemo,
 #custom-tuned,
 #custom-deluge,
-#custom-weather,
 #custom-clipboard,
 #custom-nemo,
 #custom-volume,
@@ -97,6 +95,7 @@ tooltip label {
 }
 /* === Colors === */
 #custom-logo,
+#custom-weather.lightblue,
 #custom-wifi.vpn,
 #battery {
   color: #33ccff;
@@ -112,7 +111,7 @@ tooltip label {
 }
 #custom-notification.notification,
 #custom-updates.yellow,
-#custom-weather.clear,
+#custom-weather.yellow,
 #custom-weather.thunder,
 #custom-taskwarrior.todo,
 #battery.warning {
@@ -120,6 +119,7 @@ tooltip label {
 }
 #custom-taskwarrior.critical,
 #custom-updates.red,
+#custom-weather.red,
 #custom-notification,
 #temperature.critical,
 #custom-wifi,
@@ -182,12 +182,8 @@ tooltip label {
   padding-right: 5px;
 }
 #custom-weather {
-  padding-right: 9px;
+  padding-right: 4px;
   padding-left: 4px;
-}
-#custom-weather.clear {
-  padding-right: 7px;
-  padding-left: 5px;
 }
 #custom-steam,
 #bluetooth {

@@ -26,7 +26,6 @@
     "backlight",
     "custom/volume",
     "custom/empty",
-    "clock",
     "custom/weather",
     "custom/empty",
     "custom/notification"
@@ -107,14 +106,6 @@
       " "
     ]
   },
-  "clock": {
-    "tooltip-format": "{:%A, %B %d}",
-    "format": "{:%H:%M}",
-    "interval": 60,
-    "on-click": "gsimplecal",
-    "on-click-right": "~/.local/bin/fuzzel/time_menu.sh",
-    "on-click-middle": "kitty ikhal interactive & disown"
-  },
   "custom/empty": {
     "tooltip": false,
     "format": "<span size='2pt'> </span>"
@@ -188,9 +179,11 @@
   "custom/weather": {
     "format": "{}",
     "tooltip": true,
-    "interval": 60,
+    "interval": 5,
     "exec": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py",
-    "on-click": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py --metric",
+    "on-click": "gsimplecal",
+    "on-click-right": "~/.local/bin/fuzzel/time_menu.sh",
+    "on-click-middle": "kitty ikhal interactive & disown",
     "return-type": "json"
   },
   "custom/tuned": {

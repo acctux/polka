@@ -131,7 +131,7 @@ def set_wallpaper(
     try:
         subprocess.run(
             [
-                "swww",
+                "awww",
                 "img",
                 str(image_path),
                 "--transition-duration",
