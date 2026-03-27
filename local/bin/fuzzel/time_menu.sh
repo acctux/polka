@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 
-CHOICE_1="Set Timer"
-CHOICE_2="Change Timezone"
-CHOICE_3="Metric/Imperial"
+CHOICE_1="Calendar"
+CHOICE_2="Set Timer"
+CHOICE_3="Change Timezone"
 
 MENU="$CHOICE_1
 $CHOICE_2
 $CHOICE_3
 Cancel"
+
 LINES=$(echo "$MENU" | wc -l)
+
 CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --hide-prompt --lines "$LINES" --config="$HOME/.config/fuzzel/timemenu.ini")
+
 case "$CHOICE" in
 "$CHOICE_1")
   python "$HOME/.local/bin/timer/set_timer.py"
@@ -24,7 +27,7 @@ case "$CHOICE" in
   fi
   ;;
 "$CHOICE_3")
-  python "$HOME/.local/bin/weather/main.py" --metric
+  gsimplecal &
   ;;
 "Cancel" | "")
   exit 0

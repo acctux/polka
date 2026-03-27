@@ -2,6 +2,9 @@ interval_tasks:
   Pay Credit Card:
     interval_days: 7
     due_days: 2
+  pill:
+    interval_days: 7
+    due_days: 1
 dated_tasks:
   Valentines Day:
     dates:

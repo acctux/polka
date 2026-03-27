@@ -142,8 +142,11 @@ tooltip label {
   padding-right: 7px;
   padding-left: 6px;
 }
-#temperature {
-  padding-right: 4px;
+#cpu,
+#temperature,
+#memory,
+#disk {
+  padding-right: 2px;
   padding-left: 2px;
 }
 #custom-updates {
@@ -253,6 +256,9 @@ button:hover,
 #clock:hover,
 #custom-updates:hover,
 #custom-taskwarrior:hover,
+#cpu:hover,
+#memory:hover,
+#disk:hover,
 #temperature:hover {
   background-color: rgba(16,16,19,0.3);
   color: #33ccff;

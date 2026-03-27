@@ -39,6 +39,9 @@ class NetworkManager:
             raise Exception("No devices found")
         self.device_path = device_path
 
+    def disconnect(self):
+        self._run_command(["station", self.device_name, "disconnect"])
+
     def scan_networks(self, sleep_time: int):
         device = dbus.Interface(
             self.bus.get_object("net.connman.iwd", self.device_path),
@@ -67,11 +70,21 @@ class NetworkManager:
                         networks.append((parts[0], parts[2]))
         return networks
 
-    def connect_to_network(self, ssid: str, password: str):
+    def connect_to_network(self, ssid: str, password: str | None = None):
         command = ["station", self.device_name, "connect", ssid]
         if password:
             command.extend(["--passphrase", password])
-        self._run_command(command)
+        return self._run_command(command)
+
+
+def try_connect(nm: NetworkManager, ssid: str) -> bool:
+    try:
+        nm.connect_to_network(ssid)
+        print(f"Connected to {ssid} (no password)")
+        return True
+    except Exception as e:
+        print(f"Initial connection failed: {e}")
+        return False
 
 
 def run_fuzzel(options: list[str], config: Path) -> str:
@@ -97,7 +110,13 @@ def run_fuzzel(options: list[str], config: Path) -> str:
 
 def get_wifi_password_via_zenity(ssid: str) -> str:
     result = subprocess.run(
-        ["zenity", f"--title=Enter password for {ssid}"],
+        [
+            "zenity",
+            "--entry",
+            "--title=WiFi Password",
+            f"--text=Enter password for {ssid}",
+            "--hide-text",
+        ],
         capture_output=True,
         text=True,
     )
@@ -125,25 +144,42 @@ def handle_wifi(nm: NetworkManager, sleep_time: int, config):
         for network in networks:
             sig_strength = handle_strength(network[1])
             options.append(f"{network[0]} {sig_strength}")
-        if options:
-            max_length = max(len(option) for option in options)
-            separator = "_" * (max_length + 3)
-            lines = options + [separator, "Scan", "Back"]
-            selected_network = run_fuzzel(lines, config)
-            if selected_network in ("Back", ""):
-                break
-            if selected_network == "Scan":
-                print("Rescanning networks...")
-                nm.scan_networks(sleep_time)
-                continue
-            password = get_wifi_password_via_zenity(selected_network)
-            if password:
-                nm.connect_to_network(selected_network, password)
-                print(f"Connected to {selected_network}")
-            else:
-                print("Failed to get password or canceled.")
-        else:
+        if not options:
             nm.scan_networks(sleep_time)
+            continue
+        max_length = max(len(option) for option in options)
+        separator = "_" * (max_length + 3)
+        lines = options + [separator, "Scan", "Disconnect", "Back"]
+        selected_network = run_fuzzel(lines, config)
+        if selected_network in ("Back", ""):
+            break
+        if selected_network == "Scan":
+            print("Rescanning networks...")
+            nm.scan_networks(sleep_time)
+            continue
+        if selected_network == "Disconnect":
+            try:
+                nm.disconnect()
+                print("Disconnected from WiFi")
+            except Exception as e:
+                print(f"Disconnect failed: {e}")
+            continue
+        ssid = selected_network.rsplit(" ", 1)[0]
+        try:
+            nm.connect_to_network(ssid)
+            print(f"Connected to {ssid} (no password)")
+            continue
+        except Exception as e:
+            print(f"Initial connection failed: {e}")
+        password = get_wifi_password_via_zenity(ssid)
+        if not password:
+            print("Canceled password entry.")
+            continue
+        try:
+            nm.connect_to_network(ssid, password)
+            print(f"Connected to {ssid}")
+        except Exception as e:
+            print(f"Failed to connect with password: {e}")
 
 
 def run_cmd(cmd: list[str], sudo: bool = False) -> subprocess.CompletedProcess:
@@ -214,30 +250,26 @@ def handle_vpn(config):
     list_path = Path("/run/wireguard/connections.list")
     if not list_path.exists():
         return
-    with open(list_path, "r") as f:
-        vpns = f.read().strip().splitlines()
-    vpns = vpns + ["──────", "Disconnect"]
-    choice = run_fuzzel(vpns, config)
-    if not choice:
-        sys.exit(1)
-    if choice == "Disconnect":
+    while True:
+        with open(list_path, "r") as f:
+            vpns = f.read().strip().splitlines()
+        vpns = vpns + ["──────", "Disconnect", "Back"]
+        choice = run_fuzzel(vpns, config)
+        if not choice or choice == "Back":
+            break
+        if choice == "Disconnect":
+            disconnect_current_interface()
+            continue  # stay in VPN menu
         disconnect_current_interface()
+        switch_named_config("ipv4")
+        result = run_cmd(["wg-quick", "up", choice], sudo=True)
+        run_cmd(["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=1"], sudo=True)
+        run_cmd(["sysctl", "-w", "net.ipv6.conf.default.disable_ipv6=1"], sudo=True)
+        if result.returncode != 0:
+            run_cmd(["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=0"], sudo=True)
+            run_cmd(["sysctl", "-w", "net.ipv6.conf.default.disable_ipv6=0"], sudo=True)
+            switch_named_config("ipv6")
         sys.exit(0)
-    disconnect_current_interface()
-    switch_named_config("ipv4")
-    result = run_cmd(["wg-quick", "up", choice], sudo=True)
-    run_cmd(["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=1"], sudo=True)
-    run_cmd(["sysctl", "-w", "net.ipv6.conf.default.disable_ipv6=1"], sudo=True)
-    if result.returncode != 0:
-        result = run_cmd(
-            ["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=0"], sudo=True
-        )
-        result = run_cmd(
-            ["sysctl", "-w", "net.ipv6.conf.default.disable_ipv6=0"], sudo=True
-        )
-        switch_named_config("ipv6")
-        sys.exit(1)
-    sys.exit(0)
 
 
 def main():

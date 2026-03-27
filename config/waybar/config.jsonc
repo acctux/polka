@@ -7,7 +7,7 @@
     "battery",
     "custom/updates",
     "custom/tuned",
-    "temperature",
+    "group/hardware",
     "custom/kb-switch",
     "custom/taskwarrior",
     "custom/empty",
@@ -181,10 +181,47 @@
     "tooltip": true,
     "interval": 5,
     "exec": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py",
-    "on-click": "gsimplecal",
-    "on-click-right": "~/.local/bin/fuzzel/time_menu.sh",
-    "on-click-middle": "kitty ikhal interactive & disown",
+    "on-click": "~/.local/bin/fuzzel/time_menu.sh",
+    "on-click-right": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py --metric",
     "return-type": "json"
+  },
+  // CPU
+  "cpu": {
+    "format": "󰻠 {usage}% ",
+    "on-scroll-up": "true",
+    "on-click": "kitty btop & disown",
+    "on-scroll-down": "true"
+  },
+  // Memory
+  "memory": {
+    "format": "󰍛 {}% ",
+    "on-scroll-up": "true",
+    "on-click": "kitty btop & disown",
+    "on-scroll-down": "true"
+  },
+  // Harddisc space used
+  "disk": {
+    "interval": 30,
+    "format": "󰋊 {percentage_used}% ",
+    "path": "/",
+    "on-click": "kitty btop & disown",
+    "on-scroll-up": "true",
+    "on-scroll-down": "true"
+  },
+  // Group Hardware
+  "group/hardware": {
+    "orientation": "inherit",
+    "drawer": {
+      "transition-duration": 300,
+      "children-class": "not-memory",
+      "transition-left-to-right": false
+    },
+    "modules": [
+      "temperature",
+      "disk",
+      "cpu",
+      "memory"
+    ]
   },
   "custom/tuned": {
     "exec": "~/.local/bin/power/tuned_waybar.py",

@@ -3,11 +3,12 @@ import argparse
 import json
 import pandas as pd
 from pathlib import Path
-from zoneinfo import ZoneInfo
 from dataclasses import dataclass
 import openmeteo_requests
 import requests_cache
 from retry_requests import retry
+from datetime import datetime
+import tzlocal
 
 WEATHER_ICONS = {
     **{
@@ -112,7 +113,6 @@ FALLBACK_ICON = ("unknown", "grey", "", "")
 LATITUDE = 34.1751
 LONGITUDE = -82.024
 HOURLY_STEP = 2
-TIMEZONE = "America/New_York"
 CACHE_FILE = Path(".metric_cache")
 
 
@@ -187,7 +187,7 @@ def open_meteo(lat, lon):
             "precipitation",
             "weather_code",
         ],
-        "timezone": TIMEZONE,
+        "timezone": tzlocal.get_localzone_name(),
         "wind_speed_unit": "mph",
         "temperature_unit": "fahrenheit",
         "precipitation_unit": "inch",
@@ -199,7 +199,7 @@ def open_meteo(lat, lon):
 
 
 def add_daytime_flag(
-    hourly_df: pd.DataFrame, daily_df: pd.DataFrame, tz: str, step: int, metric
+    hourly_df: pd.DataFrame, daily_df: pd.DataFrame, tz, step: int, metric
 ) -> pd.DataFrame:
     def get_sun_string(current_time, sun_time, window_hours):
         if pd.isna(sun_time):
@@ -211,10 +211,10 @@ def add_daytime_flag(
 
     daily_df["sunrise"] = pd.to_datetime(
         daily_df["sunrise"], unit="s", utc=True
-    ).dt.tz_convert(ZoneInfo(tz))
+    ).dt.tz_convert(tz)
     daily_df["sunset"] = pd.to_datetime(
         daily_df["sunset"], unit="s", utc=True
-    ).dt.tz_convert(ZoneInfo(tz))
+    ).dt.tz_convert(tz)
     hourly_df["local_date"] = hourly_df["date"].dt.tz_convert(tz).dt.date
     sun_times = daily_df.set_index(daily_df["date"].dt.date)[["sunrise", "sunset"]]
     hourly_df = hourly_df.merge(
@@ -251,7 +251,7 @@ def map_icons(
 
     def pick_icon_description_color(row):
         weather_code = int(row["weather_code"])
-        description, color, night_icon, day_icon = weather_icons.get(
+        description, color, day_icon, night_icon = weather_icons.get(
             weather_code, fallback_icon
         )
         icon = night_icon if (is_hourly and not row.get("is_day", True)) else day_icon
@@ -328,7 +328,7 @@ def today_formatted(now: pd.Timestamp) -> str:
 
 
 def build_tooltip(
-    daily_df, hourly_df, my_zone: str, celsius, now: pd.Timestamp, hourly_step=2
+    daily_df, hourly_df, my_zone, celsius, now: pd.Timestamp, hourly_step=2
 ):
     def proc_entries(entries):
         return "\n".join([entry.format(now) for entry in entries])
@@ -337,7 +337,7 @@ def build_tooltip(
     current_time = now.replace(minute=0, second=0, microsecond=0)
     time_24h_later = current_time + pd.Timedelta(hours=24)  # 24 hours later
     current_time_str = now.strftime("%H:%M")
-    hourly_df["date"] = hourly_df["date"].dt.tz_convert(ZoneInfo(my_zone))
+    hourly_df["date"] = hourly_df["date"].dt.tz_convert(my_zone)
     hourly_entries = [
         WeatherEntry(
             label=row["date"].strftime("%H:%M"),
@@ -392,6 +392,7 @@ def parse_args():
 
 
 def main():
+    TIMEZONE = datetime.now().astimezone().tzinfo
     METRIC = parse_args()
     daily_df, hourly_df = open_meteo(lat=LATITUDE, lon=LONGITUDE)
     now = pd.Timestamp.now(tz=TIMEZONE)
@@ -410,11 +411,7 @@ def main():
     )
     idx = (hourly_df["date"] - now).abs().idxmin()
     current = hourly_df.loc[idx]
-    output = {
-        "text": now.strftime("%H:%M"),
-        "tooltip": tooltip,
-        "class": current.color,
-    }
+    output = {"text": now.strftime("%H:%M"), "tooltip": tooltip, "class": current.color}
     print(json.dumps(output, ensure_ascii=False))
 
 
