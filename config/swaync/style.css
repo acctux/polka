@@ -741,7 +741,7 @@ scale slider:hover {
   margin: 3px;
   background-color: transparent;
   border-radius: 30px;
-  padding: 3px 4px;
+  padding: 4px 6px;
   min-width: 6px;
   min-height: 2px;
 }

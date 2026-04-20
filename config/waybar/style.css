@@ -1,6 +1,6 @@
 /* === Global Styles === */
 * {
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: 1px;
   font-family: "FiraMono Nerd Font Medium", monospace;
   transition: all 0.75s ease;
@@ -24,11 +24,11 @@ tooltip {
   background: rgba(16,16,19,0.7);
   padding: 0;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 15px;
   border: 1px solid rgba(51, 204, 255, 0.7);
 }
 tooltip label {
-  font-size: 15px;
+  font-size: 16px;
   background: transparent;
   font-weight: 400;
 }
@@ -76,7 +76,7 @@ tooltip label {
 #custom-kb-switch,
 #custom-taskwarrior,
 #custom-logo {
-  font-size: 16px;
+  font-size: 17px;
 }
 /* === Border Radius === */
 #custom-wifi,
@@ -149,6 +149,12 @@ tooltip label {
   padding-right: 2px;
   padding-left: 2px;
 }
+#disk {
+  padding-left: 5px;
+}
+#temperature {
+  padding-right: 5px;
+}
 #custom-updates {
   padding-right: 9px;
   padding-left: 5px;
@@ -194,11 +200,11 @@ tooltip label {
   padding-left: 5px;
 }
 #custom-tuned {
-  padding-right: 7px;
-  padding-left: 5px;
+  padding-right: 8px;
+  padding-left: 3px;
 }
 #custom-nemo {
-  padding-right: 8px;
+  padding-right: 4px;
   padding-left: 4px;
 }
 #backlight {
