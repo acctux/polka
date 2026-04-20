@@ -24,8 +24,8 @@ def toggle_hz():
     # Function to toggle Hz
     def replace_hz(match):
         current_hz = match.group(1)
-        new_hz = "144" if current_hz == "60" else "60"
-        return f"mode 1920x1080@{new_hz}Hz"
+        new_hz = "165" if current_hz == "60" else "60"
+        return f"mode 1920x1200@{new_hz}Hz"
 
     # Split by profile blocks
     profile_blocks = re.split(r"(profile\s+\w+\s*{)", text)
@@ -42,7 +42,7 @@ def toggle_hz():
             if "undocked" in profile_header:
                 # Replace mode line inside undocked profile
                 full_profile = re.sub(
-                    r"mode\s+1920x1080@(\d+)Hz", replace_hz, full_profile
+                    r"mode\s+1920x1200@(\d+)Hz", replace_hz, full_profile
                 )
 
             new_text += full_profile

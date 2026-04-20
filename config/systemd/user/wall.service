@@ -1,7 +1,7 @@
 [Unit]
 Description=Run Wall Script
-Requires=swww-daemon.service
-After=swww-daemon.service
+Requires=awww-daemon.service
+After=awww-daemon.service
 
 [Service]
 Type=oneshot

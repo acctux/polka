@@ -11,9 +11,10 @@ class HzScroller:
     INDEX_FILE = CACHE_DIR / "hz_scroll_index"
     STATE_FILE = CACHE_DIR / "hz_scroll_state"
     COMMANDS = [
-        ("󰌪", "laptop-battery-powersave", "60"),
-        ("", "laptop-ac-powersave", "144"),
-        ("󱐋", "balanced", "144"),
+        ("󱙷", "laptop-battery-powersave", "60"),
+        ("󰌪", "laptop-ac-powersave", "60"),
+        ("", "balanced", "165"),
+        ("󱐋", "latency-performance", "165"),
     ]
     TLP_SCRIPT = Path.home() / "Lit/polka/local/bin/power/tuned.py"
 
@@ -119,4 +120,3 @@ class HzScroller:
 
 if __name__ == "__main__":
     HzScroller.run(sys.argv[1:])
-

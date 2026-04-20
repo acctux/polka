@@ -1,13 +1,13 @@
 profile docked {
     output eDP-1 disable
     output HDMI-A-2 {
-        mode 1920x1080@60Hz
+        mode 1920x1200@60Hz
         enable
     }
 }
 profile undocked {
     output eDP-1 {
-        mode 1920x1080@144Hz
+        mode 1920x1200@165Hz
         enable
     }
 }
