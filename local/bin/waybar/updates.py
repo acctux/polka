@@ -6,8 +6,8 @@ import time
 
 KEYWORDS = ["linux-", "python-", "nvidia-", "fuse", "systemd"]
 MAX_TOOLTIP_LINES = 24
-THRESHOLD = 50
-THRESHOLD_YELLOW = 75
+THRESHOLD = 25
+THRESHOLD_YELLOW = 50
 THRESHOLD_RED = 100
 
 

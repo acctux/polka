@@ -15,9 +15,12 @@ CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --hide-prompt --lines "$LINES" -
 
 case "$CHOICE" in
 "$CHOICE_1")
-  python "$HOME/.local/bin/timer/set_timer.py"
+  kitty ikhal &
   ;;
 "$CHOICE_2")
+  python "$HOME/.local/bin/timer/set_timer.py"
+  ;;
+"$CHOICE_3")
   CURRENT_TZ=$(timedatectl show --property=Timezone --value)
   TZONE=$(timedatectl list-timezones | sort -u |
     fuzzel --dmenu --prompt="Timezone ($CURRENT_TZ): ")
@@ -25,9 +28,6 @@ case "$CHOICE" in
     kitty sudo timedatectl set-timezone "$TZONE"
     pkill -SIGRTMIN+4 waybar
   fi
-  ;;
-"$CHOICE_3")
-  gsimplecal &
   ;;
 "Cancel" | "")
   exit 0

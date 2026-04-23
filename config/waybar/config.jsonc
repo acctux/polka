@@ -91,14 +91,21 @@
     "interval": 60,
     "states": {
       "good": 95,
-      "warning": 30,
-      "critical": 15
+      "warning": 25,
+      "critical": 10
     },
-    "format": "{icon}{capacity}%",
+    "events": {
+      "on-discharging-warning": "notify-send -u normal 'Low Battery'",
+      "on-discharging-critical": "notify-send -u critical 'Very Low Battery'",
+      "on-charging-100": "notify-send -u normal 'Battery Full'"
+    },
+    "format": "",
     "format-charging": "󱐋{capacity}%",
     "format-plugged": "{capacity}%",
+    "format-discharging": "{icon}{capacity}%",
     "format-alt": "{icon} {time}",
     "format-full": "",
+    "full-at": 79,
     "format-icons": [
       " ",
       " ",
