@@ -3,7 +3,7 @@
 from pathlib import Path
 import subprocess
 
-config_path = Path.home() / ".config" / "fuzzel" / "clipboard.ini"
+config_path = Path.home() / ".config" / "fuzzel" / "fav-menu.ini"
 
 
 def run_fuzzel(options: list[str], config: Path) -> str:

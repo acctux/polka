@@ -4,6 +4,9 @@
   "icon-theme": "WhiteSur-dark",
   "modules-left": [
     "custom/logo",
+    "custom/empty",
+    "custom/clipboard",
+    "custom/line",
     "battery",
     "custom/updates",
     "custom/empty",
@@ -21,7 +24,6 @@
     "custom/kdeconnect",
     "custom/deluge",
     "custom/telegram",
-    "custom/clipboard",
     "bluetooth",
     "custom/wifi",
     "backlight",
@@ -96,8 +98,7 @@
     },
     "events": {
       "on-discharging-warning": "notify-send -u normal 'Low Battery'",
-      "on-discharging-critical": "notify-send -u critical 'Very Low Battery'",
-      "on-charging-100": "notify-send -u normal 'Battery Full'"
+      "on-discharging-critical": "notify-send -u critical 'Very Low Battery'"
     },
     "format": "",
     "format-charging": "󱐋{capacity}%",
@@ -115,6 +116,10 @@
     ]
   },
   "custom/empty": {
+    "tooltip": false,
+    "format": "<span size='2pt'> </span>"
+  },
+  "custom/line": {
     "tooltip": false,
     "format": "<span size='2pt'> </span>"
   },
@@ -147,12 +152,16 @@
     "on-click-middle": "rofimoji & disown"
   },
   "custom/clipboard": {
+    "exec": "~/.local/bin/waybar/fav.py",
     "signal": 9,
-    "interval": 1,
     "return-type": "json",
-    "format": "{}",
+    "format": "{}",
     "tooltip": true,
-    "on-click": "~/.local/bin/clipboard/clippy.py"
+    "interval": 3,
+    "on-click": "~/.local/bin/waybar/fav.py exec",
+    "on-click-right": "~/.local/bin/waybar/fav.py up",
+    "on-scroll-up": "~/.local/bin/waybar/fav.py up",
+    "on-scroll-down": "~/.local/bin/waybar/fav.py down"
   },
   "custom/wifi": {
     "format": "{}",
