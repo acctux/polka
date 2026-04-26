@@ -6,7 +6,7 @@ import dbus
 from pathlib import Path
 
 HOME = Path.home()
-FUZZEL_CONFIG = HOME / ".config/fuzzel/netmenu.ini"
+FUZZEL_CONFIG = HOME / ".config/fuzzel/fav-menu.ini"
 SLEEP_TIME = 2
 MAIN_CHOICES = ["WiFi", "VPN", "Cancel"]
 
@@ -94,12 +94,12 @@ def run_fuzzel(options: list[str], config: Path) -> str:
         [
             "fuzzel",
             "--dmenu",
-            "--hide-prompt",
             f"--width={max_chars + 1}",
             "--lines",
             str(lines),
             "--config",
             str(config),
+            "--x-margin=100",
         ],
         input="\n".join(options),
         text=True,
@@ -285,4 +285,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

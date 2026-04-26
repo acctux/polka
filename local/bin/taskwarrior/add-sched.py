@@ -5,7 +5,7 @@ from pydantic.dataclasses import dataclass
 import yaml
 
 CONFIG_FILE = Path(__file__).parent / "taskconf.yaml"
-FUZ_CONFIG = Path.home() / ".config/fuzzel/task.ini"
+FUZ_CONFIG = Path.home() / ".config/fuzzel/timemenu.ini"
 
 
 @dataclass(frozen=True)
@@ -40,7 +40,13 @@ def fuzzel_choice(options):
     if not FUZ_CONFIG.exists():
         return None
     choice = run_cmd(
-        ["fuzzel", "--dmenu", f"--config={FUZ_CONFIG}", "--hide-prompt"],
+        [
+            "fuzzel",
+            "--dmenu",
+            f"--config={FUZ_CONFIG}",
+            "--x-margin=100",
+            "--hide-prompt",
+        ],
         "\n".join(options),
     )
     return choice if choice else None
@@ -103,11 +109,8 @@ def delete_task(interval, dated):
     if not interval and not dated:
         run_cmd(["zenity", "--info", "--text=No tasks to delete."])
         return
-
     rows = []
-
-    # Build rows for zenity
-    for name, t in interval.items():
+    for name, _ in interval.items():
         rows.extend(
             [
                 "Interval",
@@ -115,7 +118,7 @@ def delete_task(interval, dated):
             ]
         )
 
-    for name, t in dated.items():
+    for name, _ in dated.items():
         rows.extend(
             [
                 "Dated",

@@ -12,9 +12,9 @@ class HzScroller:
     STATE_FILE = CACHE_DIR / "hz_scroll_state"
     COMMANDS = [
         ("󱙷", "laptop-battery-powersave", "60"),
-        ("󰌪", "laptop-ac-powersave", "60"),
-        ("", "balanced", "165"),
-        ("󱐋", "latency-performance", "165"),
+        ("󰌪", "laptop-ac-powersave", "165"),
+        ("󰗑", "balanced", "165"),
+        ("", "desktop", "165"),
     ]
     TLP_SCRIPT = Path.home() / "Lit/polka/local/bin/power/tuned.py"
 
@@ -66,30 +66,33 @@ class HzScroller:
     @classmethod
     def output_waybar(cls):
         index = cls.load_index()
-        icon, _, _ = cls.COMMANDS[index]
-        active_index = cls.load_state()
-        waybar_class = "active" if index == active_index else "inactive"
-        tooltip_parts = []
+        icon, profile_name, hz = cls.COMMANDS[index]
 
+        active_index = cls.load_state()
+        waybar_class = "active" if index == active_index else ""
+        tooltip_parts = []
+        tooltip_parts.append(f"Selected: {icon} {profile_name} {hz}Hz\t")
         try:
             active_output = subprocess.check_output(
                 ["tuned-adm", "active"], text=True
             ).strip()
-            profile = active_output.split(":", 1)[1].strip()
+            active_profile = active_output.split(":", 1)[1].strip()
+
             icon_for_profile = next(
-                (ic for ic, p, _ in cls.COMMANDS if p == profile), icon
+                (ic for ic, p, _ in cls.COMMANDS if p == active_profile), icon
             )
-            tooltip_parts.append(f"Current: {icon_for_profile} {profile}\t")
-        except Exception:
-            tooltip_parts.append("Tuned: unknown")
-        try:
+
             output = subprocess.check_output(["hyprctl", "monitors"], text=True)
             match = re.search(r"@(\d+)\.", output)
             if match:
-                tooltip_parts.append(f"Refresh rate: {match.group(1)}Hz")
+                tooltip_parts.append(
+                    f"Active: {icon_for_profile} {active_profile} {match.group(1)}Hz\t"
+                )
         except Exception:
-            tooltip_parts.append("unknown Hz")
+            tooltip_parts.append("Refresh rate: unknown")
+
         tooltip = "\n".join(tooltip_parts)
+
         print(json.dumps({"text": icon, "tooltip": tooltip, "class": waybar_class}))
 
     @classmethod

@@ -304,7 +304,7 @@
     "exec-if": "which swaync-client",
     "exec": "swaync-client -swb",
     "on-click-right": "swaync-client -t -sw",
-    "on-click": "fuzzel --config=$HOME/.config/fuzzel/left-menu.ini",
+    "on-click": "fuzzel --anchor top-right",
     "on-click-middle": "~/.local/bin/wall/wall.py & disown"
   }
 }
