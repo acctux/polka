@@ -3,15 +3,13 @@
   "position": "top",
   "icon-theme": "WhiteSur-dark",
   "modules-left": [
-    "custom/logo",
-    "custom/empty",
-    "custom/clipboard",
-    "custom/line",
+    "custom/weather",
     "battery",
     "custom/updates",
     "custom/empty",
-    "custom/tuned",
     "group/hardware",
+    "custom/tuned",
+    "custom/line",
     "custom/kb-switch",
     "custom/taskwarrior",
     "custom/empty",
@@ -28,10 +26,10 @@
     "custom/wifi",
     "backlight",
     "custom/volume",
+    "custom/line",
+    "custom/fav",
     "custom/empty",
-    "custom/weather",
-    "custom/empty",
-    "custom/notification"
+    "custom/logo"
   ],
   "hyprland/workspaces": {
     "format": "{icon}",
@@ -123,25 +121,6 @@
     "tooltip": false,
     "format": "<span size='2pt'> </span>"
   },
-  "custom/notification": {
-    "format": "<span size='8pt'>{icon}</span>",
-    "format-icons": {
-      "notification": "",
-      "none": "",
-      "dnd-notification": "󱙍 ",
-      "dnd-none": "󱙍 ",
-      "inhibited-notification": "󰍢 ",
-      "inhibited-none": "󰍢 ",
-      "dnd-inhibited-notification": "󱙍 ",
-      "dnd-inhibited-none": "󱙍  "
-    },
-    "return-type": "json",
-    "tooltip": false,
-    "exec-if": "which swaync-client",
-    "exec": "swaync-client -swb",
-    "on-click": "swaync-client -t -sw",
-    "on-click-right": "swaync-client -d -sw"
-  },
   "custom/kb-switch": {
     "exec": "~/.local/bin/keyboard/kb-current.sh",
     "signal": 6,
@@ -151,7 +130,7 @@
     "on-click-right": "~/.local/bin/keyboard/osk_handle.sh",
     "on-click-middle": "rofimoji & disown"
   },
-  "custom/clipboard": {
+  "custom/fav": {
     "exec": "~/.local/bin/waybar/fav.py",
     "signal": 9,
     "return-type": "json",
@@ -305,13 +284,27 @@
     "return-type": "json",
     "exec": "~/.local/bin/telegram/ayugram.sh",
     "interval": 30,
-    "on-click": "AyuGram & disown"
+    "on-click": "AyuGram & disown",
+    "on-click-right": "kitty --hold nchat"
   },
   "custom/logo": {
-    "format": "",
+    "format": "<span size='8pt'>{icon}</span>",
+    "format-icons": {
+      "notification": "",
+      "none": "",
+      "dnd-notification": "󱙍 ",
+      "dnd-none": "󱙍 ",
+      "inhibited-notification": "󰍢 ",
+      "inhibited-none": "󰍢 ",
+      "dnd-inhibited-notification": "󱙍 ",
+      "dnd-inhibited-none": "󱙍  "
+    },
+    "return-type": "json",
     "tooltip": false,
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click-right": "swaync-client -t -sw",
     "on-click": "fuzzel --config=$HOME/.config/fuzzel/left-menu.ini",
-    "on-click-right": "~/.local/bin/fuzzel/mymenu.sh",
     "on-click-middle": "~/.local/bin/wall/wall.py & disown"
   }
 }

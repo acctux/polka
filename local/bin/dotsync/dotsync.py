@@ -12,7 +12,7 @@ HOME = Path.home()
 CONFIG_DIR = HOME / ".config"
 SHARE_DIR = HOME / ".local" / "share"
 DOTS_P = HOME / "Lit" / "polka"
-BASE = HOME / "Lit/Docs/base"
+BASE = HOME / "Lit" / "Docs" / "base"
 ##########################################
 dirs_to_link = ["local/bin"]
 ind_dirs = [

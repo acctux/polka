@@ -24,11 +24,7 @@ CACHE_FILE = Path.home() / ".cache/zbar_region.png"
 def run_cmd(cmd, output=True, text=True, check=True, input=None):
     try:
         return subprocess.run(
-            cmd,
-            check=check,
-            capture_output=output,
-            text=text,
-            input=input,
+            cmd, check=check, capture_output=output, text=text, input=input
         )
     except subprocess.CalledProcessError as e:
         log.error(f"Failed: {e.stderr.strip()}")

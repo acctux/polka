@@ -46,31 +46,28 @@ tooltip label {
 }
 /* === Shared Borders === */
 #custom-kb-switch,
+#custom-weather,
 #battery,
-#custom-logo,
 #custom-taskwarrior,
 #custom-timer,
-#custom-line,
-#temperature,
 #custom-updates {
   border-right: 1px solid #33ccff;
 }
-#custom-notification,
-#custom-weather {
+#custom-logo,
+#custom-line {
   border-left: 1px solid #33ccff;
 }
 /* === Shared Font Sizes === */
 #custom-telegram,
 #custom-volume,
 #custom-kdeconnect,
-#custom-notification,
 #custom-steam,
 #backlight,
 #custom-kdeconnect,
 #custom-nemo,
 #bluetooth,
 #custom-wifi,
-#custom-clipboard,
+#custom-fav,
 #custom-tuned,
 #custom-nemo,
 #custom-telegram,
@@ -84,7 +81,7 @@ tooltip label {
 #custom-nemo,
 #custom-tuned,
 #custom-deluge,
-#custom-clipboard,
+#custom-fav,
 #custom-nemo,
 #custom-volume,
 #custom-steam,
@@ -110,9 +107,9 @@ tooltip label {
 #battery.charging {
   color: #00ff99;
 }
-#custom-notification.notification,
 #custom-updates.yellow,
 #custom-weather.yellow,
+#custom-logo.notification,
 #custom-weather.thunder,
 #custom-taskwarrior.todo,
 #battery.warning {
@@ -121,7 +118,6 @@ tooltip label {
 #custom-taskwarrior.critical,
 #custom-updates.red,
 #custom-weather.red,
-#custom-notification,
 #temperature.critical,
 #custom-wifi,
 #battery.critical {
@@ -139,7 +135,7 @@ tooltip label {
   background-color: #ff3232;
   color: #ffee33;
 }
-#custom-clipboard {
+#custom-fav {
   padding-right: 9px;
   padding-left: 5px;
 }
@@ -158,10 +154,6 @@ tooltip label {
 }
 #custom-updates {
   padding-right: 9px;
-  padding-left: 5px;
-}
-#custom-notification {
-  padding-right: 8px;
   padding-left: 5px;
 }
 #custom-deluge {
@@ -233,7 +225,7 @@ button:hover,
 #custom-nemo:hover,
 #backlight:hover,
 #custom-tuned:hover,
-#custom-clipboard:hover,
+#custom-fav:hover,
 #custom-deluge:hover,
 #custom-telegram:hover,
 #bluetooth:hover,
@@ -270,8 +262,7 @@ button:hover,
   background-color: rgba(16,16,19,0.3);
   color: #33ccff;
 }
-#battery:hover,
-#custom-notification:hover {
+#battery:hover {
   color: #33ccff;
 }
 #custom-logo:hover {
