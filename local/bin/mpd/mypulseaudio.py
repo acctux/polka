@@ -88,11 +88,10 @@ def get_volume():
 
 
 def volume_icon(vol):
-    return "󰖁" if vol == 0 else "󰕿" if vol <= 33 else "󰖀" if vol <= 66 else "󰕾"
+    return "󰝟" if vol == 0 else "󰕿" if vol <= 29 else "󰖀" if vol <= 64 else "󰕾"
 
 
 def main():
-    pos = 0.0
     while True:
         player = get_active_player()
         volume = get_volume()

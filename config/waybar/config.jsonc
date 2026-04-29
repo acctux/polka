@@ -95,8 +95,8 @@
       "critical": 10
     },
     "events": {
-      "on-discharging-warning": "notify-send -u normal 'Low Battery'",
-      "on-discharging-critical": "notify-send -u critical 'Very Low Battery'"
+      "on-discharging-warning": "notify-send -u normal 'Battery Low' && paplay /usr/share/sounds/freedesktop/stereo/service-logout.oga",
+      "on-discharging-critical": "notify-send -u critical 'Very Low Battery' && paplay /usr/share/sounds/freedesktop/stereo/service-logout.oga"
     },
     "format": "",
     "format-charging": "󱐋{capacity}%",
@@ -147,9 +147,9 @@
     "exec": "~/.local/bin/network/netbar.py",
     "interval": 2,
     "return-type": "json",
-    "on-click-right": "~/.local/bin/fuzzel/vpnmenu.sh & disown",
+    "on-click": "kitty --hold impala",
     "on-click-middle": "firewall-config",
-    "on-click": "python ~/.local/bin/network/menu.py"
+    "on-click-right": "python ~/.local/bin/network/vpnmenu.py"
   },
   "custom/volume": {
     "exec": "~/.local/bin/mpd/mypulseaudio.py",

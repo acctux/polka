@@ -4,11 +4,11 @@ import os
 import subprocess
 from pathlib import Path
 
-BASE_DIR = "/run/media/nick/Linuxcess/Games"
+BASE_DIR = Path.home() / "Desktop" / "Games"
 
 
-def create_prefix(base_dir: str, game_name: str) -> Path:
-    prefix_path = Path(base_dir) / game_name
+def create_prefix(base_dir: Path, game_name: str) -> Path:
+    prefix_path = base_dir / game_name
     prefix_path.mkdir(parents=True, exist_ok=True)
     return prefix_path
 
@@ -33,7 +33,7 @@ def get_game_name() -> str:
                 "--title",
                 "Game Name",
                 "--text",
-                "Enter the game name:",
+                "Enter directory name:",
             ],
             check=True,
             stdout=subprocess.PIPE,

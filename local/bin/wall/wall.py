@@ -22,12 +22,12 @@ TEXT_COLOR = Color("rgba(229, 231, 235, 0.65)")
 SHADOW_COLOR = Color("rgba(16, 16, 19, 1)")
 BOTTOM_PADDING = 1250
 SIDE_PADDING = 200
-TRANSITION_DURATION = 4
+TRANSITION_DURATION = 5
 screen_w = 1920
 screen_h = 1080
 transition_type = [
-    # "--transition-type",
-    # "wipe",
+    "--transition-type",
+    "wipe",
 ]
 
 
@@ -73,8 +73,6 @@ def add_quote_with_wand(
     shadow_color: Color = SHADOW_COLOR,
     text_color: Color = TEXT_COLOR,
 ) -> Path:
-    if not QUOTES_FILE.exists():
-        quote = ""
     quotes = [
         line.strip() for line in QUOTES_FILE.read_text().splitlines() if line.strip()
     ]

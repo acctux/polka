@@ -5,7 +5,7 @@ import os
 import subprocess
 from pathlib import Path
 
-BASE_DIR = Path("/run/media/nick/Linuxcess/Games")
+BASE_DIR = Path.home() / "Desktop" / "Games"
 
 
 def get_game_prefix_path() -> Path:

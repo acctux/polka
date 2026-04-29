@@ -39,10 +39,24 @@ def parse_wifi_info(station_info):
 
 
 def compute_signal_strength(rssi):
-    strength = max(0, min(100, int((rssi + 90) / 0.55)))
     ICONS = ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"]
-    icon = ICONS[min(strength // 25, 4)]
-    return strength, icon
+    if rssi <= -80:
+        index = 0
+        strength = 20
+    elif rssi <= -70:
+        index = 1
+        strength = 40
+    elif rssi <= -60:
+        index = 2
+        strength = 60
+    elif rssi <= -50:
+        index = 3
+        strength = 80
+    else:
+        index = 4
+        strength = 100
+
+    return strength, ICONS[index]
 
 
 def load_previous_stats():

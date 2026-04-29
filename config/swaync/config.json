@@ -99,15 +99,15 @@
           "label": "󱚼",
           "type": "toggle",
           "active": true,
-          "command": "sh -c '~/.config/swaync/scripts/toggle_wifi.sh'",
-          "update-command": "sh -c '~/.config/swaync/scripts/update_wifi.sh'"
+          "command": "sh -c '~/.local/bin/swaync/toggle_wifi.sh'",
+          "update-command": "sh -c '~/.local/bin/swaync/update_wifi.sh'"
         },
         {
           "label": "󰂲",
           "type": "toggle",
           "active": true,
-          "command": "sh -c '~/.config/swaync/scripts/toggle_bluetooth.sh'",
-          "update-command": "sh -c '~/.config/swaync/scripts/update_bluetooth.sh'"
+          "command": "sh -c '~/.local/bin/swaync/toggle_bluetooth.sh'",
+          "update-command": "sh -c '~/.local/bin/swaync/update_bluetooth.sh'"
         },
         {
           "label": "󱏧",
@@ -120,8 +120,8 @@
           "label": "",
           "type": "toggle",
           "active": true,
-          "command": "sh -c '~/.config/swaync/scripts/toggle_hypridle.sh'",
-          "update-command": "sh -c '~/.config/swaync/scripts/update_hypridle.sh'"
+          "command": "sh -c '~/.local/bin/swaync/toggle_hypridle.sh'",
+          "update-command": "sh -c '~/.local/bin/swaync/update_hypridle.sh'"
         }
       ]
     }

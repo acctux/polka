@@ -4,7 +4,7 @@ import os
 import re
 import subprocess
 
-MAX_LEN = 30
+MAX_LEN = 35
 
 
 def run(cmd, timeout=3):
@@ -51,7 +51,7 @@ def main():
             {
                 "text": "",
                 "tooltip": (
-                    "\n".join(f"{n}\nETA: {e}" for n, e in downloads)
+                    "\n".join(f"{n}\t\nETA: {e}" for n, e in downloads)
                     if downloads
                     else "No active downloads"
                 ),
@@ -63,4 +63,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
