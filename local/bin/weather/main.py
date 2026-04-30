@@ -307,15 +307,15 @@ class WeatherEntry:
             return (
                 f"{self.label:<5}"
                 f"<span size='21pt'>{self.icon.rjust(2)}</span>"
-                f"{str(round(self.temp)).rjust(5)}<span size='17pt'></span>{self.units}"
-                f"<span size='14pt'>{rain_icon.rjust(3)}</span>{precip_prob.rjust(4)}{precip_sum.rjust(7)}"
-                f"<span size='20pt'>{sun_icon.rjust(2)} </span>{sun_time.rjust(4)}"
+                f"{str(round(self.temp)).rjust(5)}<span size='15pt'>{self.units}</span>"
+                f"<span size='14pt'>{rain_icon.rjust(3)}</span>{precip_prob.rjust(4)}{precip_sum.rjust(8)}"
+                f"<span size='20pt'>{sun_icon.rjust(2)}</span>{sun_time.rjust(6)}"
             )
         else:
             return (
                 f"{label:<5}"
                 f"<span size='23pt'>{self.icon.rjust(2)}</span>"
-                f"{daily_temp.rjust(9)}<span size='17pt'></span>{self.units}"
+                f"{daily_temp.rjust(9)}<span size='15pt'>{self.units}</span>"
                 f"<span size='14pt'>{rain_icon.rjust(5)}</span>{precip_prob.rjust(4)}{precip_sum.rjust(10)}"
             )
 
@@ -333,7 +333,7 @@ def build_tooltip(
     def proc_entries(entries):
         return "\n".join([entry.format(now) for entry in entries])
 
-    unit_str = "C" if celsius else "F"
+    unit_str = "" if celsius else ""
     current_time = now.replace(minute=0, second=0, microsecond=0)
     time_24h_later = current_time + pd.Timedelta(hours=24)  # 24 hours later
     current_time_str = now.strftime("%H:%M")
@@ -371,11 +371,10 @@ def build_tooltip(
     icon_size = 20
     return (
         f"<span size='{icon_size}pt'>󰨳</span><span size='13pt'>  {formatted_date}</span>\n"
-        "─────────────────────────────────────────\n"
+        "────────────────────────────────────────\n"
         + f"{proc_entries(daily_entries)}\n"
         + f"\n<span size='{icon_size}pt'></span><span size='13pt'>  {current_time_str}</span>\n"
-        "─────────────────────────────────────────\n"
-        + f"{proc_entries(hourly_entries)}"
+        "────────────────────────────────────────\n" + f"{proc_entries(hourly_entries)}"
     )
 
 

@@ -53,23 +53,20 @@ tooltip label {
 #custom-updates {
   border-right: 1px solid #33ccff;
 }
+#custom-kb-switch,
 #custom-logo,
 #custom-line {
   border-left: 1px solid #33ccff;
 }
 /* === Shared Font Sizes === */
-#custom-telegram,
 #custom-volume,
-#custom-kdeconnect,
 #custom-steam,
 #backlight,
 #custom-kdeconnect,
-#custom-nemo,
 #bluetooth,
 #custom-wifi,
 #custom-fav,
 #custom-tuned,
-#custom-nemo,
 #custom-telegram,
 #custom-kb-switch,
 #custom-taskwarrior,
@@ -78,11 +75,9 @@ tooltip label {
 }
 /* === Border Radius === */
 #custom-wifi,
-#custom-nemo,
 #custom-tuned,
 #custom-deluge,
 #custom-fav,
-#custom-nemo,
 #custom-volume,
 #custom-steam,
 #custom-telegram,
@@ -110,8 +105,6 @@ tooltip label {
 #custom-updates.yellow,
 #custom-weather.yellow,
 #custom-logo.notification,
-#custom-weather.thunder,
-#custom-taskwarrior.todo,
 #battery.warning {
   color: #ffee33;
 }
@@ -141,10 +134,18 @@ tooltip label {
 }
 #cpu,
 #temperature,
+#custom-sysinfo,
 #memory,
 #disk {
-  padding-right: 2px;
+  padding-right: 0;
   padding-left: 2px;
+}
+#temperature {
+  padding-left: 4px;
+}
+#custom-sysinfo {
+  padding-right: 8px;
+  padding-left: 0;
 }
 #disk {
   padding-left: 5px;
@@ -193,12 +194,8 @@ tooltip label {
   padding-left: 5px;
 }
 #custom-tuned {
-  padding-right: 8px;
-  padding-left: 3px;
-}
-#custom-nemo {
-  padding-right: 4px;
-  padding-left: 4px;
+  padding-right: 10px;
+  padding-left: 5px;
 }
 #backlight {
   padding: 0 7px 0 5px;
@@ -222,7 +219,6 @@ button:hover,
 #custom-kdeconnect:hover,
 #custom-timer:hover,
 #custom-steam:hover,
-#custom-nemo:hover,
 #backlight:hover,
 #custom-tuned:hover,
 #custom-fav:hover,
@@ -265,6 +261,7 @@ button:hover,
 #battery:hover {
   color: #33ccff;
 }
+#custom-tuned.active,
 #custom-logo:hover {
   color: #00ff99;
 }

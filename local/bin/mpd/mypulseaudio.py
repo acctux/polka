@@ -13,6 +13,7 @@ EXCLUDED = {"JBL_Go_4"}
 DIV = 4
 MIN_LEN = 6
 MAX_LEN = 12
+TOOLTIP_FUNCTIONS = "\nLeft: Pavucontrol\t\nRight: Pause/Play\t\nMiddle: Rmpc\t"
 
 
 def run(cmd):
@@ -98,7 +99,7 @@ def main():
         if not player:
             output = {
                 "text": volume_icon(volume),
-                "tooltip": f"{volume}%",
+                "tooltip": f"󰕾 {volume}%\t\n{TOOLTIP_FUNCTIONS}",
                 "class": "stopped",
             }
             print(json.dumps(output, ensure_ascii=False), flush=True)
@@ -117,7 +118,7 @@ def main():
         safe_display = html.escape(display)
         text = f"{volume_icon(volume)}<span size='4pt'> </span><span size='9pt'>{safe_display}</span>"
         safe_track = html.escape(track)
-        tooltip = f"{volume}%\n{safe_track}"
+        tooltip = f"󰕾 {volume}%\n󰐊 {safe_track}\t\n{TOOLTIP_FUNCTIONS}"
         print(
             json.dumps(
                 {"text": text, "tooltip": tooltip, "class": "playing"},

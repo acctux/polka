@@ -6,10 +6,7 @@
     "custom/weather",
     "battery",
     "custom/updates",
-    "custom/empty",
     "group/hardware",
-    "custom/tuned",
-    "custom/line",
     "custom/kb-switch",
     "custom/taskwarrior",
     "custom/empty",
@@ -55,15 +52,6 @@
     "interval": 30,
     "format-no-controller": ""
   },
-  "temperature": {
-    "critical-threshold": 80,
-    "format-critical": "{temperatureC}°",
-    "format": "{temperatureC}°",
-    "tooltip": false,
-    "on-click": "kitty btop & disown",
-    "on-click-right": "qjournalctl & disown",
-    "on-click-middle": "kitty nvtop & disown"
-  },
   "backlight": {
     "format": "{icon}",
     "tooltip-format": "{percent}%",
@@ -104,6 +92,7 @@
     "format-discharging": "{icon}{capacity}%",
     "format-alt": "{icon} {time}",
     "format-full": "",
+    "on-click": "kitty jolt",
     "full-at": 79,
     "format-icons": [
       " ",
@@ -113,6 +102,58 @@
       " "
     ]
   },
+  "temperature": {
+    "critical-threshold": 80,
+    "format-critical": "{temperatureC}°",
+    "format": "{temperatureC}",
+    "tooltip": false,
+    "on-click": "kitty btop & disown",
+    "on-click-right": "qjournalctl & disown",
+    "on-click-middle": "kitty nvtop & disown"
+  },
+  // CPU
+  "cpu": {
+    "format": "󰻠 {usage}% ",
+    "on-scroll-up": "true",
+    "on-click": "kitty btop & disown",
+    "on-click-right": "kitty nvtop & disown",
+    "on-scroll-down": "true"
+  },
+  // Memory
+  "memory": {
+    "format": "󰍛 {}% ",
+    "on-scroll-up": "true",
+    "on-click": "kitty btop & disown",
+    "on-click-right": "kitty nvtop & disown",
+    "on-scroll-down": "true"
+  },
+  // Harddisc space used
+  "disk": {
+    "interval": 30,
+    "format": "󰋊 {percentage_used}% ",
+    "path": "/",
+    "on-click": "kitty btop & disown",
+    "on-click-right": "kitty nvtop & disown",
+    "on-scroll-up": "true",
+    "on-scroll-down": "true"
+  },
+  "custom/sysinfo": {
+    "exec": "~/.local/bin/waybar/sysinfo.py",
+    "return-type": "json"
+  },
+  "custom/tuned": {
+    "exec": "~/.local/bin/power/tuned_waybar.py",
+    "return-type": "json",
+    "interval": 3,
+    "on-click": "~/.local/bin/power/tuned_waybar.py exec",
+    "on-click-right": "~/.local/bin/power/tuned_waybar.py up",
+    "on-scroll-up": "~/.local/bin/power/tuned_waybar.py up",
+    "on-scroll-down": "~/.local/bin/power/tuned_waybar.py down"
+  },
+  "custom/bigempty": {
+    "tooltip": false,
+    "format": "<span size='6pt'> </span>"
+  },
   "custom/empty": {
     "tooltip": false,
     "format": "<span size='2pt'> </span>"
@@ -120,6 +161,29 @@
   "custom/line": {
     "tooltip": false,
     "format": "<span size='2pt'> </span>"
+  },
+  // Group Hardware
+  "group/hardware": {
+    "orientation": "inherit",
+    "drawer": {
+      "transition-duration": 300,
+      "children-class": "not-memory",
+      "transition-left-to-right": false
+    },
+    "modules": [
+      "temperature",
+      "custom/bigempty",
+      "custom/tuned",
+      "custom/bigempty",
+      "custom/line",
+      "cpu",
+      "memory",
+      "disk",
+      "custom/line",
+      "custom/bigempty",
+      "custom/sysinfo",
+      "custom/line"
+    ]
   },
   "custom/kb-switch": {
     "exec": "~/.local/bin/keyboard/kb-current.sh",
@@ -131,16 +195,16 @@
     "on-click-middle": "rofimoji & disown"
   },
   "custom/fav": {
-    "exec": "~/.local/bin/waybar/fav.py",
+    "exec": "~/.local/bin/fav/fav.py",
     "signal": 9,
     "return-type": "json",
     "format": "{}",
     "tooltip": true,
     "interval": 3,
-    "on-click": "~/.local/bin/waybar/fav.py exec",
-    "on-click-right": "~/.local/bin/waybar/fav.py up",
-    "on-scroll-up": "~/.local/bin/waybar/fav.py up",
-    "on-scroll-down": "~/.local/bin/waybar/fav.py down"
+    "on-click": "~/.local/bin/fav/fav.py exec",
+    "on-click-right": "~/.local/bin/fav/fav.py up",
+    "on-scroll-up": "~/.local/bin/fav/fav.py up",
+    "on-scroll-down": "~/.local/bin/fav/fav.py down"
   },
   "custom/wifi": {
     "format": "{}",
@@ -177,56 +241,9 @@
     "tooltip": true,
     "interval": 5,
     "exec": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py",
-    "on-click": "~/.local/bin/fuzzel/time_menu.sh",
+    "on-click": "~/.local/bin/timer/time_menu.sh",
     "on-click-right": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py --metric",
     "return-type": "json"
-  },
-  // CPU
-  "cpu": {
-    "format": "󰻠 {usage}% ",
-    "on-scroll-up": "true",
-    "on-click": "kitty btop & disown",
-    "on-scroll-down": "true"
-  },
-  // Memory
-  "memory": {
-    "format": "󰍛 {}% ",
-    "on-scroll-up": "true",
-    "on-click": "kitty btop & disown",
-    "on-scroll-down": "true"
-  },
-  // Harddisc space used
-  "disk": {
-    "interval": 30,
-    "format": "󰋊 {percentage_used}% ",
-    "path": "/",
-    "on-click": "kitty btop & disown",
-    "on-scroll-up": "true",
-    "on-scroll-down": "true"
-  },
-  // Group Hardware
-  "group/hardware": {
-    "orientation": "inherit",
-    "drawer": {
-      "transition-duration": 300,
-      "children-class": "not-memory",
-      "transition-left-to-right": false
-    },
-    "modules": [
-      "temperature",
-      "disk",
-      "cpu",
-      "memory"
-    ]
-  },
-  "custom/tuned": {
-    "exec": "~/.local/bin/power/tuned_waybar.py",
-    "return-type": "json",
-    "interval": 3,
-    "on-click": "~/.local/bin/power/tuned_waybar.py exec",
-    "on-click-right": "~/.local/bin/power/tuned_waybar.py up",
-    "on-scroll-up": "~/.local/bin/power/tuned_waybar.py up",
-    "on-scroll-down": "~/.local/bin/power/tuned_waybar.py down"
   },
   "custom/timer": {
     "format": "{}",

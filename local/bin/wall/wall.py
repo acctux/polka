@@ -20,11 +20,11 @@ TEMP_RESIZED = CACHE_DIR / "wallpaper_resized.png"
 FONT_SIZE = 11
 TEXT_COLOR = Color("rgba(229, 231, 235, 0.65)")
 SHADOW_COLOR = Color("rgba(16, 16, 19, 1)")
-BOTTOM_PADDING = 1250
-SIDE_PADDING = 200
+BOTTOM_PADDING = 1370
+SIDE_PADDING = 0
 TRANSITION_DURATION = 5
 screen_w = 1920
-screen_h = 1080
+screen_h = 1200
 transition_type = [
     "--transition-type",
     "wipe",

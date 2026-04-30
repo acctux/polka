@@ -3,7 +3,7 @@
 ICON=""
 ANDROID_MOUNT="/run/media/$(whoami)/Phone/Internal" # Dynamic path based on the username
 DISCONNECTED="{\"text\": \"\"}"
-CONNECTED="{\"text\": \"$ICON\", \"tooltip\": \"Phone connected\", \"class\": \"connected\"}"
+CONNECTED="{\"text\": \"$ICON\", \"tooltip\": \"Phone connected\t\n\nLeft: Mount Phone\t\nMiddle: KDE Connect\t\nRight: SMS\", \"class\": \"connected\"}"
 MOUNTED="{\"text\": \"$ICON\", \"tooltip\": \"Phone mounted\", \"class\": \"mounted\"}"
 STATE="$DISCONNECTED"
 
