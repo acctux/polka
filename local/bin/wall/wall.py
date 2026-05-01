@@ -9,29 +9,37 @@ from wand.color import Color
 
 # ======================== Config ========================
 HOME = Path.home()
-CACHE_DIR = HOME / ".cache"
-WALL_SCRIPT_DIR = HOME / ".local/bin/wall"
+CACHE_DIR = HOME / ".cache" / "wall"
+WALL_SCRIPT_DIR = HOME / ".local" / "bin" / "wall"
 WALL_IMG_DIR = WALL_SCRIPT_DIR / "wallpapers"
 QUOTES_FILE = WALL_SCRIPT_DIR / "quotes.txt"
 FONT_PATH = "/usr/share/fonts/OTF/FiraMonoNerdFont-Medium.otf"
-CACHE_FILE = CACHE_DIR / "wallpaper_with_quote.png"
-LAST_WALL_FILE = CACHE_DIR / ".last_wallpaper"
-TEMP_RESIZED = CACHE_DIR / "wallpaper_resized.png"
 FONT_SIZE = 11
 TEXT_COLOR = Color("rgba(229, 231, 235, 0.65)")
 SHADOW_COLOR = Color("rgba(16, 16, 19, 1)")
 BOTTOM_PADDING = 1370
 SIDE_PADDING = 0
 TRANSITION_DURATION = 5
-screen_w = 1920
-screen_h = 1200
 transition_type = [
-    "--transition-type",
-    "wipe",
+    # "--transition-type",
+    # "wipe",
 ]
 
 
 # ====================== Functions ======================
+def get_resolution():
+    out = subprocess.check_output(["hyprctl", "monitors"], text=True)
+    for line in out.splitlines():
+        line = line.strip()
+        if line and line[0].isdigit() and "@" in line:
+            part = line.split()[0]
+            res, hz = part.split("@")
+            w, h = map(int, res.split("x"))
+            hz = int(float(hz))
+            break
+    return w, h, hz
+
+
 def random_wallpaper(image_dir: Path, last_wall_file: Path) -> Path | None:
     if not image_dir.is_dir():
         return None
@@ -50,7 +58,12 @@ def random_wallpaper(image_dir: Path, last_wall_file: Path) -> Path | None:
     return selected
 
 
-def resize_to_screen(image_path: Path, screen_w=1920, screen_h=1080) -> Path:
+def resize_to_screen(
+    image_path: Path,
+    screen_w: int,
+    screen_h: int,
+    TEMP_RESIZED: Path = CACHE_DIR / "wallpaper_resized.png",
+) -> Path:
     with WandImage(filename=str(image_path)) as img:
         img.transform(resize=f"{screen_w}x{screen_h}^")
         img.crop(
@@ -66,25 +79,20 @@ def resize_to_screen(image_path: Path, screen_w=1920, screen_h=1080) -> Path:
 
 def add_quote_with_wand(
     image_path: Path,
-    side_padding: int = SIDE_PADDING,
-    bottom_padding: int = BOTTOM_PADDING,
-    font_path: str = FONT_PATH,
-    font_size: int = FONT_SIZE,
-    shadow_color: Color = SHADOW_COLOR,
-    text_color: Color = TEXT_COLOR,
+    bottom_padding: int,
+    font_path: str,
+    font_size: int,
+    shadow_color: Color,
+    text_color: Color,
+    cache_file: Path = CACHE_DIR / "wallpaper_with_quote.png",
 ) -> Path:
     quotes = [
         line.strip() for line in QUOTES_FILE.read_text().splitlines() if line.strip()
     ]
     quote = random.choice(quotes) if quotes else ""
     with WandImage(filename=str(image_path)) as img:
-        left, top = side_padding, 200
-        box_width, box_height = (
-            img.width - 2 * side_padding,
-            img.height - bottom_padding - 200,
-        )
-        text_x = int(left + box_width / 2)
-        text_y = int(top + box_height / 2)
+        text_x = img.width // 2
+        text_y = (img.height - bottom_padding + 200) // 2
         # ---------------- Shadow layer ----------------
         with WandImage(
             width=img.width,
@@ -116,13 +124,15 @@ def add_quote_with_wand(
             draw.gravity = "center"
             draw.text(text_x, text_y, quote)
             draw(img)
-        CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        img.save(filename=str(CACHE_FILE))
-    return CACHE_FILE
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        img.save(filename=str(cache_file))
+    return cache_file
 
 
 def set_wallpaper(
-    image_path: Path, transition_duration: float = TRANSITION_DURATION
+    image_path: Path,
+    transition_hz: int,
+    transition_duration: float = TRANSITION_DURATION,
 ) -> bool:
     if not image_path.exists():
         return False
@@ -135,7 +145,7 @@ def set_wallpaper(
                 "--transition-duration",
                 str(transition_duration),
                 "--transition-fps",
-                "144",
+                str(transition_hz),
             ]
             + transition_type,
             check=True,
@@ -147,21 +157,21 @@ def set_wallpaper(
 
 
 # ====================== Main ======================
-def main():
-    wallpaper = random_wallpaper(WALL_IMG_DIR, LAST_WALL_FILE)
+def main(last_wall_file: Path = CACHE_DIR / "last_wallpaper.txt"):
+    wallpaper = random_wallpaper(WALL_IMG_DIR, last_wall_file)
     if not wallpaper:
         return
+    screen_w, screen_h, screen_hz = get_resolution()
     resized_wp = resize_to_screen(wallpaper, screen_w, screen_h)
     final_image = add_quote_with_wand(
         resized_wp,
-        SIDE_PADDING,
         BOTTOM_PADDING,
         FONT_PATH,
         FONT_SIZE,
         SHADOW_COLOR,
         TEXT_COLOR,
     )
-    set_wallpaper(final_image)
+    set_wallpaper(final_image, screen_hz)
 
 
 if __name__ == "__main__":

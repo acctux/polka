@@ -10,7 +10,6 @@ $CHOICE_3
 Cancel"
 
 LINES=$(echo "$MENU" | wc -l)
-
 CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --hide-prompt --lines "$LINES" --config="$HOME/.config/fuzzel/timemenu.ini")
 
 case "$CHOICE" in
@@ -18,14 +17,14 @@ case "$CHOICE" in
   kitty ikhal &
   ;;
 "$CHOICE_2")
-  python "$HOME/.local/bin/timer/set_timer.py"
+  "$HOME/.local/bin/timer/set_timer.py"
   ;;
 "$CHOICE_3")
   CURRENT_TZ=$(timedatectl show --property=Timezone --value)
   TZONE=$(timedatectl list-timezones | sort -u |
     fuzzel --dmenu --prompt="Timezone ($CURRENT_TZ): ")
   if [ -n "$TZONE" ]; then
-    kitty sudo timedatectl set-timezone "$TZONE"
+    sudo -A timedatectl set-timezone "$TZONE"
     pkill -SIGRTMIN+4 waybar
   fi
   ;;
