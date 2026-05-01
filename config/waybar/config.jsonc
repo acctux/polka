@@ -211,7 +211,7 @@
     "exec": "~/.local/bin/network/netbar.py",
     "interval": 2,
     "return-type": "json",
-    "on-click": "kitty --hold impala",
+    "on-click": "~/.local/bin/network/net_cli_launch.sh",
     "on-click-middle": "firewall-config",
     "on-click-right": "python ~/.local/bin/network/vpnmenu.py"
   },

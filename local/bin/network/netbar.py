@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 import json
-import re
 import subprocess
 import time
 from pathlib import Path
 
 CACHE = Path("/tmp/waybar-wifi.json")
+ICONS = ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"]
 
 
-def run(cmd):
+def run(cmd: list) -> str:
     try:
         return subprocess.check_output(
             cmd, text=True, stderr=subprocess.DEVNULL
@@ -17,91 +17,106 @@ def run(cmd):
         return ""
 
 
-def find_wifi_interface():
-    for dev in Path("/sys/class/net").iterdir():
-        if (dev / "wireless").exists():
-            return dev.name
-    return None
+def get_firewalld_zone() -> str:
+    zone_output = run(["firewall-cmd", "--get-active-zones"])
+    return zone_output.splitlines()[0].split(None, 1)[0] if zone_output else "off"
 
 
-def parse_wifi_info(station_info):
-    rssi = rx = tx = None
-    rssi_match = re.search(r"signal avg:\s+(-?\d+)", station_info)
-    rx_match = re.search(r"rx bytes:\s+(\d+)", station_info)
-    tx_match = re.search(r"tx bytes:\s+(\d+)", station_info)
-    if rssi_match:
-        rssi = int(rssi_match.group(1))
-    if rx_match:
-        rx = int(rx_match.group(1))
-    if tx_match:
-        tx = int(tx_match.group(1))
-    return rssi, rx, tx
-
-
-def compute_signal_strength(rssi):
-    ICONS = ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"]
-    if rssi <= -80:
-        index = 0
-        strength = 20
-    elif rssi <= -70:
-        index = 1
-        strength = 40
-    elif rssi <= -60:
-        index = 2
-        strength = 60
-    elif rssi <= -50:
-        index = 3
-        strength = 80
-    else:
-        index = 4
-        strength = 100
-
-    return strength, ICONS[index]
-
-
-def load_previous_stats():
-    if not CACHE.exists():
-        return None
+def is_running(service_name: str) -> bool:
     try:
-        return json.loads(CACHE.read_text())
-    except Exception:
-        return None
+        return (
+            subprocess.run(
+                ["systemctl", "is-active", service_name], capture_output=True, text=True
+            ).returncode
+            == 0
+        )
+    except subprocess.CalledProcessError:
+        return False
 
 
-def save_stats(rx, tx):
-    CACHE.write_text(json.dumps({"rx": rx, "tx": tx, "t": time.time()}))
+def load_previous_stats() -> dict:
+    try:
+        return json.loads(CACHE.read_text()) if CACHE.exists() else {}
+    except json.JSONDecodeError:
+        return {}
 
 
-def compute_speeds(prev, rx, tx):
-    if not prev:
-        return 0, 0
-    dt = time.time() - prev.get("t", 0)
-    if dt <= 0.5:
-        return 0, 0
-    upload_rate = (tx - prev.get("tx", 0)) / dt
-    download_rate = (rx - prev.get("rx", 0)) / dt
-    return upload_rate, download_rate
+def parse_info_nm() -> dict:
+    wifi_list = run(
+        ["nmcli", "-f", "SSID,SIGNAL,CHAN,ACTIVE", "device", "wifi", "list"]
+    )
+    tx = run(["cat", "/sys/class/net/wlan0/statistics/tx_bytes"]) or "0"
+    rx = run(["cat", "/sys/class/net/wlan0/statistics/rx_bytes"]) or "0"
+    for line in wifi_list.splitlines()[1:]:
+        if "yes" in line:
+            ssid, strength = line.split()[0], int(line.split()[1])
+            return {
+                "net_name": ssid,
+                "strength": strength,
+                "tx": int(tx),
+                "rx": int(rx),
+            }
+    return {"net_name": "No Network", "strength": 0, "tx": int(tx), "rx": int(rx)}
 
 
-def get_firewalld_zone():
-    output = run(["firewall-cmd", "--get-active-zones"])
-    if not output:
-        return "off"
-    first_line = output.splitlines()[0]
-    zone_name = first_line.split(None, 1)[0]
-    return zone_name
+def parse_info_iwd() -> dict:
+    def find_wifi_interface_iwd() -> str:
+        for dev in Path("/sys/class/net").iterdir():
+            if (dev / "wireless").exists():
+                return dev.name
+        return ""
+
+    iface = find_wifi_interface_iwd()
+    ssid_info = run(["iwctl", "station", iface, "show"]).splitlines()
+    network = next(
+        (line.split()[2] for line in ssid_info if "Connected network" in line),
+        "Unknown Network",
+    )
+    station_info = run(["iw", "dev", iface, "station", "dump"]).splitlines()
+    iwd_strength = rx = tx = 0
+    for line in station_info:
+        if "signal avg:" in line:
+            rssi = int(line.split(":")[1].strip().split()[0])
+            iwd_strength = max(0, min(100, 100 - ((-rssi + 100) // 2)))
+        if "rx bytes:" in line:
+            rx = int(line.split(":")[1].strip())
+        if "tx bytes:" in line:
+            tx = int(line.split(":")[1].strip())
+    return {"net_name": network, "strength": iwd_strength, "tx": tx, "rx": rx}
 
 
-def build_tooltip(iface, strength, rssi, upload, download, vpn, zone_name):
-    lines = [
-        f"{iface}\t\n·{strength}%\t\n·{rssi}dBm\t\n↑{upload / 1_048_576:.1f}M\t\n↓{download / 1_048_576:.1f}M\t\n{zone_name} 󱨑\t"
+def save_stats(rx: float, tx: float) -> None:
+    try:
+        CACHE.write_text(json.dumps({"rx": rx, "tx": tx, "t": time.time()}))
+    except Exception as e:
+        print(f"Error saving stats: {e}")
+
+
+def compute_speeds(prev, rx, tx) -> tuple[float, float]:
+    if prev and "t" in prev and "tx" in prev and "rx" in prev:
+        dt = time.time() - prev.get("t", 0)
+        if dt > 0.5:
+            rx_speed = (rx - prev.get("rx", 0)) / dt
+            tx_speed = (tx - prev.get("tx", 0)) / dt
+            return rx_speed, tx_speed
+    return 0.0, 0.0
+
+
+def build_tooltip(service: str, wifi_dict: dict, vpn: str, zone_name: str) -> str:
+    tooltip = [
+        f"{service}\t",
+        f"{wifi_dict['net_name']}\t",
+        f"{wifi_dict['strength']}%\t",
+        f"↑{wifi_dict['tx'] / 1_048_576:.1f}M\t",
+        f"↓{wifi_dict['rx'] / 1_048_576:.1f}M\t",
+        f"{zone_name} 󱨑",
     ]
     if vpn:
-        lines.insert(0, f"{vpn}")
-    return "\n".join(lines)
+        tooltip.insert(0, vpn)
+    return "\n".join(tooltip)
 
 
-def output_json(icon, tooltip, vpn_active):
+def output_json(icon, tooltip, vpn_active) -> None:
     print(
         json.dumps(
             {
@@ -114,21 +129,22 @@ def output_json(icon, tooltip, vpn_active):
     )
 
 
-def main():
+def main(wifi_dict={}, service="None"):
     vpn = run(["wg", "show", "interfaces"])
-    iface = find_wifi_interface() or "wlan0"
-    station_info = run(["iw", "dev", iface, "station", "dump"])
-    rssi, rx_bytes, tx_bytes = parse_wifi_info(station_info)
-    if rssi is None or rx_bytes is None or tx_bytes is None:
-        output_json("󰤫", f"No WiFi link\n{get_firewalld_zone()}", False)
-        return
-    strength, icon = compute_signal_strength(rssi)
-    prev = load_previous_stats()
-    upload, download = compute_speeds(prev, rx_bytes, tx_bytes)
     zone_name = get_firewalld_zone()
-    save_stats(rx_bytes, tx_bytes)
-    tooltip = build_tooltip(iface, strength, rssi, upload, download, vpn, zone_name)
-    output_json(icon, tooltip, bool(vpn))
+    prev = load_previous_stats()
+    if is_running("NetworkManager"):
+        service = "NetworkManager"
+        wifi_dict = parse_info_nm()
+    elif is_running("iwd"):
+        service = "IWD"
+        wifi_dict = parse_info_iwd()
+    wifi_dict["tx"], wifi_dict["rx"] = compute_speeds(
+        prev, wifi_dict["rx"], wifi_dict["tx"]
+    )
+    tooltip = build_tooltip(service, wifi_dict, vpn, zone_name)
+    save_stats(wifi_dict["rx"], wifi_dict["tx"])
+    output_json(ICONS[min(wifi_dict["strength"] // 20, 4)], tooltip, vpn)
 
 
 if __name__ == "__main__":
