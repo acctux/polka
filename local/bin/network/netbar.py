@@ -41,12 +41,12 @@ def load_previous_stats() -> dict:
         return {}
 
 
-def parse_info_nm() -> dict:
+def parse_info_nm(iface: str) -> dict:
     wifi_list = run(
         ["nmcli", "-f", "SSID,SIGNAL,CHAN,ACTIVE", "device", "wifi", "list"]
     )
-    tx = run(["cat", "/sys/class/net/wlan0/statistics/tx_bytes"]) or "0"
-    rx = run(["cat", "/sys/class/net/wlan0/statistics/rx_bytes"]) or "0"
+    tx = run(["cat", f"/sys/class/net/{iface}/statistics/tx_bytes"])
+    rx = run(["cat", f"/sys/class/net/{iface}/statistics/rx_bytes"])
     for line in wifi_list.splitlines()[1:]:
         if "yes" in line:
             ssid, strength = line.split()[0], int(line.split()[1])
@@ -59,14 +59,14 @@ def parse_info_nm() -> dict:
     return {"net_name": "No Network", "strength": 0, "tx": int(tx), "rx": int(rx)}
 
 
-def parse_info_iwd() -> dict:
-    def find_wifi_interface_iwd() -> str:
-        for dev in Path("/sys/class/net").iterdir():
-            if (dev / "wireless").exists():
-                return dev.name
-        return ""
+def find_interface() -> str:
+    for dev in Path("/sys/class/net").iterdir():
+        if (dev / "wireless").exists():
+            return dev.name
+    return ""
 
-    iface = find_wifi_interface_iwd()
+
+def parse_info_iwd(iface: str) -> dict:
     ssid_info = run(["iwctl", "station", iface, "show"]).splitlines()
     network = next(
         (line.split()[2] for line in ssid_info if "Connected network" in line),
@@ -77,7 +77,7 @@ def parse_info_iwd() -> dict:
     for line in station_info:
         if "signal avg:" in line:
             rssi = int(line.split(":")[1].strip().split()[0])
-            iwd_strength = max(0, min(100, 100 - ((-rssi + 100) // 2)))
+            iwd_strength = max(0, min(100, 100 - ((rssi + 100) // 2)))
         if "rx bytes:" in line:
             rx = int(line.split(":")[1].strip())
         if "tx bytes:" in line:
@@ -92,23 +92,30 @@ def save_stats(rx: float, tx: float) -> None:
         print(f"Error saving stats: {e}")
 
 
-def compute_speeds(prev, rx, tx) -> tuple[float, float]:
-    if prev and "t" in prev and "tx" in prev and "rx" in prev:
-        dt = time.time() - prev.get("t", 0)
-        if dt > 0.5:
-            rx_speed = (rx - prev.get("rx", 0)) / dt
-            tx_speed = (tx - prev.get("tx", 0)) / dt
-            return rx_speed, tx_speed
-    return 0.0, 0.0
+def compute_speeds(prev: dict, iface: str):  # -> tuple[float, float]
+    info = run(["iw", "dev", iface, "link"]).splitlines()
+    rx_bitrate = tx_bitrate = 0
+    for line in info:
+        line = line.lstrip()
+        if line.startswith("rx bitrate:"):
+            rx_bitrate = float(line.split()[2])  # rx bitrate in Mbit/s
+        elif line.startswith("tx bitrate:"):
+            tx_bitrate = float(line.split()[2])  # tx bitrate in Mbit/s
+    rx_bitrate_mb = rx_bitrate / 8
+    tx_bitrate_mb = tx_bitrate / 8
+    print(f"RX Bitrate: {rx_bitrate_mb:.2f} MB/s, TX Bitrate: {tx_bitrate_mb:.2f} MB/s")
+    return rx_bitrate_mb, tx_bitrate_mb
 
 
-def build_tooltip(service: str, wifi_dict: dict, vpn: str, zone_name: str) -> str:
+def build_tooltip(
+    service: str, wifi_dict: dict, vpn: str, zone_name: str, rx: int, tx: int
+) -> str:
     tooltip = [
         f"{service}\t",
         f"{wifi_dict['net_name']}\t",
         f"{wifi_dict['strength']}%\t",
-        f"↑{wifi_dict['tx'] / 1_048_576:.1f}M\t",
-        f"↓{wifi_dict['rx'] / 1_048_576:.1f}M\t",
+        f"↑{rx}M\t",
+        f"↓{tx}M\t",
         f"{zone_name} 󱨑",
     ]
     if vpn:
@@ -122,7 +129,7 @@ def output_json(icon, tooltip, vpn_active) -> None:
             {
                 "text": icon,
                 "tooltip": tooltip,
-                "class": "vpn" if vpn_active else "wifi",
+                "class": "vpn" if vpn_active else "",
             },
             ensure_ascii=False,
         )
@@ -130,19 +137,18 @@ def output_json(icon, tooltip, vpn_active) -> None:
 
 
 def main(wifi_dict={}, service="None"):
+    iface = find_interface()
     vpn = run(["wg", "show", "interfaces"])
     zone_name = get_firewalld_zone()
     prev = load_previous_stats()
     if is_running("NetworkManager"):
         service = "NetworkManager"
-        wifi_dict = parse_info_nm()
+        wifi_dict = parse_info_nm(iface)
     elif is_running("iwd"):
         service = "IWD"
-        wifi_dict = parse_info_iwd()
-    wifi_dict["tx"], wifi_dict["rx"] = compute_speeds(
-        prev, wifi_dict["rx"], wifi_dict["tx"]
-    )
-    tooltip = build_tooltip(service, wifi_dict, vpn, zone_name)
+        wifi_dict = parse_info_iwd(iface)
+    tx, rx = compute_speeds(prev, iface)
+    tooltip = build_tooltip(service, wifi_dict, vpn, zone_name, int(rx), int(tx))
     save_stats(wifi_dict["rx"], wifi_dict["tx"])
     output_json(ICONS[min(wifi_dict["strength"] // 20, 4)], tooltip, vpn)
 
