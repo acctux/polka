@@ -13,6 +13,6 @@ CHOICE=$(fuzzel --dmenu \
 
 case "$CHOICE" in
 "OCR Screenshot") python $HOME/.local/bin/ocr/ocrcopy.py ;;
-"Set Screenshot Region") $HOME/Polka/local/bin/ocr/maimregion.sh ;;
+"Set Screenshot Region") $HOME/.local/bin/ocr/maimregion.sh ;;
 *) exit 0 ;;
 esac

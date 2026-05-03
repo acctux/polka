@@ -23,6 +23,7 @@
     "custom/wifi",
     "backlight",
     "custom/volume",
+    "custom/empty",
     "custom/line",
     "custom/fav",
     "custom/empty",
@@ -211,7 +212,7 @@
     "exec": "~/.local/bin/network/netbar.py",
     "interval": 2,
     "return-type": "json",
-    "on-click": "~/.local/bin/network/net_cli_launch.sh",
+    "on-click": "~/.local/bin/network/fuzz_wifi.sh",
     "on-click-middle": "firewall-config",
     "on-click-right": "python ~/.local/bin/network/vpnmenu.py"
   },

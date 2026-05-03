@@ -12,14 +12,14 @@ def vpn_menu(
             cmd = ["sudo", "-A"] + cmd
         return subprocess.run(cmd, text=True, capture_output=True)
 
-    def set_network_and_named(
-        ipv4: bool, script_dir: Path = Path(__file__).resolve().parent
-    ):
+    def set_network_and_named(ipv4: bool):
         val = "1" if ipv4 else "0"
         run(["sysctl", "-w", f"net.ipv6.conf.all.disable_ipv6={val}"], sudo=True)
         run(["sysctl", "-w", f"net.ipv6.conf.default.disable_ipv6={val}"], sudo=True)
+
         named_conf = Path("/etc/named.conf")
-        target = script_dir / f"namedipv{4 if ipv4 else 6}.conf"
+        namedconf_dir: Path = Path(__file__).resolve().parent / "namedconf"
+        target = namedconf_dir / f"namedipv{4 if ipv4 else 6}.conf"
         if named_conf.read_text() != target.read_text():
             if run(["cp", str(target), str(named_conf)], sudo=True).returncode == 0:
                 run(["systemctl", "restart", "named"], sudo=True)
