@@ -4,76 +4,71 @@ import subprocess
 from pathlib import Path
 import logging
 import sys
-
-##########################################
-# CONFIG
-##########################################
-HOME = Path.home()
-CONFIG_DIR = HOME / ".config"
-SHARE_DIR = HOME / ".local" / "share"
-DOTS_P = HOME / "Lit" / "polka"
-BASE = HOME / "Lit" / "Docs" / "base"
-##########################################
-dirs_to_link = ["local/bin"]
-ind_dirs = [
-    ((BASE / "fonts"), (SHARE_DIR / "fonts")),
-    ((BASE / "task"), (CONFIG_DIR / "task")),
-    ((BASE / "zsh"), (CONFIG_DIR / "zsh")),
-    ((BASE / "git"), (CONFIG_DIR / "git")),
-    ((BASE / "gh"), (CONFIG_DIR / "gh")),
-]
+import os
 
 
-##########################################
+#########################
 # LOG
-##########################################
+#########################
 class ColorFormatter(logging.Formatter):
     COLORS = {
-        logging.INFO: "\033[34m",
-        logging.WARNING: "\033[33m",
-        logging.ERROR: "\033[31m",
+        logging.DEBUG: "\033[36m",  # cyan
+        logging.INFO: "\033[34m",  # blue
+        logging.WARNING: "\033[93m",  # yellow
+        logging.ERROR: "\033[31m",  # red
+        logging.CRITICAL: "\033[41m",  # red background
     }
     RESET = "\033[0m"
+    UNDERLINE = "\033[4m"
+    NAME_COLOR = "\033[93m"  # yellow
 
-    def format(self, record: logging.LogRecord) -> str:
-        color = self.COLORS.get(record.levelno, "")
-        message = super().format(record)
-        return f"{color}{message}{self.RESET}"
+    def format(self, record):
+        colored_name = f"{self.NAME_COLOR}{record.name}{self.RESET}"
+        level_color = self.COLORS.get(record.levelno, "")
+        colored_message = f"{level_color}{record.getMessage()}{self.RESET}"
+        message = f"{colored_name}: {colored_message}"
+        if record.levelno == logging.CRITICAL:
+            message = f"{self.UNDERLINE}{message}{self.RESET}"
+        return message
 
 
-def get_logger(name: str) -> logging.Logger:
-    logger = logging.getLogger(name)
-    if not logger.handlers:
-        handler = logging.StreamHandler(sys.stderr)
-        formatter = ColorFormatter("%(name)s %(levelname)s: %(message)s")
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-        logger.propagate = False
+def get_logger(log_name: str | None = None, level=logging.INFO):
+    logger = logging.getLogger(log_name)
+    if logger.handlers:
+        return logger
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(ColorFormatter())
+    logger.addHandler(handler)
+    logger.setLevel(level)
+    logger.propagate = False
     return logger
 
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = get_logger("Polka")
 
 
-############################
-# Helpers
-############################
+##########################################
+# DATA CLASSES
+##########################################
+home: Path = Path.home()
+dotfiles_dir: Path = home / "Lit" / "polka"
+secdots_dir: Path = home / "Lit" / "Docs" / "secdots"
+dirs_to_link: list[str] = ["local/bin"]
+
+
+##########################################
+# HELPERS
+##########################################
 def link_path(src: Path, dst: Path) -> bool:
     dst.parent.mkdir(parents=True, exist_ok=True)
-    rel = src.relative_to(dst.parent, walk_up=True)
-    if dst.is_symlink() and dst.readlink() == rel:
+    rel = os.path.relpath(src, dst.parent)
+    if dst.is_symlink() and os.readlink(dst) == rel:
         return False
-    else:
-        if dst.is_dir():
-            shutil.rmtree(dst)
-        dst.unlink(missing_ok=True)
-    if dst.exists():
+    if dst.exists() or dst.is_symlink():
         if dst.is_dir() and not dst.is_symlink():
             shutil.rmtree(dst)
         else:
-            dst.unlink(missing_ok=True)
+            dst.unlink()
         log.info(f"Removed: {dst}")
     dst.symlink_to(rel, target_is_directory=src.is_dir())
     log.info(f"Linked: {dst} → {rel}")
@@ -85,53 +80,55 @@ def dotted_destination(src: Path, source_dir: Path, target_dir: Path) -> Path:
     return target_dir / Path("." + parts[0], *parts[1:])
 
 
-def file_candidates(
-    target_dir: Path,
-    dotfiles_dir: Path,
-    dirs_to_link: list[str],
-    ind_dirs: list[tuple[Path, Path]],
-):
-    for src in dotfiles_dir.rglob("*"):
-        if src.is_file():
-            rel = src.relative_to(dotfiles_dir)
-            if rel.parts[0] == ".git":
-                continue
-            if any(rel.is_relative_to(Path(d)) for d in dirs_to_link):
-                continue
-            yield src, dotted_destination(src, dotfiles_dir, target_dir)
+def collect_candidates(
+    base_dir: Path, home: Path, dirs_to_skip: list[str]
+) -> list[tuple[Path, Path]]:
+    """Return list of (src, dst) tuples for all files in base_dir, skipping certain dirs."""
+    candidates = []
+    for src in base_dir.rglob("*"):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(base_dir)
+        if rel.parts[0] == ".git":
+            continue
+        if any(rel.parts[0] == d.split("/")[0] for d in dirs_to_skip):
+            continue
+        candidates.append((src, dotted_destination(src, base_dir, home)))
+    return candidates
+
+
+def file_candidates() -> list[tuple[Path, Path]]:
+    """Return list of (src, dst) tuples to link."""
+    candidates = []
+    candidates.extend(collect_candidates(dotfiles_dir, home, dirs_to_link))
+    candidates.extend(collect_candidates(secdots_dir, home, dirs_to_link))
     for d in dirs_to_link:
         src = dotfiles_dir / d
         if src.is_dir():
-            yield src, dotted_destination(src, dotfiles_dir, target_dir)
-    for src_dir, dst_dir in ind_dirs:
-        if not src_dir.is_dir():
-            continue
-        for src in src_dir.rglob("*"):
-            if src.is_file():
-                yield src, dst_dir / src.relative_to(src_dir)
+            candidates.append((src, dotted_destination(src, dotfiles_dir, home)))
+    return candidates
 
 
-############################
-# Main
-############################
-def deploy_dotfiles(
-    HOME: Path,
-    dot_dir: Path,
-    dirs_to_link: list[str],
-    ind_dirs: list[tuple[Path, Path]],
-):
-    if not dot_dir.is_dir():
-        log.error(f"Dotfiles directory not found: {dot_dir}")
+##########################################
+# MAIN
+##########################################
+def deploy_dotfiles():
+    if not dotfiles_dir.is_dir():
+        log.error(f"Dotfiles directory not found: {dotfiles_dir}")
         return
     linked = 0
-    for src, dst in file_candidates(HOME, dot_dir, dirs_to_link, ind_dirs):
+    for src, dst in file_candidates():
         if link_path(src, dst):
             linked += 1
     if shutil.which("hyprctl"):
         subprocess.run(["hyprctl", "reload"], check=False)
         log.info("Hyprland reloaded")
-    log.info(f"Linked: {linked}")
+    log.info(f"Total linked:\033[0m {linked}")
 
 
+##########################################
+# ENTRY
+##########################################
 if __name__ == "__main__":
-    deploy_dotfiles(HOME, DOTS_P, dirs_to_link, ind_dirs)
+    deploy_dotfiles()
+
