@@ -3,6 +3,7 @@
 import random
 import subprocess
 from pathlib import Path
+import json
 from wand.image import Image as WandImage
 from wand.drawing import Drawing
 from wand.color import Color
@@ -13,6 +14,8 @@ CACHE_DIR = HOME / ".cache" / "wall"
 WALL_SCRIPT_DIR = HOME / ".local" / "bin" / "wall"
 WALL_IMG_DIR = WALL_SCRIPT_DIR / "wallpapers"
 QUOTES_FILE = WALL_SCRIPT_DIR / "quotes.txt"
+WALL_CACHE_JSON = CACHE_DIR / "last_used.json"
+RESIZED_WALL = CACHE_DIR / "wallpaper_with_quote.png"
 FONT_PATH = "/usr/share/fonts/OTF/FiraMonoNerdFont-Medium.otf"
 FONT_SIZE = 11
 TEXT_COLOR = Color("rgba(229, 231, 235, 0.65)")
@@ -26,23 +29,19 @@ transition_type = [
 ]
 
 
-# ====================== Functions ======================
-def get_resolution():
-    out = subprocess.check_output(["hyprctl", "monitors"], text=True)
-    for line in out.splitlines():
-        line = line.strip()
-        if line and line[0].isdigit() and "@" in line:
-            part = line.split()[0]
-            res, hz = part.split("@")
-            w, h = map(int, res.split("x"))
-            hz = int(float(hz))
-            break
-    return w, h, hz
+def load_cache(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return {}
 
 
-def random_wallpaper(image_dir: Path, last_wall_file: Path) -> Path | None:
-    if not image_dir.is_dir():
-        return None
+def save_cache(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data))
+
+
+def random_wallpaper(image_dir: Path, cache: dict) -> Path | None:
     images = [
         p
         for p in image_dir.iterdir()
@@ -50,46 +49,50 @@ def random_wallpaper(image_dir: Path, last_wall_file: Path) -> Path | None:
     ]
     if not images:
         return None
-    last = last_wall_file.read_text().strip() if last_wall_file.exists() else ""
-    candidates = [p for p in images if str(p) != last] or images
-    selected = random.choice(candidates)
-    last_wall_file.parent.mkdir(parents=True, exist_ok=True)
-    last_wall_file.write_text(str(selected))
+    last = cache.get("last_wallpaper", "")
+    selected = random.choice([p for p in images if str(p) != last] or images)
+    cache["last_wallpaper"] = str(selected)
     return selected
 
 
-def resize_to_screen(
-    image_path: Path,
-    screen_w: int,
-    screen_h: int,
-    TEMP_RESIZED: Path = CACHE_DIR / "wallpaper_resized.png",
-) -> Path:
-    with WandImage(filename=str(image_path)) as img:
-        img.transform(resize=f"{screen_w}x{screen_h}^")
+def random_quote(quote_file: Path, cache: dict) -> str:
+    quotes = [q.strip() for q in quote_file.read_text().splitlines() if q.strip()]
+    if not quotes:
+        return ""
+    last = cache.get("last_quote", "")
+    quote = random.choice([q for q in quotes if q != last] or quotes)
+    cache["last_quote"] = quote
+    return quote
+
+
+def resize_to_screen(input_path: Path, output_path: Path) -> int:
+    data = json.loads(subprocess.check_output(["hyprctl", "monitors", "-j"], text=True))
+    screen_h: int = data[0]["height"]
+    screen_w: int = data[0]["width"]
+    hz: float = data[0]["refreshRate"]
+    with WandImage(filename=str(input_path)) as img:
+        img.transform(resize=f"{data[0]['width']}x{data[0]['height']}^")
         img.crop(
-            left=max((img.width - screen_w) // 2, 0),
+            left=max((img.width - data[0]["width"]) // 2, 0),
             top=max((img.height - screen_h) // 2, 0),
             width=screen_w,
             height=screen_h,
         )
-        TEMP_RESIZED.parent.mkdir(parents=True, exist_ok=True)
-        img.save(filename=str(TEMP_RESIZED))
-    return TEMP_RESIZED
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        img.save(filename=str(output_path))
+    return int(hz)
 
 
 def add_quote_with_wand(
     image_path: Path,
+    quote: str,
     bottom_padding: int,
     font_path: str,
     font_size: int,
     shadow_color: Color,
     text_color: Color,
-    cache_file: Path = CACHE_DIR / "wallpaper_with_quote.png",
-) -> Path:
-    quotes = [
-        line.strip() for line in QUOTES_FILE.read_text().splitlines() if line.strip()
-    ]
-    quote = random.choice(quotes) if quotes else ""
+) -> None:
+
     with WandImage(filename=str(image_path)) as img:
         text_x = img.width // 2
         text_y = (img.height - bottom_padding + 200) // 2
@@ -124,18 +127,13 @@ def add_quote_with_wand(
             draw.gravity = "center"
             draw.text(text_x, text_y, quote)
             draw(img)
-        cache_file.parent.mkdir(parents=True, exist_ok=True)
-        img.save(filename=str(cache_file))
-    return cache_file
+        image_path.parent.mkdir(parents=True, exist_ok=True)
+        img.save(filename=str(image_path))
 
 
 def set_wallpaper(
-    image_path: Path,
-    transition_hz: int,
-    transition_duration: float = TRANSITION_DURATION,
-) -> bool:
-    if not image_path.exists():
-        return False
+    image_path: Path, transition_hz: int, transition_duration: float
+) -> None:
     try:
         subprocess.run(
             [
@@ -150,29 +148,31 @@ def set_wallpaper(
             + transition_type,
             check=True,
         )
-        return True
     except subprocess.CalledProcessError as e:
         print(f"{e}")
-        return False
 
 
 # ====================== Main ======================
-def main(last_wall_file: Path = CACHE_DIR / "last_wallpaper.txt"):
-    wallpaper = random_wallpaper(WALL_IMG_DIR, last_wall_file)
-    if not wallpaper:
+def main():
+    cache = load_cache(WALL_CACHE_JSON)
+    cache.setdefault("last_wallpaper", "")
+    cache.setdefault("last_quote", "")
+    wallpaper = random_wallpaper(WALL_IMG_DIR, cache)
+    quote = random_quote(QUOTES_FILE, cache)
+    save_cache(WALL_CACHE_JSON, cache)
+    if not wallpaper or not quote:
         return
-    screen_w, screen_h, screen_hz = get_resolution()
-    resized_wp = resize_to_screen(wallpaper, screen_w, screen_h)
-    final_image = add_quote_with_wand(
-        resized_wp,
+    hz = resize_to_screen(wallpaper, RESIZED_WALL)
+    add_quote_with_wand(
+        RESIZED_WALL,
+        quote,
         BOTTOM_PADDING,
         FONT_PATH,
         FONT_SIZE,
         SHADOW_COLOR,
         TEXT_COLOR,
     )
-    set_wallpaper(final_image, screen_hz)
+    set_wallpaper(RESIZED_WALL, hz, TRANSITION_DURATION)
 
 
-if __name__ == "__main__":
-    main()
+main()
