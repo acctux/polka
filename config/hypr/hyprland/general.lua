@@ -21,20 +21,20 @@ hl.gesture({
 	direction = "horizontal",
 	action = "workspace",
 })
-hl.gesture({
-	fingers = 4,
-	direction = "up",
-	action = function()
-		hl.dispatch(hl.dsp.global("quickshell:overviewWorkspacesToggle"))
-	end,
-})
-hl.gesture({
-	fingers = 4,
-	direction = "down",
-	action = function()
-		hl.dispatch(hl.dsp.global("quickshell:overviewWorkspacesToggle"))
-	end,
-})
+-- hl.gesture({
+-- 	fingers = 4,
+-- 	direction = "up",
+-- 	action = function()
+-- 		hl.dispatch(hl.dsp.global("quickshell:overviewWorkspacesToggle"))
+-- 	end,
+-- })
+-- hl.gesture({
+-- 	fingers = 4,
+-- 	direction = "down",
+-- 	action = function()
+-- 		hl.dispatch(hl.dsp.global("quickshell:overviewWorkspacesToggle"))
+-- 	end,
+-- })
 
 hl.config({
 	gestures = {
@@ -47,15 +47,13 @@ hl.config({
 	},
 	general = {
 		-- Gaps and border
-		gaps_in = 4,
-		gaps_out = 5,
+		gaps_in = 3,
+		gaps_out = 0,
 		gaps_workspaces = 50,
-
 		border_size = 1,
-
 		col = {
-			active_border = "rgba(0DB7D455)",
-			inactive_border = "rgba(31313600)",
+			active_border = "rgba(00ff99ee)",
+			inactive_border = "rgba(0,114,255,0.7)",
 		},
 		resize_on_border = true,
 
@@ -72,14 +70,17 @@ hl.config({
 		-- 2 = circle, higher = squircle, 4 = very obvious squircle
 		-- Fuck clearly visible squircles. 100% Apple brainrot.
 		rounding_power = 2.5,
-		rounding = 18,
+		rounding = 10,
+		active_opacity = 0.95,
+		inactive_opacity = 0.75,
+		fullscreen_opacity = 1.0,
 
 		blur = {
 			enabled = true,
 			xray = true,
 			special = false,
 			new_optimizations = true,
-			size = 10,
+			size = 6,
 			passes = 3,
 			brightness = 1,
 			noise = 0.05,
@@ -96,7 +97,7 @@ hl.config({
 			range = 20,
 			offset = { 0, 2 },
 			render_power = 10,
-			color = "rgba(00000020)",
+			color = "rgba(8, 8, 10, 1)",
 		},
 		-- Dim
 		dim_inactive = true,
@@ -228,21 +229,6 @@ hl.animation({
 	bezier = "menu_decel",
 	style = "slide",
 })
--- specialWorkspace
-hl.animation({
-	leaf = "specialWorkspaceIn",
-	enabled = true,
-	speed = 2.8,
-	bezier = "emphasizedDecel",
-	style = "slidevert",
-})
-hl.animation({
-	leaf = "specialWorkspaceOut",
-	enabled = true,
-	speed = 1.2,
-	bezier = "emphasizedAccel",
-	style = "slidevert",
-})
 -- zoom
 hl.animation({
 	leaf = "zoomFactor",
@@ -253,7 +239,8 @@ hl.animation({
 
 hl.config({
 	input = {
-		kb_layout = "us",
+		kb_layout = "us,ru,ua",
+		-- kb_options = "grp:alt_space_toggle",
 		numlock_by_default = true,
 		repeat_delay = 250,
 		repeat_rate = 35,
@@ -278,7 +265,7 @@ hl.config({
 		animate_manual_resizes = false,
 		animate_mouse_windowdragging = false,
 		enable_swallow = false,
-		swallow_regex = "(foot|kitty|allacritty|Alacritty)",
+		swallow_regex = "(kitty|allacritty|Alacritty)",
 		on_focus_under_fullscreen = 2,
 		allow_session_lock_restore = true,
 		session_lock_xray = true,
@@ -287,7 +274,8 @@ hl.config({
 	},
 
 	binds = {
-		scroll_event_delay = 0,
+		scroll_event_delay = 500,
+		drag_threshold = 10,
 		hide_special_on_workspace_change = true,
 	},
 

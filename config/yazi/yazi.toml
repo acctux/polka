@@ -1,2 +1,4 @@
 [mgr]
 show_hidden = false
+sort_by = "mtime"
+linemode = "size_and_mtime"
