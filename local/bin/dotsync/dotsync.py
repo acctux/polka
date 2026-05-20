@@ -53,82 +53,77 @@ log = get_logger("Polka")
 home: Path = Path.home()
 dotfiles_dir: Path = home / "Lit" / "polka"
 secdots_dir: Path = home / "Lit" / "Docs" / "secdots"
-dirs_to_link: list[str] = ["local/bin"]
 
 
-##########################################
-# HELPERS
-##########################################
-def link_path(src: Path, dst: Path) -> bool:
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    rel = os.path.relpath(src, dst.parent)
-    if dst.is_symlink() and os.readlink(dst) == rel:
-        return False
-    if dst.exists() or dst.is_symlink():
-        if dst.is_dir() and not dst.is_symlink():
-            shutil.rmtree(dst)
-        else:
-            dst.unlink()
-        log.info(f"Removed: {dst}")
-    dst.symlink_to(rel, target_is_directory=src.is_dir())
-    log.info(f"Linked: {dst} → {rel}")
-    return True
+class PolkaConfiguration:
+    def __init__(
+        self,
+        home: Path,
+        dotfiles_dir: Path,
+        secdots_dir: Path,
+    ):
+        self.home = home
+        self.dotfile_path = dotfiles_dir
+        self.secdot_path = secdots_dir
 
+    def link_path(self, src: Path, dst: Path) -> bool:
+        """Create a symlink, replacing existing files/folders if necessary."""
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        rel = os.path.relpath(src, dst.parent)
+        if dst.is_symlink() and os.readlink(dst) == rel:
+            return False
+        if dst.exists() or dst.is_symlink():
+            if dst.is_dir() and not dst.is_symlink():
+                shutil.rmtree(dst)
+            else:
+                dst.unlink()
+            log.info(f"Removed: {dst}")
+        dst.symlink_to(rel, target_is_directory=src.is_dir())
+        log.info(f"Linked: {dst} → {rel}")
+        return True
 
-def dotted_destination(src: Path, source_dir: Path, target_dir: Path) -> Path:
-    parts = src.relative_to(source_dir).parts
-    return target_dir / Path("." + parts[0], *parts[1:])
+    def dotted_destination(self, src: Path, source_dir: Path) -> Path:
+        """Return the destination path with a dot-prefixed top-level folder."""
+        parts = src.relative_to(source_dir).parts
+        return self.home / Path("." + parts[0], *parts[1:])
 
+    def collect_candidates(self, base_dir: Path) -> list[tuple[Path, Path]]:
+        """Collect all files in base_dir, skipping unwanted dirs."""
+        candidates = []
+        for src in base_dir.rglob("*"):
+            if not src.is_file():
+                continue
+            rel = src.relative_to(base_dir)
+            if rel.parts[0] == ".git":
+                continue
+            candidates.append((src, self.dotted_destination(src, base_dir)))
+        return candidates
 
-def collect_candidates(
-    base_dir: Path, home: Path, dirs_to_skip: list[str]
-) -> list[tuple[Path, Path]]:
-    """Return list of (src, dst) tuples for all files in base_dir, skipping certain dirs."""
-    candidates = []
-    for src in base_dir.rglob("*"):
-        if not src.is_file():
-            continue
-        rel = src.relative_to(base_dir)
-        if rel.parts[0] == ".git":
-            continue
-        if any(rel.parts[0] == d.split("/")[0] for d in dirs_to_skip):
-            continue
-        candidates.append((src, dotted_destination(src, base_dir, home)))
-    return candidates
+    def file_candidates(self) -> list[tuple[Path, Path]]:
+        """Get all candidate files and directories for linking from dotfiles and secdots."""
+        candidates: list[tuple[Path, Path]] = []
+        candidates.extend(self.collect_candidates(self.dotfile_path))
+        candidates.extend(self.collect_candidates(self.secdot_path))
+        return candidates
 
-
-def file_candidates() -> list[tuple[Path, Path]]:
-    """Return list of (src, dst) tuples to link."""
-    candidates = []
-    candidates.extend(collect_candidates(dotfiles_dir, home, dirs_to_link))
-    candidates.extend(collect_candidates(secdots_dir, home, dirs_to_link))
-    for d in dirs_to_link:
-        src = dotfiles_dir / d
-        if src.is_dir():
-            candidates.append((src, dotted_destination(src, dotfiles_dir, home)))
-    return candidates
-
-
-##########################################
-# MAIN
-##########################################
-def deploy_dotfiles():
-    if not dotfiles_dir.is_dir():
-        log.error(f"Dotfiles directory not found: {dotfiles_dir}")
-        return
-    linked = 0
-    for src, dst in file_candidates():
-        if link_path(src, dst):
-            linked += 1
-    if shutil.which("hyprctl"):
-        subprocess.run(["hyprctl", "reload"], check=False)
-        log.info("Hyprland reloaded")
-    log.info(f"Total linked:\033[0m {linked}")
+    def deploy(self):
+        """Automate the linking of all dotfiles."""
+        if not self.dotfile_path.is_dir():
+            log.error(f"Dotfiles directory not found: {self.dotfile_path}")
+            return
+        linked = 0
+        for src, dst in self.file_candidates():
+            if self.link_path(src, dst):
+                linked += 1
+        if shutil.which("hyprctl"):
+            subprocess.run(["hyprctl", "reload"], check=False)
+            log.info("Hyprland reloaded")
+        log.info(f"Total linked: {linked}")
 
 
 ##########################################
 # ENTRY
 ##########################################
 if __name__ == "__main__":
-    deploy_dotfiles()
-
+    polka = PolkaConfiguration(home, dotfiles_dir, secdots_dir)
+    polka.deploy()
