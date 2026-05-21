@@ -5,6 +5,7 @@
 require("hyprland/general")
 require("hyprland/rules")
 require("hyprland/keybinds")
+require("hyprland/monitor")
 -- nwg-displays support: re-add the files if it updates later
 -- require("workspaces")
 -- require("monitors")

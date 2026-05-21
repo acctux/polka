@@ -1,0 +1,16 @@
+[Desktop Entry]
+Version=1.0
+Encoding=UTF-8
+Exec=/home/nick/.local/bin/email/neomutt_launch.sh
+Terminal=false
+Type=Application
+Icon=email
+Categories=Network;Email;
+MimeType=message/rfc822;x-scheme-handler/mailto;application/x-xpinstall;application/x-extension-ics;text/calendar;text/vcard;text/x-vcard;x-scheme-handler/webcal;x-scheme-handler/webcals;x-scheme-handler/mid;
+StartupNotify=true
+StartupWMClass=eu.betterbird.Betterbird
+Actions=ComposeMessage;OpenAddressBook;
+Name=NeoMutt
+Comment=Send and receive mail with Betterbird
+GenericName=Mail Client
+Keywords=Email;E-mail;Newsgroup;Feed;RSS

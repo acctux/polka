@@ -1,8 +1,7 @@
 terminal = "uwsm app -- kitty"
-fileManager = "kitty --hold yazi"
+fileManager = "kitty yazi"
 browser = "firedragon"
-textEditor = "kitty --hold nvim"
-officeSoftware = "libreoffice"
+textEditor = "kitty nvim"
 volumeMixer = "pavucontrol"
 taskManager = "kitty btop"
 --##################################################
@@ -70,7 +69,7 @@ hl.bind(shiftMod .. " + Escape", hl.dsp.exec_cmd("hyprctl kill"), { description 
 --##################################################
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("swayosd-client --playerctl next"))
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("swayosd-client --playerctl previous"))
-hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("swayosd-client --input-volume mute-toggle"))
+hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("~/.local/bin/keyboard/mute-input.sh"))
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("swayosd-client --output-volume mute-toggle"))
 hl.bind(
 	"XF86AudioRaiseVolume",

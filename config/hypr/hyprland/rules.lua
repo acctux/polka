@@ -135,11 +135,11 @@ hl.window_rule({
 	float = true,
 	center = true,
 })
-hl.window_rule({
-	match = { class = "^(org\\.gnome\\.Nautilus)$" },
-	float = true,
-	center = true,
-})
+-- hl.window_rule({
+-- 	match = { class = "^(org\\.gnome\\.Nautilus)$" },
+-- 	float = true,
+-- 	center = true,
+-- })
 hl.window_rule({
 	match = { class = "^(org\\.gnome\\.baobab)$" },
 	float = true,

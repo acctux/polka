@@ -4,7 +4,7 @@ import subprocess
 import re
 from pathlib import Path
 
-KANSHI_CONFIG = Path.home() / "Lit/polka/config/kanshi/config"
+KANSHI_CONFIG = Path.home() / ".config" / "kanshi" / "config"
 
 
 def set_hz(target_hz: str):
