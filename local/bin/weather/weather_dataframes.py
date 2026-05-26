@@ -1,4 +1,3 @@
-from typing import Any
 import json
 import openmeteo_requests
 import pandas as pd
@@ -7,13 +6,31 @@ from retry_requests import retry
 from pathlib import Path
 
 
-def fetch_weather_response(conf: dict[str, Any]):
+def fetch_weather_response():
     _cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
     _retry_session = retry(_cache_session, retries=5, backoff_factor=0.2)
     _client = openmeteo_requests.Client(session=_retry_session)
+
+    def load_config(filename="coordinates.json"):
+        script_dir = Path.home() / ".local" / "bin" / "weather"
+        config_path = script_dir / filename
+        with open(config_path, "r") as f:
+            return json.load(f)
+
+    config = {
+        "latitude": 48.29,
+        "longitude": 25.94,
+        "timezone": "Europe/Kyiv",
+    }
+    conf = load_config()
+    if not conf:
+        conf = config
+    LAT = conf["latitude"]
+    LON = conf["longitude"]
+    TZ = conf["timezone"]
     params = {
-        "latitude": conf["latitude"],
-        "longitude": conf["longitude"],
+        "latitude": LAT,
+        "longitude": LON,
         "daily": [
             "weather_code",
             "temperature_2m_max",
@@ -38,7 +55,7 @@ def fetch_weather_response(conf: dict[str, Any]):
             "soil_moisture_9_to_27cm",
             "is_day",
         ],
-        "timezone": conf["timezone"],
+        "timezone": TZ,
         "forecast_days": 14,
     }
     return _client.weather_api("https://api.open-meteo.com/v1/forecast", params=params)[
@@ -95,18 +112,7 @@ def build_daily_dataframe(response) -> pd.DataFrame:
 
 
 def load_weather_dataframes():
-    config = {
-        "latitude": 48.29,
-        "longitude": 25.94,
-        "timezone": "Europe/Kyiv",
-    }
-    script_dir = Path(__file__).resolve().parent
-    config_path = script_dir / "coordinates.json"
-    conf = config
-    if config_path.is_file():
-        with open(config_path, "r") as file:
-            conf = json.load(file)
-    response = fetch_weather_response(conf)
+    response = fetch_weather_response()
     hourly_df = build_hourly_dataframe(response)
     daily_df = build_daily_dataframe(response)
     return hourly_df, daily_df
