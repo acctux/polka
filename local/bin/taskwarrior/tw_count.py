@@ -4,25 +4,24 @@ import json
 
 
 def main():
-    tasks = []
-    urgent = False
     result = subprocess.run(
-        ["task", "status:pending", "export"],
-        capture_output=True,
-        text=True,
-        check=True,
+        ["task", "status:pending", "export"], capture_output=True, text=True
     ).stdout
     data = json.loads(result)
+    if not data:
+        print(json.dumps({"text": ""}))
+        return
+    urgent = False
+    tasks = []
     for task in data:
-        urgency = float(task.get("urgency", 0))
-        tasks.append(task.get("description", ""))
+        urgency: float = task.get("urgency")
+        tasks.append(task.get("description"))
         if urgency >= 7:
             urgent = True
-    if not data:
-        return {"text": ""}
-    tooltip = f"Active: {len(tasks)}\t\n" + "\n".join(f"• {t}\t" for t in tasks)
+    sum_tasks = str(len(tasks))
+    tooltip = f"Active: {sum_tasks}\t\n" + "\n".join(f"• {t}\t" for t in tasks)
     output = {
-        "text": str(len(tasks)),
+        "text": sum_tasks,
         "tooltip": tooltip,
         "class": "critical" if urgent else "",
     }

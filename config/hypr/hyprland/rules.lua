@@ -74,7 +74,7 @@ hl.layer_rule({ match = { namespace = "gtk4-layer-shell" }, no_anim = true })
 hl.layer_rule({
 	match = { namespace = "swaync-control-center" },
 	blur = true,
-	no_anim = true,
+	-- no_anim = true,
 	blur_popups = true,
 	ignore_alpha = 0.1,
 })

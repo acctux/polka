@@ -1,26 +1,12 @@
 #!/usr/bin/env python3
+import sys
 import json
 import subprocess
 
 
-def notify(title: str, body: str, urgency: str = "normal") -> None:
-    subprocess.run(["notify-send", f"--urgency={urgency}", title, body])
-
-
-def export_tasks() -> list[dict]:
-    result = subprocess.run(
-        ["task", "export"],
-        capture_output=True,
-        text=True,
-    )
-    try:
-        return json.loads(result.stdout)
-    except json.JSONDecodeError:
-        notify("Task Reminder", "Error parsing task export", urgency="critical")
-        raise
-
-
-def get_pending_tasks(data: list[dict]) -> tuple[list[tuple[str, float]], bool]:
+def export_tasks() -> tuple[list[tuple[str, float]], bool]:
+    result = subprocess.run(["task", "export"], capture_output=True, text=True)
+    data = json.loads(result.stdout)
     tasks = []
     urgent = False
     for task in data:
@@ -31,26 +17,23 @@ def get_pending_tasks(data: list[dict]) -> tuple[list[tuple[str, float]], bool]:
         tasks.append((description, urgency))
         if urgency >= 7:
             urgent = True
-    tasks.sort(key=lambda x: x[1], reverse=True)
     return tasks, urgent
 
 
 def build_message(tasks: list[tuple[str, float]]) -> str:
-    if not tasks:
-        return ""
     return "\n".join(f"• {desc}" for desc, _ in tasks)
 
 
 def main() -> None:
-    try:
-        data = export_tasks()
-    except json.JSONDecodeError:
-        return
-    tasks, urgent = get_pending_tasks(data)
+    tasks, urgent = export_tasks()
+    if not tasks:
+        sys.exit(0)
     body = build_message(tasks)
     if body:
-        urgency_flag = "critical" if urgent else "normal"
-        notify("To-Do Reminder", body, urgency=urgency_flag)
+        crit = "normal"
+        if urgent:
+            crit = "critical"
+        subprocess.run(["notify-send", f"--urgency={crit}", "To-Do Reminder", body])
 
 
 if __name__ == "__main__":

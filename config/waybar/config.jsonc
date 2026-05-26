@@ -193,7 +193,7 @@
     "tooltip": false,
     "on-click": "hyprctl switchxkblayout at-translated-set-2-keyboard next",
     "on-click-right": "~/.local/bin/keyboard/osk_handle.sh",
-    "on-click-middle": "rofimoji & disown"
+    "on-click-middle": "~/.local/bin/keyboard/emoji_select.sh"
   },
   "custom/fav": {
     "exec": "~/.local/bin/fav/fav.py",
@@ -240,7 +240,7 @@
   "custom/weather": {
     "format": "{}",
     "tooltip": true,
-    "interval": 5,
+    "interval": 60,
     "exec": "~/.local/bin/weather/.venv/bin/python ~/.local/bin/weather/weather_code_handler.py",
     "on-click": "~/.local/bin/timer/time_menu.sh",
     "on-click-right": "~/.local/bin/weather/.venv/bin/python ~/.local/bin/weather/main.py --metric",
@@ -264,7 +264,7 @@
     "interval": 300,
     "signal": 8,
     "on-click": "kitty taskwarrior-tui",
-    "on-click-right": "~/.local/bin/taskwarrior/add-sched.py"
+    "on-click-right": "~/.local/bin/taskwarrior/tw_add.py"
   },
   "custom/updates": {
     "format": "{}<span size='4pt'> </span>",
