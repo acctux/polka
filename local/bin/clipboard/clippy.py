@@ -3,6 +3,11 @@ from pathlib import Path
 import subprocess
 
 
+CONFIG_PATH = Path.home() / ".config" / "fuzzel" / "prompt.ini"
+MAX_WIDTH = 64
+MAX_LINES = 24
+
+
 def clipboard_fuzzel_menu(
     config_path=Path.home() / ".config" / "fuzzel" / "prompt.ini",
     max_width=64,

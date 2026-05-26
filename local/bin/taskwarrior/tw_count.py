@@ -3,43 +3,30 @@ import subprocess
 import json
 
 
-def export_tasks():
+def main():
+    tasks = []
+    urgent = False
     result = subprocess.run(
         ["task", "status:pending", "export"],
         capture_output=True,
         text=True,
         check=True,
-    )
-    return json.loads(result.stdout)
-
-
-def collect_pending_tasks(data):
-    tasks = []
-    urgent = False
+    ).stdout
+    data = json.loads(result)
     for task in data:
-        desc = task.get("description", "")
         urgency = float(task.get("urgency", 0))
-        tasks.append(desc)
+        tasks.append(task.get("description", ""))
         if urgency >= 7:
             urgent = True
-    return tasks, urgent
-
-
-def build_output(tasks, urgent):
-    if not tasks:
+    if not data:
         return {"text": ""}
-    count = len(tasks)
-    tooltip = f"Active:{count}\n" + "\n".join(f"•{t}\t" for t in tasks)
-    return {
-        "text": str(count),
+    tooltip = f"Active: {len(tasks)}\t\n" + "\n".join(f"• {t}\t" for t in tasks)
+    output = {
+        "text": str(len(tasks)),
         "tooltip": tooltip,
-        "class": "critical" if urgent else "todo",
+        "class": "critical" if urgent else "",
     }
-
-
-def main():
-    tasks, urgent = collect_pending_tasks(export_tasks())
-    print(json.dumps(build_output(tasks, urgent)))
+    print(json.dumps(output))
 
 
 if __name__ == "__main__":

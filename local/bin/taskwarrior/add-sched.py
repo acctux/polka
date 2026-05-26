@@ -4,6 +4,7 @@ from pathlib import Path
 from pydantic.dataclasses import dataclass
 import yaml
 
+
 CONFIG_FILE = Path(__file__).parent / "taskconf.yaml"
 FUZ_CONFIG = Path.home() / ".config/fuzzel/timemenu.ini"
 
@@ -20,157 +21,148 @@ class DatedTask:
     due_days: int
 
 
-def run_cmd(cmd, input_text=None):
-    result = subprocess.run(cmd, input=input_text, text=True, capture_output=True)
-    if result.returncode == 0:
-        return result.stdout.strip()
-    return None
+class TaskManager:
+    def __init__(self, config_file=CONFIG_FILE, fuz_config=FUZ_CONFIG):
+        self.config_file = config_file
+        self.fuz_config = fuz_config
+        self.interval_tasks: dict[str, IntervalTask] = {}
+        self.dated_tasks: dict[str, DatedTask] = {}
+        self.load_config()
 
+    @staticmethod
+    def run_cmd(cmd, input_text=None):
+        result = subprocess.run(cmd, input=input_text, text=True, capture_output=True)
+        return result.stdout.strip() if result.returncode == 0 else None
 
-def prompt_entry(title, text):
-    return run_cmd(["zenity", "--entry", f"--title={title}", f"--text={text}"])
+    def prompt_entry(self, title, text):
+        return self.run_cmd(["zenity", "--entry", f"--title={title}", f"--text={text}"])
 
+    def prompt_int(self, title, text):
+        value = self.prompt_entry(title, text)
+        return int(value) if value and value.isdigit() else None
 
-def prompt_int(title, text):
-    value = prompt_entry(title, text)
-    return int(value) if value and value.isdigit() else None
-
-
-def fuzzel_choice(options):
-    if not FUZ_CONFIG.exists():
-        return None
-    choice = run_cmd(
-        [
-            "fuzzel",
-            "--dmenu",
-            f"--config={FUZ_CONFIG}",
-            "--x-margin=100",
-            "--hide-prompt",
-        ],
-        "\n".join(options),
-    )
-    return choice if choice else None
-
-
-def load_config():
-    if not CONFIG_FILE.exists():
-        return {}, {}
-    with open(CONFIG_FILE, "r") as f:
-        data = yaml.safe_load(f) or {}
-    interval = {
-        name: IntervalTask(**task)
-        for name, task in data.get("interval_tasks", {}).items()
-    }
-    dated = {
-        name: DatedTask(
-            dates=[tuple(d) for d in task["dates"]], due_days=task["due_days"]
-        )
-        for name, task in data.get("dated_tasks", {}).items()
-    }
-    return interval, dated
-
-
-def save_config(interval, dated):
-    data = {
-        "interval_tasks": {name: task.__dict__ for name, task in interval.items()},
-        "dated_tasks": {
-            name: {"dates": [list(d) for d in task.dates], "due_days": task.due_days}
-            for name, task in dated.items()
-        },
-    }
-    with open(CONFIG_FILE, "w") as f:
-        yaml.safe_dump(data, f, sort_keys=False, default_flow_style=False, width=70)
-
-
-def add_interval(interval, desc):
-    interval_days = prompt_int("Interval Days", "Enter interval days:")
-    due_days = prompt_int("Due Days", "Enter due days:")
-    if interval_days is None or due_days is None:
-        return
-    interval[desc] = IntervalTask(interval_days=interval_days, due_days=due_days)
-
-
-def add_dated(dated, desc):
-    date_str = prompt_entry("Event Date", "Enter date (MM-DD):")
-    if not date_str or "-" not in date_str:
-        return
-    try:
-        month, day = map(int, date_str.split("-"))
-    except ValueError:
-        return
-    due_days = prompt_int("Due Days", "Enter due days:")
-    if due_days is None:
-        return
-    task = dated.setdefault(desc, DatedTask(dates=[], due_days=due_days))
-    task.dates.append((month, day))
-
-
-def delete_task(interval, dated):
-    if not interval and not dated:
-        run_cmd(["zenity", "--info", "--text=No tasks to delete."])
-        return
-    rows = []
-    for name, _ in interval.items():
-        rows.extend(
+    def fuzzel_choice(self, options):
+        choice = self.run_cmd(
             [
-                "Interval",
-                name,
-            ]
+                "fuzzel",
+                "--dmenu",
+                f"--config={self.fuz_config}",
+                "--x-margin=100",
+                "--hide-prompt",
+            ],
+            "\n".join(options),
         )
+        return choice if choice else None
 
-    for name, _ in dated.items():
-        rows.extend(
-            [
-                "Dated",
-                name,
-            ]
+    def load_config(self):
+        if not self.config_file.exists():
+            return
+        with open(self.config_file, "r") as f:
+            data = yaml.safe_load(f) or {}
+        self.interval_tasks = {
+            name: IntervalTask(**task)
+            for name, task in data.get("interval_tasks", {}).items()
+        }
+        self.dated_tasks = {
+            name: DatedTask(
+                dates=[tuple(d) for d in task["dates"]], due_days=task["due_days"]
+            )
+            for name, task in data.get("dated_tasks", {}).items()
+        }
+
+    def save_config(self):
+        data = {
+            "interval_tasks": {
+                name: task.__dict__ for name, task in self.interval_tasks.items()
+            },
+            "dated_tasks": {
+                name: {
+                    "dates": [list(d) for d in task.dates],
+                    "due_days": task.due_days,
+                }
+                for name, task in self.dated_tasks.items()
+            },
+        }
+        with open(self.config_file, "w") as f:
+            yaml.safe_dump(data, f, sort_keys=False, default_flow_style=False, width=70)
+
+    def add_interval_task(self, desc):
+        interval_days = self.prompt_int("Interval Days", "Enter interval days:")
+        due_days = self.prompt_int("Due Days", "Enter due days:")
+        if interval_days is not None and due_days is not None:
+            self.interval_tasks[desc] = IntervalTask(
+                interval_days=interval_days, due_days=due_days
+            )
+
+    def add_dated_task(self, desc):
+        date_str = self.prompt_entry("Event Date", "Enter date (MM-DD):")
+        if not date_str or "-" not in date_str:
+            return
+        try:
+            month, day = map(int, date_str.split("-"))
+        except ValueError:
+            return
+        due_days = self.prompt_int("Due Days", "Enter due days:")
+        if due_days is None:
+            return
+        task = self.dated_tasks.setdefault(desc, DatedTask(dates=[], due_days=due_days))
+        task.dates.append((month, day))
+
+    def delete_task(self):
+        if not self.interval_tasks and not self.dated_tasks:
+            self.run_cmd(["zenity", "--info", "--text=No tasks to delete."])
+            return
+
+        rows = []
+        for name in self.interval_tasks:
+            rows.extend(["Interval", name])
+        for name in self.dated_tasks:
+            rows.extend(["Dated", name])
+
+        cmd = [
+            "zenity",
+            "--list",
+            "--title=Delete Task",
+            "--text=Select task to delete",
+            "--column=Type",
+            "--column=Task",
+            "--print-column=ALL",
+            "--separator=|",
+            "--height=400",
+            "--width=600",
+        ] + rows
+
+        choice = self.run_cmd(cmd)
+        if not choice:
+            return
+
+        task_type, name = choice.split("|", 1)
+        if task_type == "Interval":
+            self.interval_tasks.pop(name, None)
+        elif task_type == "Dated":
+            self.dated_tasks.pop(name, None)
+
+    def run(self):
+        action = self.fuzzel_choice(
+            ["Add Interval Task", "Add Dated Task", "Remove Scheduled Task"]
         )
+        if not action:
+            return
+        if action == "Remove Scheduled Task":
+            self.delete_task()
+            self.save_config()
+            return
 
-    cmd = [
-        "zenity",
-        "--list",
-        "--title=Delete Task",
-        "--text=Select task to delete",
-        "--column=Type",
-        "--column=Task",
-        "--print-column=ALL",
-        "--separator=|",
-        "--height=400",
-        "--width=600",
-    ] + rows
+        desc = self.prompt_entry("Task Description", "Enter task description:")
+        if not desc:
+            return
 
-    choice = run_cmd(cmd)
-    if not choice:
-        return
-
-    task_type, name = choice.split("|", 1)
-
-    if task_type == "Interval":
-        interval.pop(name, None)
-    elif task_type == "Dated":
-        dated.pop(name, None)
-
-
-def main():
-    interval, dated = load_config()
-    action = fuzzel_choice(
-        ["Add Interval Task", "Add Dated Task", "Remove Scheduled Task"]
-    )
-    if not action:
-        return
-    if action == "Remove Scheduled Task":
-        delete_task(interval, dated)
-        save_config(interval, dated)
-        return
-    desc = prompt_entry("Task Description", "Enter task description:")
-    if not desc:
-        return
-    if action == "Add Interval Task":
-        add_interval(interval, desc)
-    elif action == "Add Dated Task":
-        add_dated(dated, desc)
-    save_config(interval, dated)
+        if action == "Add Interval Task":
+            self.add_interval_task(desc)
+        elif action == "Add Dated Task":
+            self.add_dated_task(desc)
+        self.save_config()
 
 
 if __name__ == "__main__":
-    main()
+    TaskManager().run()

@@ -1,124 +1,121 @@
 #!/usr/bin/env python3
+
 import os
 import subprocess
-import time
 from pathlib import Path
+import time
 import imaplib2
 
+
 HOME = Path.home()
-CREDENTIAL_FILE = HOME / ".ssh" / "bridge_creds.txt"
-LAST_EMAIL_FILE = Path.home() / ".cache" / "last_email.txt"
-SLEEP_TIME = 60
+CREDENTIAL_FILE = HOME / ".ssh/bridge_creds.txt"
+LAST_EMAIL_FILE = HOME / ".cache/last_email.txt"
 
 
-def zenity_prompt(title, text, hide=False):
-    cmd = ["zenity", "--entry", f"--title={title}", f"--text={text}"]
-    if hide:
-        cmd.append("--hide-text")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError("User cancelled credential entry")
-    return result.stdout.strip()
+class ProtonMailBridgeNotifier:
+    SLEEP_TIME = 20
 
+    def __init__(self, credential_file: Path, last_email_file: Path):
+        self.creds = self.load_or_prompt_credentials(credential_file)
+        self.last_email_file = last_email_file
+        self.last_email: tuple[str, str] = self.load_last_email(last_email_file)
+        self.manage_service("start")
+        time.sleep(self.SLEEP_TIME)
 
-def create_credentials_file():
-    CREDENTIAL_FILE.parent.mkdir(parents=True, exist_ok=True)
-    creds = {
-        "USERNAME": zenity_prompt("ProtonMail Bridge", "Enter full email:"),
-        "PASSWORD": zenity_prompt("ProtonMail Bridge", "Enter password:", hide=True),
-    }
-    with open(CREDENTIAL_FILE, "w") as f:
-        f.write(f"USERNAME={creds['USERNAME']}\nPASSWORD={creds['PASSWORD']}\n")
-    os.chmod(CREDENTIAL_FILE, 0o600)
+    def manage_service(self, action: str = "start") -> None:
+        subprocess.run(["systemctl", "--user", action, "protonmail-bridge.service"])
 
+    def load_or_prompt_credentials(self, credential_file: Path) -> tuple[str, str]:
+        def prompt(title: str, text: str, hide=False) -> str:
+            cmd = ["zenity", "--entry", f"--title={title}", f"--text={text}"]
+            if hide:
+                cmd.append("--hide-text")
+            return subprocess.run(cmd, capture_output=True, text=True).stdout.strip()
 
-def load_credentials():
-    with open(CREDENTIAL_FILE, "r") as f:
-        creds = dict(line.strip().split("=", 1) for line in f if "=" in line)
-    if not all(k in creds for k in ["USERNAME", "PASSWORD"]):
-        raise ValueError("Missing credentials")
-    return creds
+        user_mane = ""
+        password = ""
+        if not credential_file.exists():
+            credential_file.parent.mkdir(parents=True, exist_ok=True)
+            cmd = [
+                "zenity",
+                "--entry",
+                "--title=ProtonMail",
+                '--text="Enter full email: "',
+            ]
+            user_mane = subprocess.run(
+                cmd, capture_output=True, text=True
+            ).stdout.strip()
+            password = prompt("ProtonMail", "Enter password:", hide=True)
+            credential_file.write_text(f"USERNAME={user_mane}\nPASSWORD={password}\n")
+            os.chmod(credential_file, 0o600)
+        else:
+            for line in credential_file.read_text().splitlines():
+                if "USERNAME=" in line:
+                    user_mane = line.strip().split("=", 1)[1]
+                if "PASSWORD=" in line:
+                    password = line.strip().split("=", 1)[1]
+        return user_mane, password
 
+    def load_last_email(self, last_email_file: Path) -> tuple[str, str]:
+        if not last_email_file.exists():
+            last_email_file.parent.mkdir(parents=True, exist_ok=True)
+            return "", ""
+        lines = last_email_file.read_text().strip().splitlines()
+        return lines[0], lines[1] if len(lines) > 1 else ""
 
-def read_last_email():
-    try:
-        with open(LAST_EMAIL_FILE, "r") as f:
-            lines = f.read().strip().split("\n", 1)
-            if len(lines) == 1:
-                return lines, ""
-            return lines
-    except FileNotFoundError:
-        return "", ""
+    def fetch_last_five(self, imap: imaplib2.IMAP4) -> list[tuple[str, str]]:
+        try:
+            _, data = imap.search(None, "ALL")
+            email_ids = data[0].split()
+            last_five: list[tuple[str, str]] = []
+            for email_index in range(-1, -6, -1):
+                _, msg_data = imap.fetch(
+                    email_ids[email_index], "(BODY.PEEK[HEADER.FIELDS (SUBJECT FROM)])"
+                )
+                header_lines = msg_data[0][1].decode().splitlines()
+                sender = header_lines[0].replace("From: ", "").strip()
+                subject = header_lines[1].replace("Subject: ", "").strip()
+                last_five.append((sender, subject))
+            return last_five
+        except Exception as e:
+            print(f"Error fetching emails: {e}")
+            return []
 
+    def check_email(self) -> None:
+        def signout(imap: imaplib2.IMAP4):
+            imap.close()
+            imap.logout()
+            self.manage_service("stop")
 
-def write_last_email(sender, subject):
-    LAST_EMAIL_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(LAST_EMAIL_FILE, "w") as f:
-        f.write(f"{sender}\n{subject}")
-
-
-def fetch_last_email_subject(username, password):
-    try:
         imap = imaplib2.IMAP4("127.0.0.1", 1143)
-        imap.login(username, password)
+        imap.login(self.creds[0], self.creds[1])
         imap.select("INBOX")
-        _, data = imap.search(None, "ALL")
-        email_ids = data[0].split()
-        _, msg_data = imap.fetch(email_ids[-1], "(BODY[HEADER.FIELDS (SUBJECT FROM)])")
-        header_text = msg_data[0][1].decode()
-        sender = next(
-            (
-                line[len("From:") :].strip()
-                for line in header_text.splitlines()
-                if line.startswith("From:")
-            ),
-            "",
-        )
-        subject = next(
-            (
-                line[len("Subject:") :].strip()
-                for line in header_text.splitlines()
-                if line.startswith("Subject:")
-            ),
-            "",
-        )
-        return imap, sender, subject
-    except imaplib2.IMAP4.error as e:
-        print(f"IMAP error: {e}")
-        return "", "", ""
-    except Exception as e:
-        print(f"Error: {e}")
-        return "", "", ""
-
-
-def main():
-    if not CREDENTIAL_FILE.exists():
-        create_credentials_file()
-        old_sender = ""
-        old_subject = ""
-    else:
-        creds = load_credentials()
-        old_sender, old_subject = read_last_email()
-    subprocess.run(["systemctl", "--user", "start", "protonmail-bridge.service"])
-    time.sleep(SLEEP_TIME)
-    imap, sender, subject = fetch_last_email_subject(
-        creds["USERNAME"], creds["PASSWORD"]
-    )
-    if sender != old_sender or subject != old_subject:
-        cmd = [
-            "notify-send",
-            sender,
-            subject,
-            "--icon=thunderbird",
-            "-h",
-            "string:action-clicked:thunderbird",
-        ]
-        subprocess.run(cmd)
-        write_last_email(sender, subject)
-    imap.close()
-    imap.logout()
-    subprocess.run(["systemctl", "--user", "stop", "protonmail-bridge.service"])
+        last_five = self.fetch_last_five(imap)
+        if not last_five:
+            signout(imap)
+            return
+        new_emails: list[tuple[str, str]] = []
+        for i, email in enumerate(last_five):
+            if email == self.last_email:
+                new_emails = last_five[:i]
+        print(new_emails)
+        for email in new_emails:
+            sender, subject = email
+            subprocess.run(
+                [
+                    "notify-send",
+                    sender,
+                    subject,
+                    "--icon=thunderbird",
+                    "-h",
+                    "string:action-clicked:thunderbird",
+                ]
+            )
+        if last_five:
+            sender, subject = last_five[0]
+            self.last_email_file.write_text(f"{sender}\n{subject}")
+        signout(imap)
 
 
 if __name__ == "__main__":
-    main()
+    ProtonMailBridgeNotifier(CREDENTIAL_FILE, LAST_EMAIL_FILE).check_email()

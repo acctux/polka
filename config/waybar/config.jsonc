@@ -212,7 +212,7 @@
     "exec": "~/.local/bin/network/netbar.py",
     "interval": 2,
     "return-type": "json",
-    "on-click": "~/.local/bin/network/fuzz_wifi.sh",
+    "on-click": "~/.local/bin/network/vpnmenu.py",
     "on-click-middle": "firewall-config",
     "on-click-right": "python ~/.local/bin/network/vpnmenu.py"
   },
@@ -241,9 +241,9 @@
     "format": "{}",
     "tooltip": true,
     "interval": 5,
-    "exec": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py",
+    "exec": "~/.local/bin/weather/.venv/bin/python ~/.local/bin/weather/weather_code_handler.py",
     "on-click": "~/.local/bin/timer/time_menu.sh",
-    "on-click-right": "/home/nick/.local/bin/weather/.venv/bin/python ~/Lit/polka/local/bin/weather/main.py --metric",
+    "on-click-right": "~/.local/bin/weather/.venv/bin/python ~/.local/bin/weather/main.py --metric",
     "return-type": "json"
   },
   "custom/timer": {

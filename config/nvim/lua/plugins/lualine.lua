@@ -38,7 +38,7 @@ return {
       },
       sections = {
         lualine_a = { { "mode", separator = { left = "" }, right_padding = 2 } },
-        lualine_b = { "filename", "diagnostics" },
+        lualine_b = { "filename", "venv-selector", "diagnostics" },
         lualine_c = {
           "%=", --[[ add your center components here in place of this comment ]]
         },
