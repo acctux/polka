@@ -1,46 +1,49 @@
+from typing import Any
+import json
 import openmeteo_requests
 import pandas as pd
 import requests_cache
 from retry_requests import retry
-
-_cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
-_retry_session = retry(_cache_session, retries=5, backoff_factor=0.2)
-_client = openmeteo_requests.Client(session=_retry_session)
-_URL = "https://api.open-meteo.com/v1/forecast"
-_PARAMS = {
-    "latitude": 34.18,
-    "longitude": -82.02,
-    "daily": [
-        "weather_code",
-        "temperature_2m_max",
-        "temperature_2m_min",
-        "sunrise",
-        "sunset",
-        "precipitation_sum",
-        "precipitation_probability_max",
-    ],
-    "hourly": [
-        "temperature_2m",
-        "dew_point_2m",
-        "relative_humidity_2m",
-        "precipitation_probability",
-        "precipitation",
-        "weather_code",
-        "cloud_cover",
-        "wind_speed_10m",
-        "wind_direction_10m",
-        "soil_temperature_0cm",
-        "soil_moisture_3_to_9cm",
-        "soil_moisture_9_to_27cm",
-        "is_day",
-    ],
-    "timezone": "America/New_York",
-    "forecast_days": 14,
-}
+from pathlib import Path
 
 
-def fetch_weather_response():
-    return _client.weather_api(_URL, params=_PARAMS)[0]
+def fetch_weather_response(conf: dict[str, Any]):
+    _cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
+    _retry_session = retry(_cache_session, retries=5, backoff_factor=0.2)
+    _client = openmeteo_requests.Client(session=_retry_session)
+    params = {
+        "latitude": conf["latitude"],
+        "longitude": conf["longitude"],
+        "daily": [
+            "weather_code",
+            "temperature_2m_max",
+            "temperature_2m_min",
+            "sunrise",
+            "sunset",
+            "precipitation_sum",
+            "precipitation_probability_max",
+        ],
+        "hourly": [
+            "temperature_2m",
+            "dew_point_2m",
+            "relative_humidity_2m",
+            "precipitation_probability",
+            "precipitation",
+            "weather_code",
+            "cloud_cover",
+            "wind_speed_10m",
+            "wind_direction_10m",
+            "soil_temperature_0cm",
+            "soil_moisture_3_to_9cm",
+            "soil_moisture_9_to_27cm",
+            "is_day",
+        ],
+        "timezone": conf["timezone"],
+        "forecast_days": 14,
+    }
+    return _client.weather_api("https://api.open-meteo.com/v1/forecast", params=params)[
+        0
+    ]
 
 
 def build_hourly_dataframe(response) -> pd.DataFrame:
@@ -92,7 +95,18 @@ def build_daily_dataframe(response) -> pd.DataFrame:
 
 
 def load_weather_dataframes():
-    response = fetch_weather_response()
+    config = {
+        "latitude": 48.29,
+        "longitude": 25.94,
+        "timezone": "Europe/Kyiv",
+    }
+    script_dir = Path(__file__).resolve().parent
+    config_path = script_dir / "coordinates.json"
+    conf = config
+    if config_path.is_file():
+        with open(config_path, "r") as file:
+            conf = json.load(file)
+    response = fetch_weather_response(conf)
     hourly_df = build_hourly_dataframe(response)
     daily_df = build_daily_dataframe(response)
     return hourly_df, daily_df

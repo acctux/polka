@@ -533,7 +533,7 @@ class WaybarRenderer:
         weekday = now.strftime("%a")
         month = now.strftime("%b")
         year = now.year
-        return f"{weekday}, {month} {weekday}{suffix}, {year}"
+        return f"{weekday}, {month} {int_day}{suffix}, {year}"
 
     def row(
         self,
@@ -598,45 +598,49 @@ class WeatherApp:
         pkl_cache: Path,
         groups: list,
         codes: dict[int, str],
+        ttl: int,
     ) -> None:
         self.processor = WeatherProcessor(imperial=imperial, groups=groups, codes=codes)
         self.renderer = WaybarRenderer()
         self.pkl_cache = pkl_cache
+        self.ttl = ttl
 
     def save_pkl(
-        self,
-        pkl_cache: Path,
-        hourly_df: pd.DataFrame,
-        daily_df: pd.DataFrame,
-    ):
+        self, pkl_cache: Path, hourly_df: pd.DataFrame, daily_df: pd.DataFrame
+    ) -> None:
         pkl_cache.parent.mkdir(parents=True, exist_ok=True)
         with open(pkl_cache, "wb") as pkl_txt:
             pickle.dump((hourly_df, daily_df), pkl_txt)
 
-    def run(
-        self,
-        ttl: int,
-    ) -> None:
+    def run(self) -> None:
         tz = str(get_localzone())
         now = pd.Timestamp.now(tz)
+        hourly_df, daily_df = self._get_data(tz)
+        daily_df = self.processor.process_daily(daily_df)
+        hourly_df = self.processor.process_hourly(hourly_df, now)
+        output = self.renderer.render(now, hourly_df, daily_df)
+        print(json.dumps(output, ensure_ascii=False))
+
+    def _get_data(self, tz: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+        if self._cache_is_valid():
+            with open(self.pkl_cache, "rb") as f:
+                return pickle.load(f)
+        return self._load_fresh(tz)
+
+    def _cache_is_valid(self) -> bool:
+        result = False
         if self.pkl_cache.exists():
-            if (time.time() - self.pkl_cache.stat().st_mtime) < ttl:
-                with open(self.pkl_cache, "rb") as pkl_txt:
-                    hourly_df, daily_df = pickle.load(pkl_txt)
-                    daily_df = self.processor.process_daily(daily_df)
-                    hourly_df = self.processor.process_hourly(hourly_df, now)
-                    output = self.renderer.render(now, hourly_df, daily_df)
-                    print(json.dumps(output, ensure_ascii=False))
-            else:
-                hourly_df, daily_df = load_weather_dataframes()
-                hourly_df = self.processor.map_sunrise_sunset(hourly_df, daily_df, tz)
-                hourly_df = self.processor.enrich(hourly_df)
-                daily_df = self.processor.enrich(daily_df)
-                self.save_pkl(self.pkl_cache, hourly_df, daily_df)
-                daily_df = self.processor.process_daily(daily_df)
-                hourly_df = self.processor.process_hourly(hourly_df, now)
-                output = self.renderer.render(now, hourly_df, daily_df)
-                print(json.dumps(output, ensure_ascii=False))
+            if (time.time() - self.pkl_cache.stat().st_mtime) < self.ttl:
+                result = True
+        return result
+
+    def _load_fresh(self, tz: str):
+        hourly_df, daily_df = load_weather_dataframes()
+        hourly_df = self.processor.map_sunrise_sunset(hourly_df, daily_df, tz)
+        hourly_df = self.processor.enrich(hourly_df)
+        daily_df = self.processor.enrich(daily_df)
+        self.save_pkl(self.pkl_cache, hourly_df, daily_df)
+        return hourly_df, daily_df
 
 
 if __name__ == "__main__":
@@ -645,7 +649,6 @@ if __name__ == "__main__":
         pkl_cache=Path.home() / ".cache/weather_cache" / "weather.pkl",
         groups=GROUPS,
         codes=CODES,
-    ).run(
         ttl=CACHE_TTL,
-    )
+    ).run()
 
