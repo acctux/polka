@@ -88,10 +88,16 @@ tooltip label {
 }
 /* === Colors === */
 #custom-logo,
-#custom-weather.lightblue,
+#custom-weather.cyan,
 #custom-wifi.vpn,
 #battery {
   color: #33ccff;
+}
+#custom-weather.blue {
+  color: #0077FF;
+}
+#custom-weather.grey {
+  color: #828385;
 }
 #custom-tuned.active,
 #custom-updates,

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 from pathlib import Path
 import pickle
 import time
@@ -14,6 +15,7 @@ from dataclasses import dataclass
 # CACHE
 # =========================================================
 CACHE_TTL = 60 * 15  # 15 min
+CACHE_DIR = Path.home() / ".cache" / "weather_cache"
 
 
 @dataclass(slots=True)
@@ -331,15 +333,12 @@ GROUPS = [
 
 class WeatherProcessor:
     def __init__(
-        self,
-        imperial: bool,
-        groups: list[WeatherGroup],
-        codes: dict[int, str],
-    ):
-        self.imperial = imperial
+        self, groups: list[WeatherGroup], codes: dict[int, str], imperial_cache: Path
+    ) -> None:
+        self.imperial = self._load_imperial(imperial_cache)
         self.codes = codes
-        self.temp_unit = "" if imperial else ""
-        self.size_unit = "in" if imperial else "mm"
+        self.temp_unit = "" if self.imperial else ""
+        self.size_unit = "in" if self.imperial else "mm"
         self.icon_map: dict[int, tuple[str, str]] = {}
         self.color_map: dict[int, str] = {}
         for group in groups:
@@ -351,11 +350,7 @@ class WeatherProcessor:
     # =========================================================
     # FORMATTING UTILITIES (Internal)
     # =========================================================
-    def _fmt_temp(
-        self,
-        series: pd.Series,
-        show_unit: bool = True,
-    ) -> pd.Series:
+    def _fmt_temp(self, series: pd.Series, show_unit: bool = True) -> pd.Series:
         def fmt(x):
             value = f"{x:.0f}"
             return f"{value}{self.temp_unit}" if show_unit else value
@@ -365,10 +360,7 @@ class WeatherProcessor:
             series = series * 9 / 5 + 32
         return series.map(fmt)
 
-    def _fmt_probability(
-        self,
-        series: pd.Series,
-    ) -> pd.Series:
+    def _fmt_probability(self, series: pd.Series) -> pd.Series:
         def fmt(x):
             if pd.isna(x):
                 return ""
@@ -379,10 +371,7 @@ class WeatherProcessor:
         series = pd.to_numeric(series, errors="coerce")
         return series.map(fmt)
 
-    def _fmt_size(
-        self,
-        series: pd.Series,
-    ) -> pd.Series:
+    def _fmt_size(self, series: pd.Series) -> pd.Series:
         def fmt(x):
             if self.imperial:
                 x = x / 25.4
@@ -402,10 +391,7 @@ class WeatherProcessor:
     # =========================================================
     # DATA ENRICHMENT (Internal)
     # =========================================================
-    def enrich(
-        self,
-        df: pd.DataFrame,
-    ) -> pd.DataFrame:
+    def enrich(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
         df["description"] = df["weather_code"].map(self.codes)
         df["color"] = df["weather_code"].map(self.color_map)
@@ -427,10 +413,7 @@ class WeatherProcessor:
     # PUBLIC PROCESSING METHODS
     # =========================================================
     def map_sunrise_sunset(
-        self,
-        hourly_df: pd.DataFrame,
-        daily_df: pd.DataFrame,
-        tz: str,
+        self, hourly_df: pd.DataFrame, daily_df: pd.DataFrame, tz: str
     ) -> pd.DataFrame:
         hourly_df = hourly_df.copy()
         hourly_df["day_date"] = hourly_df["date"].dt.normalize()
@@ -450,11 +433,14 @@ class WeatherProcessor:
         self,
         hourly_df: pd.DataFrame,
         now: pd.Timestamp,
+        hours_ahead: int = 24,
+        jump_h_minutes: int = 30,
+        step: int = 2,
     ) -> pd.DataFrame:
         start = now.floor("h")
-        if now.minute >= 30:
+        if now.minute >= jump_h_minutes:
             start = now.ceil("h")
-        end = start + pd.Timedelta(hours=23)
+        end = start + pd.Timedelta(hours=hours_ahead)
         mask = hourly_df["date"].between(start, end)
         hourly_filtered = hourly_df.loc[mask]
         hourly = hourly_filtered.copy()
@@ -466,37 +452,23 @@ class WeatherProcessor:
             hourly["precipitation_probability"]
         )
         # 2. Extract Sun Events
+        hourly = hourly.iloc[::step].reset_index(drop=True)
         hourly["sun_event"] = ""
-        h_end = hourly["date"] + pd.Timedelta(hours=1)
         sunrise_hit = (hourly["sunrise_dt"] >= hourly["date"]) & (
-            hourly["sunrise_dt"] < h_end
+            hourly["sunrise_dt"] < hourly["date"] + pd.Timedelta(hours=step)
         )
         sunset_hit = (hourly["sunset_dt"] >= hourly["date"]) & (
-            hourly["sunset_dt"] < h_end
+            hourly["sunset_dt"] < hourly["date"] + pd.Timedelta(hours=step)
         )
-        sunrise_str = "<span size='15pt'>󰖜</span> " + hourly["sunrise_dt"].dt.strftime(
-            "%H:%M"
-        )
-        sunset_str = "<span size='15pt'>󰖛</span> " + hourly["sunset_dt"].dt.strftime(
-            "%H:%M"
-        )
-        hourly.loc[sunrise_hit, "sun_event"] = sunrise_str
-        hourly.loc[sunset_hit, "sun_event"] = sunset_str
-        # 1. Identify sun events sitting on odd indices
-        odd_events = hourly["sun_event"].where(hourly.index % 2 == 1, "")
-        # 2. Shift them backward by 1 row to line up with even indices
-        shifted_events = odd_events.shift(-1, fill_value="")
-        # 3. Fill empty even slots with the shifted events
-        hourly["sun_event"] = hourly["sun_event"].where(
-            hourly["sun_event"] != "", shifted_events
-        )
-        hourly = hourly.iloc[::2].reset_index(drop=True)
+        hourly.loc[sunrise_hit, "sun_event"] = "<span size='15pt'>󰖜</span> " + hourly[
+            "sunrise_dt"
+        ].dt.strftime("%H:%M")
+        hourly.loc[sunset_hit, "sun_event"] = "<span size='15pt'>󰖛</span> " + hourly[
+            "sunset_dt"
+        ].dt.strftime("%H:%M")
         return hourly
 
-    def process_daily(
-        self,
-        daily_df: pd.DataFrame,
-    ) -> pd.DataFrame:
+    def process_daily(self, daily_df: pd.DataFrame) -> pd.DataFrame:
         daily_df["temperature_2m"] = (
             self._fmt_temp(daily_df["temperature_2m_max"], show_unit=False)
             + "/"
@@ -510,11 +482,66 @@ class WeatherProcessor:
         )
         return daily_df.head(7).reset_index(drop=True)
 
+    def _load_imperial(self, settings_file: Path) -> bool:
+        settings_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with open(settings_file, "r") as f:
+                imperial = bool(json.load(f).get("imperial", True))
+        except FileNotFoundError, json.JSONDecodeError, OSError:
+            imperial = True
+        if "--metric" in sys.argv:
+            imperial = not imperial
+            settings_file.write_text(json.dumps({"imperial": imperial}, indent=2))
+        return imperial
+
 
 # =========================================================
-# WAYBAR RENDERER
+# MAIN
 # =========================================================
-class WaybarRenderer:
+class WeatherApp:
+    def __init__(self, processor: WeatherProcessor, ttl: int, pkl_cache: Path) -> None:
+        self.processor = processor
+        self.pkl_cache = pkl_cache
+        self.ttl = ttl
+
+    def save_pkl(
+        self, pkl_cache: Path, hourly_df: pd.DataFrame, daily_df: pd.DataFrame
+    ) -> None:
+        pkl_cache.parent.mkdir(parents=True, exist_ok=True)
+        with open(pkl_cache, "wb") as pkl_txt:
+            pickle.dump((hourly_df, daily_df), pkl_txt)
+
+    def run(self) -> None:
+        tz = str(get_localzone())
+        now = pd.Timestamp.now(tz)
+        hourly_df, daily_df = self._get_data(tz)
+        daily_df = self.processor.process_daily(daily_df)
+        hourly_df = self.processor.process_hourly(hourly_df, now)
+        output = self.render(now, hourly_df, daily_df)
+        print(json.dumps(output, ensure_ascii=False))
+
+    def _get_data(self, tz: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+        if self.pkl_cache.exists():
+            is_fresh = (time.time() - self.pkl_cache.stat().st_mtime) < self.ttl
+            if is_fresh:
+                with open(self.pkl_cache, "rb") as f:
+                    return pickle.load(f)
+        try:
+            return self._load_fresh(tz)
+        except Exception:
+            if self.pkl_cache.exists():
+                with open(self.pkl_cache, "rb") as f:
+                    return pickle.load(f)
+            raise
+
+    def _load_fresh(self, tz: str):
+        hourly_df, daily_df = load_weather_dataframes()
+        hourly_df = self.processor.map_sunrise_sunset(hourly_df, daily_df, tz)
+        hourly_df = self.processor.enrich(hourly_df)
+        daily_df = self.processor.enrich(daily_df)
+        self.save_pkl(self.pkl_cache, hourly_df, daily_df)
+        return hourly_df, daily_df
+
     @staticmethod
     def today_label(now: pd.Timestamp) -> str:
         int_day = now.day
@@ -535,11 +562,7 @@ class WaybarRenderer:
         year = now.year
         return f"{weekday}, {month} {int_day}{suffix}, {year}"
 
-    def row(
-        self,
-        row: dict[str, Any],
-        hourly_mode: bool,
-    ) -> str:
+    def row(self, row: dict[str, Any], hourly_mode: bool) -> str:
         icon = row.get("icon", "")
         size = 22 if hourly_mode else 24
         if hourly_mode:
@@ -561,10 +584,7 @@ class WaybarRenderer:
         )
 
     def render(
-        self,
-        now: pd.Timestamp,
-        hourly_df: pd.DataFrame,
-        daily_df: pd.DataFrame,
+        self, now: pd.Timestamp, hourly_df: pd.DataFrame, daily_df: pd.DataFrame
     ) -> dict[str, str]:
         hourly_rows = [self.row(row, True) for row in hourly_df.to_dict("records")]
         daily_rows = [self.row(row, False) for row in daily_df.to_dict("records")]
@@ -588,66 +608,10 @@ class WaybarRenderer:
         }
 
 
-# =========================================================
-# MAIN
-# =========================================================
-class WeatherApp:
-    def __init__(
-        self,
-        imperial: bool,
-        pkl_cache: Path,
-        groups: list,
-        codes: dict[int, str],
-        ttl: int,
-    ) -> None:
-        self.processor = WeatherProcessor(imperial=imperial, groups=groups, codes=codes)
-        self.renderer = WaybarRenderer()
-        self.pkl_cache = pkl_cache
-        self.ttl = ttl
-
-    def save_pkl(
-        self, pkl_cache: Path, hourly_df: pd.DataFrame, daily_df: pd.DataFrame
-    ) -> None:
-        pkl_cache.parent.mkdir(parents=True, exist_ok=True)
-        with open(pkl_cache, "wb") as pkl_txt:
-            pickle.dump((hourly_df, daily_df), pkl_txt)
-
-    def run(self) -> None:
-        tz = str(get_localzone())
-        now = pd.Timestamp.now(tz)
-        hourly_df, daily_df = self._get_data(tz)
-        daily_df = self.processor.process_daily(daily_df)
-        hourly_df = self.processor.process_hourly(hourly_df, now)
-        output = self.renderer.render(now, hourly_df, daily_df)
-        print(json.dumps(output, ensure_ascii=False))
-
-    def _get_data(self, tz: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-        if self._cache_is_valid():
-            with open(self.pkl_cache, "rb") as f:
-                return pickle.load(f)
-        return self._load_fresh(tz)
-
-    def _cache_is_valid(self) -> bool:
-        result = False
-        if self.pkl_cache.exists():
-            if (time.time() - self.pkl_cache.stat().st_mtime) < self.ttl:
-                result = True
-        return result
-
-    def _load_fresh(self, tz: str):
-        hourly_df, daily_df = load_weather_dataframes()
-        hourly_df = self.processor.map_sunrise_sunset(hourly_df, daily_df, tz)
-        hourly_df = self.processor.enrich(hourly_df)
-        daily_df = self.processor.enrich(daily_df)
-        self.save_pkl(self.pkl_cache, hourly_df, daily_df)
-        return hourly_df, daily_df
-
-
 if __name__ == "__main__":
+    processor = WeatherProcessor(
+        groups=GROUPS, codes=CODES, imperial_cache=CACHE_DIR / "settings.json"
+    )
     WeatherApp(
-        imperial=True,
-        pkl_cache=Path.home() / ".cache/weather_cache" / "weather.pkl",
-        groups=GROUPS,
-        codes=CODES,
-        ttl=CACHE_TTL,
+        processor=processor, ttl=CACHE_TTL, pkl_cache=CACHE_DIR / "weather.pkl"
     ).run()

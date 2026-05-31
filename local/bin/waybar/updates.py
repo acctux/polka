@@ -7,9 +7,9 @@ from pathlib import Path
 
 KEYWORDS = ["linux-", "python-", "nvidia-", "fuse", "systemd"]
 MAX_TOOLTIP_LINES = 24
-THRESHOLD = 20
-THRESHOLD_YELLOW = 35
-THRESHOLD_RED = 50
+THRESHOLD = 50
+THRESHOLD_YELLOW = 75
+THRESHOLD_RED = 100
 
 
 def check_lock_files() -> None:
@@ -74,4 +74,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

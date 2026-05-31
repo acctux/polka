@@ -1,4 +1,4 @@
-"$schema" = 'https://starship.rs/config-schema.json'
+"$schema" = "https://starship.rs/config-schema.json"
 format = """\
 ${status}\
 ${directory}\
@@ -9,16 +9,17 @@ ${character}\
 """
 
 add_newline = false
+
 [character]
-format = "[](bg:black)[$symbol](bold) "
+format = "[](bg:black)[$symbol](bold)"
 success_symbol = "[](fg:black black)"
 error_symbol = "[](fg:black black)"
 disabled = false
 
 [username]
-style_root = 'bg:black bold red'
-style_user = 'bg:black yellow'
-format = '[$user]($style)'
+style_root = "bg:black bold red"
+style_user = "bg:black yellow"
+format = "[$user]($style)"
 
 [status]
 disabled = false
@@ -28,19 +29,28 @@ format = "[$symbol]($style)"
 
 [hostname]
 ssh_only = true
-style = 'bg:black bold dimmed green'
+style = "bg:black bold dimmed green"
 format = "[ $hostname ]($style)"
 
 [directory]
 style = "bg:black white"
-format = '[$path]($style)[$read_only]($read_only_style)'
-repo_root_format = '[$before_root_path]($before_repo_root_style)[$repo_root]($repo_root_style)[$path]($style )[$read_only ]($read_only_style)'
+format = "[$path]($style)[$read_only]($read_only_style)"
+repo_root_format = "[$before_root_path]($before_repo_root_style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style)"
 repo_root_style = "bg:black bold white"
 before_repo_root_style = "bg:black blue"
 read_only = "[\uf023]"
 read_only_style = "bg:black red"
 truncate_to_repo = true
 truncation_length = 5
+
+[directory.substitutions]
+"Desktop" = " Desktop"
+"Documents" = " Documents"
+"Downloads" = " Downloads"
+"Music" = "󰎈 Music"
+"Pictures" = " Pictures"
+"Videos" = " Videos"
+"Lit" = "󰊤 Lit"
 
 [time]
 disabled = true
@@ -49,13 +59,21 @@ format = "[$time]($style) "
 
 [git_branch]
 style = "bg:black bold 85"
-symbol = ' '
+symbol = " 󰘬 "
 format = "[$symbol]($style)[$branch](bg:black 85)"
 truncation_length = 8
 truncation_symbol = "."
 
+[git_commit]
+commit_hash_length = 4
+tag_symbol = " "
+
+[git_state]
+format = '[\($state($progress_current of $progress_total)\)]($style)'
+cherry_pick = "[🍒 PICKING](bold red)"
+
 [git_status]
-format = '[${ahead}${behind}${modified}${conflicted}${stashed}${deleted}${renamed}${staged}${untracked}]($style)'
+format = "[ ${ahead}${behind}${modified}${conflicted}${stashed}${deleted}${renamed}${staged}${untracked}]($style)"
 style = "bg:black 85"
 conflicted = "≠"
 ahead = "⇡$count"
@@ -63,8 +81,8 @@ behind = "⇣$count"
 diverged = "⇕"
 untracked = "?"
 stashed = "󰏖"
-modified = '+'
-staged = ""
+modified = "+"
+staged = '[++\($count\)](green)'
 renamed = "󱞸"
 deleted = "󱡂"
 up_to_date = "✔"
@@ -72,15 +90,15 @@ up_to_date = "✔"
 [cmd_duration]
 disabled = true
 min_time = 2_000
-format = '[took $duration ]($style)'
-style = 'bg:black bold yellow'
+format = "[took $duration]($style)"
+style = "bg:black bold yellow"
 
 [jobs]
-symbol = "▧ "
+symbol = "▧"
 style = "bg:black blue"
 format = "[ $number$symbol]($style)"
 
 [python]
 disabled = true
 style = "bg:black yellow"
-format = '[${virtualenv} ]($style)'
+format = "[${virtualenv} ]($style)"

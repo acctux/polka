@@ -1,132 +1,130 @@
 #!/usr/bin/env python3
+import time
 import subprocess
 import json
-import time
 import html
 from pathlib import Path
 
-CACHE_FILE = Path.home() / ".cache" / "nowplaying_scroll.json"
-SLEEP = 1
-SCROLL_SPEED = 1
-SEP = "  "
-EXCLUDED = {"JBL_Go_4"}
-DIV = 4
-MIN_LEN = 6
-MAX_LEN = 12
+EXCLUDED = ["JBL_Go_4"]
 TOOLTIP_FUNCTIONS = "\nLeft: Pavucontrol\t\nRight: Pause/Play\t\nMiddle: Rmpc\t"
+CHAR_MOVE = 2
 
 
-def run(cmd):
+def run(cmd) -> str:
     return subprocess.run(
         ["playerctl"] + cmd, capture_output=True, text=True
     ).stdout.strip()
 
 
-def get_players():
-    return [p for p in run(["-l"]).splitlines() if p != "No players found"]
-
-
-def get_active_player():
-    players = get_players()
-    for p in players:
-        if p in EXCLUDED:
+def get_active_player(excluded: list[str]) -> str:
+    data = run(["-l"]).splitlines()
+    running_player = ""
+    for player in data:
+        if player == "No players found":
+            return ""
+        if player in excluded:
             continue
-        status = run(["--player", p, "status"])
+        status = run(["--player", player, "status"])
         if status == "Playing":
-            return p
-    return None
+            running_player = player
+    return running_player
 
 
-def window_len(text_len):
-    length = max(MIN_LEN, min(MAX_LEN, text_len))
-    length = (length // DIV) * DIV
-    return max(MIN_LEN, length)
+def window_len(text_len, min_len: int = 6, max_len: int = 12, div: int = 4) -> int:
+    value = text_len // div
+    if value < min_len:
+        return min_len
+    elif value > max_len:
+        return max_len
+    else:
+        return value
 
 
-def get_metadata(player):
+def get_metadata(player) -> str:
     artist = run(["--player", player, "metadata", "xesam:artist"])
     title = run(["--player", player, "metadata", "xesam:title"])
     return f"{artist} – {title}" if artist else title
 
 
-def load_state():
-    if CACHE_FILE.exists():
-        data = json.loads(CACHE_FILE.read_text())
+def load_state(cache_file: Path) -> tuple[str, int, int]:
+    try:
+        data = json.loads(cache_file.read_text())
         return (
-            data.get("track"),
-            float(data.get("pos", 0)),
-            data.get("ts", time.time()),
+            data.get("track", ""),
+            data.get("pos", 0),
+            data.get("ts", int(time.time())),
         )
-    return None, 0.0, time.time()
+    except (FileNotFoundError, json.JSONDecodeError, ValueError, TypeError):
+        return ("", 0, int(time.time()))
 
 
-def save_state(track, pos):
-    CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CACHE_FILE.write_text(json.dumps({"track": track, "pos": pos, "ts": time.time()}))
+def save_state(cache_file: Path, track: str, pos: int):
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(json.dumps({"track": track, "pos": pos, "ts": time.time()}))
 
 
-def scroll_text(text, pos, delta):
-    text_len = len(text)
-    win = window_len(text_len)
-    if text_len <= win:
+def scroll_text(
+    text: str, pos: float, delta: int, sep: str = "  "
+) -> tuple[float, str]:
+    win = window_len(len(text))
+    if len(text) <= win:
         return 0.0, text[:win]
-    cycle = text + SEP
-    cycle_len = len(cycle)
-    looped = cycle * 2
-    pos = pos + delta * SCROLL_SPEED
-    if pos >= cycle_len:
-        pos -= cycle_len
+    cycle = text + sep
+    pos = (pos + delta) % len(cycle)
     start = int(pos)
-    return pos, looped[start : start + win]
+    return pos, (cycle * 2)[start : start + win]
 
 
-def get_volume():
+def get_volume_icon() -> tuple[int, str]:
     out = subprocess.check_output(
         ["pactl", "get-sink-volume", "@DEFAULT_SINK@"], text=True
+    ).split("/")
+    left_vol = int(out[1].strip().split("%")[0])
+    right_vol = int(out[3].strip().split("%")[0])
+    vol = int((left_vol + right_vol) / 2)
+    icon = "󰕾"
+    if vol == 0:
+        icon = "󰝟"
+    elif vol <= 29:
+        icon = "󰕿"
+    elif vol <= 64:
+        icon = "󰖀"
+    return (vol, icon)
+
+
+def print_waybar(text: str, tooltip: str, waybar_class: str) -> None:
+    dict = {"text": text, "tooltip": tooltip, "class": waybar_class}
+    print(json.dumps(dict, ensure_ascii=False))
+
+
+def run_player(vol: int, icon: str, active_player: str, cache_file: Path):
+    track = get_metadata(active_player)
+    saved_track, saved_pos, saved_ts = load_state(cache_file)
+    if track != saved_track:
+        pos = 0.0
+        display = track[: window_len(len(track))]
+    else:
+        now = time.time()
+        pos, display = scroll_text(track, saved_pos, int(now - saved_ts))
+    print_waybar(
+        f"{icon}<span size='4pt'> </span><span size='9pt'>{html.escape(display)}</span>",
+        f"󰕾 {vol}%\n󰐊 {html.escape(track)}\t\n{TOOLTIP_FUNCTIONS}",
+        "playing",
     )
-    vols = [int(x) for x in __import__("re").findall(r"(\d+)%", out)]
-    return sum(vols[:2]) // len(vols[:2]) if vols else 0
-
-
-def volume_icon(vol):
-    return "󰝟" if vol == 0 else "󰕿" if vol <= 29 else "󰖀" if vol <= 64 else "󰕾"
+    save_state(cache_file, track, int(pos))
 
 
 def main():
-    while True:
-        player = get_active_player()
-        volume = get_volume()
-        if not player:
-            output = {
-                "text": volume_icon(volume),
-                "tooltip": f"󰕾 {volume}%\t\n{TOOLTIP_FUNCTIONS}",
-                "class": "stopped",
-            }
-            print(json.dumps(output, ensure_ascii=False), flush=True)
-            time.sleep(SLEEP)
-            continue
-        track = get_metadata(player)
-        now = time.time()
-        saved_track, saved_pos, saved_ts = load_state()
-        if track != saved_track:
-            pos = 0.0
-            win = window_len(len(track))
-            display = track[:win]
-        else:
-            pos, display = scroll_text(track, saved_pos, now - saved_ts)
-        save_state(track, pos)
-        safe_display = html.escape(display)
-        text = f"{volume_icon(volume)}<span size='4pt'> </span><span size='9pt'>{safe_display}</span>"
-        safe_track = html.escape(track)
-        tooltip = f"󰕾 {volume}%\n󰐊 {safe_track}\t\n{TOOLTIP_FUNCTIONS}"
-        print(
-            json.dumps(
-                {"text": text, "tooltip": tooltip, "class": "playing"},
-                ensure_ascii=False,
-            ),
-            flush=True,
+    vol, icon = get_volume_icon()
+    if active_player := get_active_player(EXCLUDED):
+        run_player(
+            vol,
+            icon,
+            active_player,
+            Path.home() / ".cache" / "pulse_scroll" / "nowplaying_scroll.json",
         )
-        time.sleep(SLEEP)
+    else:
+        print_waybar(icon, f"󰕾 {vol}%\t\n{TOOLTIP_FUNCTIONS}", "stopped")
 
 
 if __name__ == "__main__":

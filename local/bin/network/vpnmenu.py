@@ -67,7 +67,7 @@ class WiFiManager:
             log.error(f"Error running command {cmd}: {e.stderr.strip()}")
             return ""
 
-    def reset_wifi(self):
+    def reset_wifi(self) -> None:
         for current in self.SERVICES:
             status = self.run_cmd(["systemctl", "is-active", current])
             if status == "active":
@@ -147,7 +147,7 @@ class VPNManager:
         log.info(choice)
         return None if choice in ("", "Cancel") else choice
 
-    def set_network_and_named(self, ipv4: bool):
+    def set_network_and_named(self, ipv4: bool) -> None:
         val = "1" if ipv4 else "0"
         for key in ("all", "default"):
             self.run_sudo(["sysctl", "-w", f"net.ipv6.conf.{key}.disable_ipv6={val}"])
@@ -159,7 +159,7 @@ class VPNManager:
         self.run_sudo(["cp", str(target_conf), str(self.named_conf_path)])
         self.run_sudo(["systemctl", "restart", "named"])
 
-    def disconnect_all_wg(self):
+    def disconnect_all_wg(self) -> None:
         wg_status = self.run_sudo(["wg", "show"]).stdout.splitlines()
         for line in wg_status:
             if line.startswith("interface:"):
@@ -167,7 +167,7 @@ class VPNManager:
                 self.run_sudo(["wg-quick", "down", iface], sudo=False)
                 time.sleep(0.5)
 
-    def connect_vpn(self, choice: str):
+    def connect_vpn(self, choice: str) -> None:
         self.disconnect_all_wg()
         self.set_network_and_named(ipv4=False)
         time.sleep(0.5)
@@ -179,7 +179,7 @@ class VPNManager:
             self.set_network_and_named(ipv4=success)
 
 
-def launch_wifi():
+def launch_wifi() -> None:
     try:
         process_names = [p.name() for p in psutil.process_iter(attrs=["name"])]
         if "NetworkManager" in process_names:
@@ -200,7 +200,7 @@ def launch_wifi():
 def main_menu():
     cli_choice = sys.argv[1] if len(sys.argv) > 1 else None
     options = [
-        ("Launch Wi-Fi Manager", "wifi"),
+        ("Wi-Fi Manager", "wifi"),
         ("VPN Menu", "vpn"),
         ("Change Wi-Fi Backend", "wifi_reset"),
         ("Cancel", "exit"),
