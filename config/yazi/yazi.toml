@@ -3,3 +3,7 @@ show_hidden = false
 sort_by = "alphabetical"
 sort_dir_first = true
 linemode = "size_and_mtime"
+
+[[plugin.prepend_previewers]]
+mime = "application/{*zip,tar,bzip2,7z*,rar,xz,zstd,java-archive}"
+run = "ouch"

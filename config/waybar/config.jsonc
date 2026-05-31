@@ -219,7 +219,7 @@
   "custom/volume": {
     "exec": "~/.local/bin/mpd/mypulseaudio.py",
     "return-type": "json",
-    "interval": 2,
+    "interval": 1,
     "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5%",
     "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5%",
     "format": "{text}",

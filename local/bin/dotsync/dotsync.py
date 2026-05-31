@@ -46,6 +46,7 @@ log = get_logger("Polka")
 class PolkaDots:
     HOME = Path.home()
     SKIP_BASE = {".git", "__pycache__", ".venv"}
+    SKIP_NAME = {".gitignore"}
 
     def __init__(self, dotfiles_dirs: list[str]):
         self.dotfiles_paths = [self.HOME / d for d in dotfiles_dirs]
@@ -60,7 +61,10 @@ class PolkaDots:
                 if not src.is_file():
                     continue
                 parts = src.relative_to(src_dir).parts
-                if parts[0] in self.SKIP_BASE:
+                for part in parts:
+                    if part in self.SKIP_BASE:
+                        continue
+                if parts[-1] in self.SKIP_NAME:
                     continue
                 dst = self.HOME / Path("." + parts[0], *parts[1:])
                 dst.parent.mkdir(parents=True, exist_ok=True)
