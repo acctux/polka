@@ -3,7 +3,6 @@
 image/jpeg=imv.desktop
 image/png=imv.desktop
 image/gif=imv.desktop
-image/svg+xml=featherpad.desktop
 image/bmp=imv.desktop
 image/tiff=imv.desktop
 image/webp=imv.desktop
@@ -12,9 +11,6 @@ image/x-raw=imv.desktop
 # Document MIME Types
 application/pdf=org.gnome.Evince.desktop
 application/epub=org.gnome.Evince.desktop
-application/json=featherpad.desktop
-text/plain=featherpad.desktop
-text/html=featherpad.desktop
 application/msword=libreoffice-writer.desktop
 application/vnd.ms-excel=libreoffice-calc.desktop
 application/vnd.ms-powerpoint=libreoffice-impress.desktop
@@ -41,20 +37,10 @@ video/avi=mpv.desktop
 video/x-flv=mpv.desktop
 video/quicktime=mpv.desktop
 video/x-msvideo=mpv.desktop
-# Font MIME Types
-application/x-font-ttf=font-manager.desktop
-application/x-font-otf=font-manager.desktop
-# Compression MIME Types
-application/zip=file-roller.desktop
-application/x-tar=file-roller.desktop
-application/gzip=file-roller.desktop
-application/x-7z-compressed=file-roller.desktop
-application/x-rar-compressed=file-roller.desktop
 # Miscellaneous MIME Types
 inode/directory=org.gnome.Nautilus.desktop
 x-scheme-handler/http=firedragon.desktop
 x-scheme-handler/https=firedragon.desktop
-x-scheme-handler/mailto=firebird.desktop
 x-scheme-handler/magnet=deluge.desktop
 
 [Added Associations]
@@ -62,7 +48,6 @@ x-scheme-handler/magnet=deluge.desktop
 image/jpeg=imv.desktop;
 image/png=imv.desktop;
 image/gif=imv.desktop;
-image/svg+xml=featherpad.desktop;imv.desktop
 image/bmp=imv.desktop;
 image/tiff=imv.desktop;
 image/webp=imv.desktop;
@@ -71,9 +56,6 @@ image/x-raw=imv.desktop;
 # Document MIME Types
 application/pdf=org.gnome.Evince.desktop;
 application/epub=org.gnome.Evince.desktop;
-application/json=featherpad.desktop;
-text/plain=featherpad.desktop;
-text/html=featherpad.desktop;
 application/msword=libreoffice-writer.desktop;
 application/vnd.ms-excel=libreoffice-calc.desktop;
 application/vnd.ms-powerpoint=libreoffice-impress.desktop;
@@ -100,20 +82,9 @@ video/avi=mpv.desktop;
 video/x-flv=mpv.desktop;
 video/quicktime=mpv.desktop;
 video/x-msvideo=mpv.desktop;
-# Font MIME Types
-application/x-font-ttf=font-manager.desktop;
-application/x-font-otf=font-manager.desktop;
-# Compression MIME Types
-application/zip=file-roller.desktop;
-application/x-tar=file-roller.desktop;
-application/gzip=file-roller.desktop;
-application/x-7z-compressed=file-roller.desktop;
-application/x-rar-compressed=file-roller.desktop;
 # Miscellaneous MIME Types
 inode/directory=org.gnome.Nautilus.desktop;
-application/octet-stream=featherpad.desktop;
 x-scheme-handler/http=firedragon.desktop
 x-scheme-handler/https=firedragon.desktop
-x-scheme-handler/mailto=firebird.desktop;
 x-scheme-handler/magnet=deluge.desktop;
 

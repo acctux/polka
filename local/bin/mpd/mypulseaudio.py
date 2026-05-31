@@ -5,9 +5,7 @@ import json
 import html
 from pathlib import Path
 
-EXCLUDED = ["JBL_Go_4"]
 TOOLTIP_FUNCTIONS = "\nLeft: Pavucontrol\t\nRight: Pause/Play\t\nMiddle: Rmpc\t"
-CHAR_MOVE = 2
 
 
 def run(cmd) -> str:
@@ -97,32 +95,24 @@ def print_waybar(text: str, tooltip: str, waybar_class: str) -> None:
     print(json.dumps(dict, ensure_ascii=False))
 
 
-def run_player(vol: int, icon: str, active_player: str, cache_file: Path):
-    track = get_metadata(active_player)
-    saved_track, saved_pos, saved_ts = load_state(cache_file)
-    if track != saved_track:
-        pos = 0.0
-        display = track[: window_len(len(track))]
-    else:
-        now = time.time()
-        pos, display = scroll_text(track, saved_pos, int(now - saved_ts))
-    print_waybar(
-        f"{icon}<span size='4pt'> </span><span size='9pt'>{html.escape(display)}</span>",
-        f"󰕾 {vol}%\n󰐊 {html.escape(track)}\t\n{TOOLTIP_FUNCTIONS}",
-        "playing",
-    )
-    save_state(cache_file, track, int(pos))
-
-
 def main():
     vol, icon = get_volume_icon()
-    if active_player := get_active_player(EXCLUDED):
-        run_player(
-            vol,
-            icon,
-            active_player,
-            Path.home() / ".cache" / "pulse_scroll" / "nowplaying_scroll.json",
+    if active_player := get_active_player(["JBL_Go_4"]):
+        track = get_metadata(active_player)
+        cache_file = Path.home() / ".cache" / "pulse_scroll" / "nowplaying_scroll.json"
+        saved_track, saved_pos, saved_ts = load_state(cache_file)
+        if track != saved_track:
+            pos = 0.0
+            display = track[: window_len(len(track))]
+        else:
+            now = time.time()
+            pos, display = scroll_text(track, saved_pos, int(now - saved_ts))
+        print_waybar(
+            f"{icon}<span size='4pt'> </span><span size='9pt'>{html.escape(display)}</span>",
+            f"󰕾 {vol}%\n󰐊 {html.escape(track)}\t\n{TOOLTIP_FUNCTIONS}",
+            "playing",
         )
+        save_state(cache_file, track, int(pos))
     else:
         print_waybar(icon, f"󰕾 {vol}%\t\n{TOOLTIP_FUNCTIONS}", "stopped")
 

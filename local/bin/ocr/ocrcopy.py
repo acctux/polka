@@ -2,7 +2,7 @@
 from pathlib import Path
 import subprocess
 
-CACHE_FILE = Path.home() / ".cache/ocr_region.png"
+CACHE_FILE = Path.home() / ".cache" / "ocr_region.png"
 
 
 def main():
@@ -24,4 +24,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

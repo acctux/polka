@@ -189,8 +189,8 @@
   "custom/kb-switch": {
     "exec": "~/.local/bin/keyboard/kb-current.py",
     "signal": 6,
+    "return-type": "json",
     "format": "{}",
-    "tooltip": false,
     "on-click": "hyprctl switchxkblayout at-translated-set-2-keyboard next",
     "on-click-right": "~/.local/bin/keyboard/osk_handle.sh",
     "on-click-middle": "~/.local/bin/keyboard/emoji_select.sh"

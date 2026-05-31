@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import os
 import json
 import subprocess
@@ -60,21 +59,18 @@ class ProtonMailBridgeNotifier:
         imap.select("INBOX")
         return imap
 
-    def fetch_last_five(
-        self,
-        imap: imaplib2.IMAP4,
-    ) -> list[tuple[str, str, str]]:
+    def fetch_last_five(self, imap: imaplib2.IMAP4) -> list[tuple[str, str, str]]:
         try:
             _, data = imap.search(None, "ALL")
             ids = data[0].split()
             results = []
             for email_id in ids[-1:-6:-1]:
                 _, uid_data = imap.fetch(email_id, "(UID)")
-                uid = uid_data[0].decode().split("UID ")[1].split()[0]
+                uid = uid_data[0].decode().split("UID ")[1].split(")")[0]
                 _, msg_data = imap.fetch(
                     email_id, "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)])"
                 )
-                msg = message_from_bytes(msg_data)
+                msg = message_from_bytes(msg_data[0][1])
                 sender = msg.get("From", "").strip()
                 subject = msg.get("Subject", "").strip()
                 results.append((uid, sender, subject))
@@ -84,8 +80,7 @@ class ProtonMailBridgeNotifier:
             return []
 
     def get_new_emails(
-        self,
-        last_five: list[tuple[str, str, str]],
+        self, last_five: list[tuple[str, str, str]]
     ) -> list[tuple[str, str, str]]:
         for i, (uid, _, _) in enumerate(last_five):
             if uid == self.last_uid:
@@ -95,11 +90,7 @@ class ProtonMailBridgeNotifier:
             new = last_five
         return new
 
-    def notify(
-        self,
-        sender: str,
-        subject: str,
-    ) -> None:
+    def notify(self, sender: str, subject: str) -> None:
         subprocess.run(
             [
                 "notify-send",

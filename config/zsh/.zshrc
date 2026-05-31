@@ -3,7 +3,6 @@ source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zs
 eval "$(mcfly init zsh)"
 eval "$(starship init zsh)"
 eval "$(zoxide init --cmd cd zsh)"
-# eval "$(direnv hook zsh)"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 HISTSIZE=10000
 SAVEHIST=10000
