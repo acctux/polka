@@ -172,7 +172,7 @@ GROUPS = [
     ),
     WeatherGroup(
         name="rain_mix",
-        color="blue",
+        color="cyan",
         units=[
             WeatherUnit(icon="", codes=[84]),
             WeatherUnit(icon=("", ""), codes=[57, 83]),
@@ -180,7 +180,7 @@ GROUPS = [
     ),
     WeatherGroup(
         name="rain_wind",
-        color="blue",
+        color="cyan",
         units=[
             WeatherUnit(icon="", codes=[]),
             WeatherUnit(icon=("", ""), codes=[62, 63, 64, 65]),
@@ -188,7 +188,7 @@ GROUPS = [
     ),
     WeatherGroup(
         name="sleet",
-        color="blue",
+        color="cyan",
         units=[
             WeatherUnit(icon="", codes=[23, 24, 67, 69]),
             WeatherUnit(icon=("", ""), codes=[56, 66, 68]),
@@ -204,7 +204,7 @@ GROUPS = [
     ),
     WeatherGroup(
         name="rain",
-        color="blue",
+        color="cyan",
         units=[
             WeatherUnit(icon="", codes=[21]),
             WeatherUnit(icon=("", ""), codes=[]),
@@ -212,7 +212,7 @@ GROUPS = [
     ),
     WeatherGroup(
         name="showers",
-        color="blue",
+        color="cyan",
         units=[
             WeatherUnit(icon="", codes=[59, 60, 61, 81, 82]),
             WeatherUnit(icon=("", ""), codes=[25, 26, 27, 58, 80]),
@@ -228,7 +228,7 @@ GROUPS = [
     ),
     WeatherGroup(
         name="sprinkle",
-        color="blue",
+        color="cyan",
         units=[
             WeatherUnit(icon="", codes=[20, 54, 55]),
             WeatherUnit(icon=("", ""), codes=[10, 50, 51, 52, 53]),
