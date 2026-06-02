@@ -15,13 +15,10 @@ alias ll='eza -al --icons=always'
 alias lt='eza -a --tree --level=1 --icons=always'
 alias shutdown='systemctl poweroff'
 alias grep='grep --color=auto'
-alias mkdir='mkdir -pv'
 alias cx='chmod +x'
 alias lg='lazygit'
 alias st='systemctl-tui'
-alias loggy='sudo systemctl restart logid'
-alias dotsync='/home/nick/.local/bin/dotsync/dotsync.py'
-alias gamemode='/home/nick/.local/bin/power/gamemode.py'
+alias dotsync='~/.local/bin/dotsync/dotsync.py'
 export PATH="$PATH:/home/nick/Polka/local/bin"
 function y() {
 	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd

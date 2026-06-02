@@ -148,9 +148,6 @@ class VPNManager:
         return None if choice in ("", "Cancel") else choice
 
     def set_network_and_named(self, ipv4: bool) -> None:
-        val = "1" if ipv4 else "0"
-        for key in ("all", "default"):
-            self.run_sudo(["sysctl", "-w", f"net.ipv6.conf.{key}.disable_ipv6={val}"])
         target_conf = self.namedconf_dir / f"namedipv{'4' if ipv4 else '6'}.conf"
         current_conf = self.run_sudo(["cat", str(self.named_conf_path)]).stdout
         if current_conf == target_conf.read_text():
@@ -170,12 +167,11 @@ class VPNManager:
     def connect_vpn(self, choice: str) -> None:
         self.disconnect_all_wg()
         self.set_network_and_named(ipv4=False)
-        time.sleep(0.5)
+        time.sleep(1.5)
         if choice != "Disconnect":
             success = (
                 self.run_sudo(["wg-quick", "up", choice], sudo=False).returncode == 0
             )
-            time.sleep(0.5)
             self.set_network_and_named(ipv4=success)
 
 

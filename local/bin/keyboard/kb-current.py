@@ -4,7 +4,12 @@ import json
 import subprocess
 from pathlib import Path
 
-LAYOUT_ICONS = {"English (US)": "🇺🇸", "Russian": "🇷🇺", "Ukrainian": "🇺🇦"}
+LAYOUT_ICONS = {
+    "English (US)": "🇺🇸",
+    "Russian": "🇷🇺",
+    "Russian (phonetic)": "🇷🇺",
+    "Ukrainian": "🇺🇦",
+}
 KEYBOARD_NAME = "at-translated-set-2-keyboard"
 CACHE_FILE = Path.home() / ".cache" / "keyboard_waybar" / "keyboard_layout_cache.json"
 
