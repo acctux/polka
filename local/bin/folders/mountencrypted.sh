@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CIPHER="$HOME/Desktop/Encrypted"
+CIPHER="$HOME/Desktop/Private"
 PLAIN="$HOME/Desktop/Decrypted"
 
 initialize_gocrypt() {
@@ -13,6 +13,7 @@ initialize_gocrypt() {
 
 mount_fs() {
   mkdir -p "$CIPHER" "$PLAIN"
+  gio set "$HOME/Desktop/Decrypted" metadata::custom-icon "file:///usr/share/icons/WhiteSur-dark/places/scalable/folder-unlocked.svg"
   PASSFILE=$(mktemp)
   PASSWORD=$(zenity --password --title="Enter gocryptfs password")
   echo "$PASSWORD" >"$PASSFILE"

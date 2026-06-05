@@ -28,7 +28,7 @@ hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(browser))
 hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(textEditor))
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd("fuzzel"))
 hl.bind(shiftMod .. " + R", hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
-hl.bind(shiftMod .. " + E", hl.dsp.exec_cmd("nautilus"))
+hl.bind(shiftMod .. " + B", hl.dsp.exec_cmd("~/.local/bin/email/neomutt_launch.sh"))
 hl.bind(shiftMod .. " + T", hl.dsp.exec_cmd("~/.local/bin/keyboard/osk_handle.sh"))
 --##################################################
 -- WINDOW FOCUS AND SWITCHING

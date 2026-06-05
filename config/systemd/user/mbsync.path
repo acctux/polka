@@ -1,0 +1,8 @@
+[Unit]
+Description=Watch mail directory for local changes
+
+[Path]
+PathChanged=%h/.local/mail/protonmail/.notmuch
+
+[Install]
+WantedBy=default.target

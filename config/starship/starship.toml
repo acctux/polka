@@ -47,10 +47,13 @@ truncation_length = 5
 "Desktop" = " Desktop"
 "Documents" = " Documents"
 "Downloads" = " Downloads"
-"Music" = "󰎈 Music"
+"Music" = " Music"
 "Pictures" = " Pictures"
 "Videos" = " Videos"
-"Lit" = "󰊤 Lit"
+"Books" = " Books"
+"Lit" = " Lit"
+"Private" = " Private"
+"Games" = "󰊴 Games"
 
 [time]
 disabled = true

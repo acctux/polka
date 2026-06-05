@@ -1,0 +1,94 @@
+# -------------------------------------------------------------------------
+# color object foreground background
+# color { header | body } foreground background regex
+# color index-object foreground background pattern
+# color compose composeobject foreground background
+#
+# If your terminal supports color, these commands can be used to assign
+# foreground/background combinations to certain objects. The currently
+# defined  objects  are: attach_headers,  attachment, body,  bold,  error,
+# hdrdefault, header, index, index_author, index_collapsed, index_date,
+# index_flags, index_label, index_number, index_size, index_subject,
+# index_tag, index_tags, indicator, markers, message, normal, progress,
+# prompt, quoted, quotedN, search, signature, status, tilde, tree,
+# underline.
+#
+# If the sidebar is enabled the following objects are also valid:
+# sidebar_divider, sidebar_flagged, sidebar_highlight, sidebar_indicator,
+# sidebar_new, sidebar_ordinary, sidebar_spoolfile. 
+#
+# The body and header objects allow you to restrict the colorization to a
+# regular expression.  The index-object permits you to select colored
+# messages by pattern.  
+#
+# The header and body match regex in the header/body of a message,
+# index-object can match pattern in the message index.  Note that IMAP
+# server-side searches (=b, =B, =h) are not  supported  for color index
+# patterns.
+#
+# Valid colors include: default, black, red, green, yellow, blue, magenta,
+# cyan, white, colorN.
+#
+# The  uncolor command can be applied to the index, header and body objects
+# only. It removes entries from the list. You must specify the same pattern
+# specified in the color command for it to be removed. The pattern “*” is a
+# special token which means to clear the color list of all entries.
+#
+# For further information on colorization, please consult the NeoMutt
+# manual.
+# -------------------------------------------------------------------------
+
+color header cyan default "^From:"
+color header cyan default "^Subject:"
+color header brightwhite default "^(CC|BCC)"
+color hdrdefault brightblue default
+mono bold bold
+mono underline underline
+mono indicator reverse
+mono error bold
+mono body bold "^gpg: Good signature"
+color normal default default
+color indicator black cyan
+color error red default
+color status white brightblack
+color tilde cyan default
+color sidebar_divider brightblue default
+color sidebar_ordinary white default
+color sidebar_flagged brightred default
+color sidebar_unread cyan default
+color sidebar_highlight black cyan
+color index_number blue default
+color index_date green default
+color index brightblue default "~N"     # new messages
+color index cyan default "~U"           # unread
+color index red default "~F"            # flagged
+color index brightred default "~D"      # deleted
+color index brightyellow default "~T"   # tagged emails
+color index_author red default '.*'
+color body brightgreen default "(https?|ftp)://[\-\.+,/%~_:?&=\#a-zA-Z0-9]+"
+color body brightgreen default "[\-\.+_a-zA-Z0-9]+@[\-\.a-zA-Z0-9]+"
+color body green default "\`[^\`]*\`"
+color body brightblue default "^# \.*"
+color body brightcyan default "^## \.*"
+color body brightgreen default "^### \.*"
+color body yellow default "^(\t| )*(-|\\*) \.*"
+color body brightcyan default "[;:][-o][)/(|]"
+color body brightcyan default "[;:][)(|]"
+color body brightcyan default "[ ][*][^*]*[*][ ]?"
+color body brightcyan default "[ ]?[*][^*]*[*][ ]"
+color body red default "(BAD signature)"
+color body cyan default "(Good signature)"
+color body brightblack default "^gpg: Good signature .*"
+color body brightyellow default "^gpg: "
+color body brightyellow red "^gpg: BAD signature from.*"
+color attachment magenta default
+color signature brightwhite default
+color search brightred black
+color quoted cyan default
+color quoted1 brightcyan default
+color quoted2 blue default
+color quoted3 green default
+color quoted4 yellow default
+color quoted5 red default
+color tree white default
+color progress black cyan

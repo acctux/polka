@@ -1,0 +1,11 @@
+set signature="$HOME/.local/bin/email/signature.sh|"
+set folder = "$XDG_DATA_HOME/mail/proton"
+set mbox_type = Maildir
+set spoolfile = "+Inbox"
+set postponed = "+Drafts"
+set record = "+Sent"
+mailboxes +Inbox +Sent +Drafts +Trash +Archive +Spam +Starred
+mailboxes "+Folders/Important Docs"
+mailboxes "+Folders/Important Docs/Hana"
+mailboxes "+Folders/Important Docs/I-129F"
+mailboxes "+Folders/Important Docs/Permanent Travel"

@@ -1,5 +1,6 @@
 source /usr/share/zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+export SSH_ASKPASS=/usr/lib/seahorse/ssh-askpass
 eval "$(mcfly init zsh)"
 eval "$(starship init zsh)"
 eval "$(zoxide init --cmd cd zsh)"

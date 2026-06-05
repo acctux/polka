@@ -7,40 +7,34 @@ from pathlib import Path
 import logging
 
 
-##############################
-# Logging Setup
-##############################
+#########################
+# LOG
+#########################
 class ColorFormatter(logging.Formatter):
     COLORS = {
-        logging.DEBUG: "\033[36m",  # Cyan
-        logging.INFO: "\033[34m",  # Blue
-        logging.WARNING: "\033[93m",  # Yellow
-        logging.ERROR: "\033[31m",  # Red
-        logging.CRITICAL: "\033[41m",  # Red background
+        logging.INFO: "\033[36m",
+        logging.WARNING: "\033[93m",
+        logging.ERROR: "\033[31m",
     }
     RESET = "\033[0m"
-    UNDERLINE = "\033[4m"
+    NAME = "\033[93m"
 
     def format(self, record):
-        message = f"{record.name}: {record.getMessage()}"
-        color = self.COLORS.get(record.levelno, "")
-        if color:
-            message = f"{color}{message}{self.RESET}"
-        if record.levelno == logging.CRITICAL:
-            message = f"{self.UNDERLINE}{message}{self.RESET}"
-        return message
+        name = f"{self.NAME}{record.name}{self.RESET}"
+        msg = f"{self.COLORS.get(record.levelno, '')}{record.getMessage()}{self.RESET}"
+        return f"{name}: {msg}"
 
 
-def get_logger(log_name: str | None = None, level=logging.INFO):
-    logger = logging.getLogger(log_name)
-    if logger.handlers:
-        return logger
+def get_logger(log_name=None, level=logging.INFO):
+    log = logging.getLogger(log_name)
+    if log.handlers:
+        return log
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(ColorFormatter())
-    logger.addHandler(handler)
-    logger.setLevel(level)
-    logger.propagate = False
-    return logger
+    log.addHandler(handler)
+    log.setLevel(level)
+    log.propagate = False
+    return log
 
 
 log = get_logger("NetworkManager")
@@ -107,12 +101,15 @@ class WiFiManager:
 # VPN Manager
 ##############################
 class VPNManager:
-    vpn_list = Path("/var/cache/mysysinfo/vpn.list")
-
-    def __init__(self):
-        self.named_conf_path = Path("/etc/named.conf")
-        self.namedconf_dir = Path(__file__).resolve().parent / "namedconf"
-        self.fuzzel_config = Path.home() / ".config/fuzzel/fav-menu.ini"
+    def __init__(
+        self,
+        fuzzel_config=Path.home() / ".config/fuzzel/fav-menu.ini",
+        namedconf_dir=Path(__file__).resolve().parent / "namedconf",
+        vpn_list=Path("/var/cache/mysysinfo/vpn.list"),
+    ):
+        self.namedconf_dir = namedconf_dir
+        self.fuzzel_config = fuzzel_config
+        self.vpn_list = vpn_list
 
     def run_sudo(
         self, cmd: list[str], sudo: bool = True
@@ -123,37 +120,34 @@ class VPNManager:
         return subprocess.run(cmd, text=True, capture_output=True)
 
     def run_fuzzel(self) -> str | None:
-        options = self.vpn_list.read_text().splitlines() + [
-            "─────",
-            "Disconnect",
-            "Cancel",
+        vpn_lines = self.vpn_list.read_text().splitlines()
+        menu_options = vpn_lines + ["─────", "Disconnect", "Cancel"]
+        cmd = [
+            "fuzzel",
+            "--dmenu",
+            f"--width={max(map(len, menu_options)) + 1}",
+            "--lines",
+            str(len(menu_options)),
+            "--config",
+            str(self.fuzzel_config),
+            "--x-margin=80",
         ]
-        width = max(map(len, options)) + 1
         choice = subprocess.run(
-            [
-                "fuzzel",
-                "--dmenu",
-                f"--width={width}",
-                "--lines",
-                str(len(options)),
-                "--config",
-                str(self.fuzzel_config),
-                "--x-margin=80",
-            ],
-            input="\n".join(options),
-            text=True,
-            capture_output=True,
+            cmd, input="\n".join(menu_options), text=True, capture_output=True
         ).stdout.strip()
-        log.info(choice)
-        return None if choice in ("", "Cancel") else choice
+        if choice in ("", "Cancel"):
+            choice = None
+        log.info(f"Selected: {choice}")
+        return choice
 
     def set_network_and_named(self, ipv4: bool) -> None:
+        named_conf_path = Path("/etc/named.conf")
         target_conf = self.namedconf_dir / f"namedipv{'4' if ipv4 else '6'}.conf"
-        current_conf = self.run_sudo(["cat", str(self.named_conf_path)]).stdout
+        current_conf = self.run_sudo(["cat", str(named_conf_path)]).stdout
         if current_conf == target_conf.read_text():
             return
         time.sleep(1)
-        self.run_sudo(["cp", str(target_conf), str(self.named_conf_path)])
+        self.run_sudo(["cp", str(target_conf), str(named_conf_path)])
         self.run_sudo(["systemctl", "restart", "named"])
 
     def disconnect_all_wg(self) -> None:
@@ -177,7 +171,9 @@ class VPNManager:
 
 def launch_wifi() -> None:
     try:
-        process_names = [p.name() for p in psutil.process_iter(attrs=["name"])]
+        process_names = []
+        for p in psutil.process_iter(attrs=["name"]):
+            process_names.append(p.name())
         if "NetworkManager" in process_names:
             subprocess.run(["kitty", "nmtui"])
             return
@@ -194,7 +190,6 @@ def launch_wifi() -> None:
 # Main Menu
 ##############################
 def main_menu():
-    cli_choice = sys.argv[1] if len(sys.argv) > 1 else None
     options = [
         ("Wi-Fi Manager", "wifi"),
         ("VPN Menu", "vpn"),
@@ -221,13 +216,16 @@ def main_menu():
     if action == "wifi":
         launch_wifi()
     elif action == "vpn":
+        cli_choice = sys.argv[1] if len(sys.argv) > 1 else None
+        vpn = VPNManager()
         if not cli_choice:
-            cli_choice = VPNManager().run_fuzzel()
+            cli_choice = vpn.run_fuzzel()
             log.info(cli_choice)
         if cli_choice:
-            VPNManager().connect_vpn(cli_choice)
+            vpn.connect_vpn(cli_choice)
     elif action == "wifi_reset":
-        WiFiManager().reset_wifi()
+        wifi = WiFiManager()
+        wifi.reset_wifi()
     elif action == "exit" or action is None:
         sys.exit(0)
 

@@ -1,41 +1,66 @@
-# Adapted/improved from Arch Linux wiki
-# https://wiki.archlinux.org/title/Notmuch
-
-# F3 to create threads from search results
-# F4 to search your inbox using notmuch
-# F5 to interactively apply tags to emails using notmuch
-# F8 to tag/DELETE search results with "deleted".
-# F9 to show messages pending deletion.
-
-macro index <F3> \
-"<enter-command>set my_old_pipe_decode=\$pipe_decode my_old_wait_key=\$wait_key nopipe_decode nowait_key<enter>\
-<pipe-message>notmuch-mutt -r thread<enter>\
-<change-folder-readonly>`echo ${XDG_CACHE_HOME:-$HOME/.cache}/notmuch/mutt/results`<enter>\
-<enter-command>set pipe_decode=\$my_old_pipe_decode wait_key=\$my_old_wait_key<enter>" \
-"notmuch: reconstruct thread"
-
-macro index <F4> \
-"<enter-command>set my_old_pipe_decode=\$pipe_decode my_old_wait_key=\$wait_key nopipe_decode nowait_key<enter>\
-<shell-escape>notmuch-mutt -r --prompt search<enter>\
-<change-folder-readonly>`echo ${XDG_CACHE_HOME:-$HOME/.cache}/notmuch/mutt/results`<enter>\
-<enter-command>set pipe_decode=\$my_old_pipe_decode wait_key=\$my_old_wait_key<enter>" \
-"notmuch: search mail"
-
-macro index <F5> \
-"<enter-command>set my_old_pipe_decode=\$pipe_decode my_old_wait_key=\$wait_key nopipe_decode nowait_key<enter>\
-<pipe-message>~/.scripts/notmuch-mass-tag<enter>\
-<enter-command>set pipe_decode=\$my_old_pipe_decode wait_key=\$my_old_wait_key<enter>" \
-"notmuch: interactively mass tag selected messages"
-
-macro index <F8> \
-"<enter-command>set my_old_pipe_decode=\$pipe_decode my_old_wait_key=\$wait_key nopipe_decode nowait_key<enter>\
-<pipe-message>~/.scripts/notmuch-mass-delete<enter>\
-<enter-command>set pipe_decode=\$my_old_pipe_decode wait_key=\$my_old_wait_key<enter>" \
-"notmuch: apply +deleted tag to selected messages"
-
-macro index <F9> \
-"<enter-command>set my_old_pipe_decode=\$pipe_decode my_old_wait_key=\$wait_key nopipe_decode nowait_key<enter>\
-<pipe-message>notmuch-mutt -o ~/.local/share/mail/Notmuch search tag:deleted 2>/dev/null<enter>\
-<change-folder>`echo ~/.local/share/mail/Notmuch`<enter>\
-<enter-command>set pipe_decode=\$my_old_pipe_decode wait_key=\$my_old_wait_key<enter>" \
-"notmuch: show messages with +deleted tag"
+# ====================================================================
+# 1. BINDINGS
+# ====================================================================
+bind index,pager i noop
+bind index,pager g noop
+bind index,pager M noop
+bind index,pager C noop
+bind index j next-entry
+bind index k previous-entry
+bind index l display-message
+bind index K first-entry
+bind index J last-entry
+bind pager j next-line
+bind pager k previous-line
+bind pager l view-attachments
+bind pager K top
+bind pager J bottom
+bind index L limit
+bind index U undelete-message
+bind index,pager S sync-mailbox
+bind index,pager \CK sidebar-prev
+bind index,pager \CJ sidebar-next
+bind index,pager \CL sidebar-open
+bind index,pager \CH sidebar-toggle-visible
+bind index,pager q exit
+bind index / search
+macro index <space> "t" "toggle tag"
+bind attach <return> view-mailcap
+# ==========================================
+# MACROS
+# ==========================================
+# Mark all new emails as read
+macro index A \
+  "<tag-pattern>~N<enter><tag-prefix><clear-flag>N<untag-pattern>.<enter>" \
+  "mark all new as read"
+# Save attachments quickly
+macro attach s "<save-entry>$XDG_DOWNLOAD_DIR<eol>" \
+"save attachment"
+# Run external mail sync
+macro index O "<shell-escape>$HOME/.local/bin/email/emailsync.sh<enter>" \
+"fetch and index email"
+# URL extraction from messages
+macro index,pager \cb "<pipe-message>urlscan<Enter>" \
+"extract URLs from message"
+macro attach,compose \cb "<pipe-entry>urlscan<Enter>" \
+"extract URLs from entry"
+# Folder navigation
+# Compact
+macro index <F5> "<enter-command>set index_format='%2C | %Z[%d] %-20.20F %s'; set date_format='%y-%m-%d'<enter>" "Compact view"
+# Detailed
+macro index <F6> "<enter-command>set index_format='%2C | %Z [%d] %-20.20F %?X?📎?(%-4.4c) %s'; set date_format='%y-%m-%d %H:%M'<enter>" "Extended view"
+macro index,pager gi "<change-folder>=Inbox<enter>" "go to Inbox"
+macro index,pager Mi "<save-message>=Inbox<enter>" "move to Inbox"
+macro index,pager Ci "<copy-message>=Inbox<enter>" "copy to Inbox"
+macro index,pager gd "<change-folder>=Drafts<enter>" "go to Drafts"
+macro index,pager Md "<save-message>=Drafts<enter>" "move to Drafts"
+macro index,pager Cd "<copy-message>=Drafts<enter>" "copy to Drafts"
+macro index,pager gt "<change-folder>=Trash<enter>" "go to Trash"
+macro index,pager Mt "<save-message>=Trash<enter>" "move to Trash"
+macro index,pager Ct "<copy-message>=Trash<enter>" "copy to Trash"
+macro index,pager gs "<change-folder>=Sent<enter>" "go to Sent"
+macro index,pager Ms "<save-message>=Sent<enter>" "move to Sent"
+macro index,pager Cs "<copy-message>=Sent<enter>" "copy to Sent"
+macro index,pager gl "<change-folder>=Folders/Important Docs<enter>" "go to Important Docs"
+macro index,pager Ml "<save-message>=Folders/Important Docs<enter>" "move to Important Docs"
+macro index,pager Cl "<copy-message>=Folders/Important Docs<enter>" "copy to Important Docs"
