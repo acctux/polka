@@ -19,7 +19,7 @@ class MaimPdfTool:
     def _notify(self, msg):
         self._run("notify-send", msg)
 
-    def _ensure(self, *paths):
+    def _mkdirs(self, *paths):
         for p in paths:
             p.mkdir(parents=True, exist_ok=True)
 
@@ -40,26 +40,22 @@ class MaimPdfTool:
         return region
 
     def _next_index(self) -> int:
-        self._ensure(self.screens)
-        max_index = -1
-        for path in self.screens.glob("*.png"):
-            if path.stem.isdigit():
-                num = int(path.stem)
-                if num > max_index:
-                    max_index = num
-        return max_index + 1
+        self._mkdirs(self.screens)
+        pngs = sorted(self.screens.glob("*.png"))
+        if not pngs:
+            return 0
+        return int(pngs[-1].stem) + 1
 
     def capture(self) -> None:
-        self._ensure(self.screens)
+        self._mkdirs(self.screens)
         region = self._load_region()
-        idx = self._next_index()
-        out = self.screens / f"{idx:03d}.png"
-        self._run("grim", "-g", region, str(out))
-        self._notify(f"Saved screenshot: {out.name}")
+        screen_path = self.screens / f"{self._next_index():03d}.png"
+        self._run("grim", "-g", region, str(screen_path))
+        self._notify(f"Saved screenshot: {screen_path.name}")
 
     # ---------- OCR ----------
     def ocr_2_pdf(self):
-        self._ensure(self.noalpha)
+        self._mkdirs(self.noalpha)
         self._run(
             "mogrify",
             "-path",
@@ -70,11 +66,16 @@ class MaimPdfTool:
             "off",
             str(self.screens / "*.png"),
         )
-        images = sorted(self.noalpha.glob("*.png"))
-        if not images:
+        noalpha_images = sorted(self.noalpha.glob("*.png"))
+        if not noalpha_images:
             raise RuntimeError("No images found")
         tmp_pdf = self.base / "tmp.pdf"
-        self._run("img2pdf", *map(str, images), "-o", str(tmp_pdf))
+        self._run(
+            "img2pdf",
+            *map(str, noalpha_images),
+            "-o",
+            str(tmp_pdf),
+        )
         self._run(
             "ocrmypdf",
             "--language",
@@ -87,27 +88,31 @@ class MaimPdfTool:
             str(self.output_pdf),
         )
         tmp_pdf.unlink(missing_ok=True)
-        for p in self.noalpha.glob("*"):
-            p.unlink()
+        for no_alpha_screenshot in self.noalpha.glob("*"):
+            no_alpha_screenshot.unlink()
         self.noalpha.rmdir()
         self._notify(f"OCR saved: {self.output_pdf}")
 
 
 def main():
-    maimpdf_handler = MaimPdfTool()
-    parser = argparse.ArgumentParser(prog="maimpdf")
-    sub = parser.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("region")
-    sub.add_parser("capture")
-    sub.add_parser("ocr")
+    parser = argparse.ArgumentParser(prog="maim_pdf")
+    parser.add_argument(
+        "cmd",
+        choices=[
+            "region",
+            "capture",
+            "ocr",
+        ],
+        help="Command to run",
+    )
     args = parser.parse_args()
-    match args.cmd:
-        case "region":
-            maimpdf_handler.select_region()
-        case "capture":
-            maimpdf_handler.capture()
-        case "ocr":
-            maimpdf_handler.ocr_2_pdf()
+    tool = MaimPdfTool()
+    if args.cmd == "region":
+        tool.select_region()
+    elif args.cmd == "capture":
+        tool.capture()
+    elif args.cmd == "ocr":
+        tool.ocr_2_pdf()
 
 
 if __name__ == "__main__":

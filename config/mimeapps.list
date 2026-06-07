@@ -9,8 +9,8 @@ image/webp=imv.desktop
 image/heif=imv.desktop
 image/x-raw=imv.desktop
 # Document MIME Types
-application/pdf=org.gnome.Evince.desktop
-application/epub=org.gnome.Evince.desktop
+application/pdf=org.pwmt.zathura.desktop
+application/epub=org.pwmt.zathura.desktop
 application/msword=libreoffice-writer.desktop
 application/vnd.ms-excel=libreoffice-calc.desktop
 application/vnd.ms-powerpoint=libreoffice-impress.desktop
@@ -38,7 +38,7 @@ video/x-flv=mpv.desktop
 video/quicktime=mpv.desktop
 video/x-msvideo=mpv.desktop
 # Miscellaneous MIME Types
-inode/directory=org.gnome.Nautilus.desktop
+inode/directory=yazi.desktop
 x-scheme-handler/http=firedragon.desktop
 x-scheme-handler/https=firedragon.desktop
 x-scheme-handler/magnet=deluge.desktop
@@ -54,8 +54,8 @@ image/webp=imv.desktop;
 image/heif=imv.desktop;
 image/x-raw=imv.desktop;
 # Document MIME Types
-application/pdf=org.gnome.Evince.desktop;
-application/epub=org.gnome.Evince.desktop;
+application/pdf=org.pwmt.zathura.desktop;
+application/epub=org.pwmt.zathura.desktop;
 application/msword=libreoffice-writer.desktop;
 application/vnd.ms-excel=libreoffice-calc.desktop;
 application/vnd.ms-powerpoint=libreoffice-impress.desktop;
@@ -83,7 +83,7 @@ video/x-flv=mpv.desktop;
 video/quicktime=mpv.desktop;
 video/x-msvideo=mpv.desktop;
 # Miscellaneous MIME Types
-inode/directory=org.gnome.Nautilus.desktop;
+inode/directory=yazi.desktop;
 x-scheme-handler/http=firedragon.desktop
 x-scheme-handler/https=firedragon.desktop
 x-scheme-handler/magnet=deluge.desktop;

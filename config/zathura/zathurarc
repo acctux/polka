@@ -1,0 +1,16 @@
+set selection-clipboard clipboard
+set selection-notification false
+
+set window-title-basename true
+set statusbar-basename true
+
+set recolor true
+set recolor-keephue true
+
+# Toggle Dark Mode easily with the 'i' key (like in MuPDF/Okular)
+map i recolor
+map D toggle_page_mode
+
+# Adjust zoom step size to 5% increments for finer control
+set zoom-step 5
+set zoom-center true

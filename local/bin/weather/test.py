@@ -350,17 +350,10 @@ class WeatherProcessor:
     # =========================================================
     # FORMATTING UTILITIES (Internal)
     # =========================================================
-    def _fmt_temp(
-        self, series: pd.Series, show_unit: bool = True, soil: bool = False
-    ) -> pd.Series:
+    def _fmt_temp(self, series: pd.Series, show_unit: bool = True) -> pd.Series:
         def fmt(x):
-            if pd.isna(x):
-                return ""
             value = f"{x:.0f}"
-            result = f"{value}{self.temp_unit}" if show_unit else value
-            if soil:
-                result = f"<span size='10pt'> </span>{result} "  # prepend soil icon
-            return result
+            return f"{value}{self.temp_unit}" if show_unit else value
 
         series = pd.to_numeric(series, errors="coerce")
         if self.imperial:
@@ -373,36 +366,39 @@ class WeatherProcessor:
                 return ""
             if x < 15:
                 return ""
-            return f"{int(round(x))}%󰖌"
+            return f"{int(round(x))}% 󰖌"
 
         series = pd.to_numeric(series, errors="coerce")
         return series.map(fmt)
 
     def _fmt_water_need(self, mm: float) -> str:
         """
-        Format water needed for display.
-        Metric: mm / L per m²
-        Imperial: gallons per ft²
-        Strips unnecessary leading/trailing zeros.
+        Water need formatter:
+        Metric -> mm / L per m²
+        Imperial -> gallons per ft²
         """
         if pd.isna(mm) or mm <= 0:
             return ""
-        if self.imperial:
-            value = mm * 0.02453
-            unit = "g/ft²"
-        else:
-            # Metric
-            value = mm
-            unit = "L/m²"
-        if value < 0.01:
+        if not self.imperial:
+            if mm < 0.01:
+                return ""
+            if mm < 1:
+                mm_str = f"{mm:.2f}".lstrip("0")
+            elif mm < 10:
+                mm_str = f"{mm:.1f}"
+            else:
+                mm_str = f"{mm:.0f}"
+            return f"󱒂({mm_str}mm / {int(round(mm))} L/m²)"
+        gal_per_ft2 = mm * 0.02453  # 1 mm = 0.02453 gal/ft²
+        if gal_per_ft2 < 0.01:
             return ""
-        if value < 1:
-            value_str = f"{value:.2f}".lstrip("0")
-        elif value < 10:
-            value_str = f"0{value:.1f}"
+        if gal_per_ft2 < 1:
+            gal_str = f"{gal_per_ft2:.2f}".lstrip("0")
+        elif gal_per_ft2 < 10:
+            gal_str = f"{gal_per_ft2:.1f}"
         else:
-            value_str = f"{value:.1f}"
-        return f"󱒂 {value_str}({unit})"
+            gal_str = f"{gal_per_ft2:.0f}"
+        return f"󱒂({gal_str} gal/ft²)"
 
     def _fmt_size(self, series: pd.Series) -> pd.Series:
         def fmt(x):
@@ -466,7 +462,7 @@ class WeatherProcessor:
         self,
         hourly_df: pd.DataFrame,
         now: pd.Timestamp,
-        hours_ahead: int = 23,
+        hours_ahead: int = 24,
         jump_h_minutes: int = 30,
         step: int = 2,
     ) -> pd.DataFrame:
@@ -479,9 +475,7 @@ class WeatherProcessor:
         hourly = hourly_filtered.copy()
         # 1. Apply Formats
         hourly["temperature_2m"] = self._fmt_temp(hourly["temperature_2m"])
-        hourly["soil_temperature_0cm"] = self._fmt_temp(
-            hourly["soil_temperature_0cm"], soil=True
-        )
+        hourly["soil_temperature_0cm"] = self._fmt_temp(hourly["soil_temperature_0cm"])
         hourly["precipitation"] = self._fmt_size(hourly["precipitation"])
         hourly["precipitation_probability"] = self._fmt_probability(
             hourly["precipitation_probability"]
@@ -572,6 +566,7 @@ class WeatherApp:
         now = pd.Timestamp.now(tz)
         hourly_df, daily_df = self._get_data(tz)
         daily_df = self.processor.process_daily(daily_df)
+        print(daily_df.to_string(index=False))
         hourly_df = self.processor.process_hourly(hourly_df, now)
         output = self.render(now, hourly_df, daily_df)
         print(json.dumps(output, ensure_ascii=False))
@@ -625,19 +620,19 @@ class WeatherApp:
             return (
                 f"{row['date']:%H:%M}"
                 f"<span size='{size}pt'>{icon:^3}</span>"
-                f"{row.get('temperature_2m'):^10}"
-                f"{row.get('precipitation_probability'):^4}"
-                f"{row.get('precipitation'):^10}"
-                f"{row.get('soil_temperature_0cm')}"
-                f"{row.get('sun_event')}"
+                f"{row.get('temperature_2m'):^8}"
+                f"{row.get('precipitation_probability'):^6}"
+                f"{row.get('precipitation'):^8}"
+                # f"{row.get('soil_temperature_0cm'):^7}"
+                f"{row.get('sun_event'):^9}"
             )
         return (
             f"{row['date']:%a}"
-            f"<span size='{size}pt'>{icon:^3}</span>"
-            f"{row.get('temperature_2m'):^11}"
-            f"{row.get('precipitation_probability'):^4}"
-            f"{row.get('precipitation_sum'):^11}"
-            f"{row.get('additional_water_needed_icon')}"
+            f"<span size='{size}pt'>{icon:^5}</span>"
+            f"{row.get('temperature_2m'):^9}"
+            f"{row.get('precipitation_probability'):^10}"
+            f"{row.get('precipitation_sum'):^8}"
+            f"{row.get('additional_water_needed_icon'):^8}"
         )
 
     def render(
@@ -648,13 +643,13 @@ class WeatherApp:
         tooltip = (
             [
                 f"<span size='20pt'>󰨳</span><span size='13pt'>  {self.today_label(now)}</span>",
-                "────────────────────────────────────────────────",
+                "──────────────────────────────────────────",
             ]
             + hourly_rows
             + [
                 "",
                 f"<span size='20pt'></span><span size='13pt'>  {now.strftime('%H:%M')}</span>",
-                "────────────────────────────────────────────────",
+                "──────────────────────────────────────────",
             ]
             + daily_rows
         )

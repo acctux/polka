@@ -1,9 +1,9 @@
 [calendars]
 
 [[private]]
-path = ~/.config/khal
+path = ~/Desktop/Calendar/
 type = calendar
-
+color = #0077FF
 [locale]
 timeformat = %H:%M
 dateformat = %Y-%m-%d

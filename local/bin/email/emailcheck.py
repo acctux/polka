@@ -12,25 +12,11 @@ class NotMuchNotify:
     def run(self, cmd: list[str]) -> subprocess.CompletedProcess:
         return subprocess.run(cmd, check=True, capture_output=True, text=True)
 
-    def mutt_not_running(self) -> bool:
-        cmd = ["pgrep", "-x", "neomutt"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        return result.returncode != 0
-
-    def refresh_mail(self, mutt_not_running: bool) -> None:
-        bridge_started = False
-        if mutt_not_running:
-            cmd = ["systemctl", "--user", "is-active", "protonmail-bridge.service"]
-            result = self.run(cmd)
-            if result.stdout.strip() != "active":
-                self.run(["systemctl", "--user", "start", "protonmail-bridge.service"])
-                bridge_started = True
-                time.sleep(30)
+    def refresh_mail(self) -> None:
+        self.run(["systemctl", "--user", "start", "protonmail-bridge.service"])
+        time.sleep(60)
         self.run(["mbsync", "-Va"])
         self.run(["notmuch", "new"])
-        mutt_still_not_running = self.mutt_not_running()
-        if mutt_still_not_running and bridge_started:
-            self.run(["systemctl", "--user", "stop", "protonmail-bridge.service"])
 
     def youve_got_mail(self, emails: list[tuple[str, str, str]]) -> None:
         latest_id = emails[0][0]
@@ -76,8 +62,7 @@ class NotMuchNotify:
             return ""
 
     def get_email(self):
-        mutt_not_running = self.mutt_not_running()
-        self.refresh_mail(mutt_not_running=mutt_not_running)
+        self.refresh_mail()
         new_emails = self.get_msg_ids()
         if new_emails:
             print(new_emails)

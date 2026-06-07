@@ -12,9 +12,9 @@ class HzScroller:
     COMMANDS = [
         ("󰅍", LOCAL_BIN / "clipboard" / "clippy.py", "Clipboard History\t"),
         ("󰉐", LOCAL_BIN / "folders" / "mountencrypted.sh", "Mount Encrypted Folder\t"),
-        ("󱄺", LOCAL_BIN / "fav" / "ocrmenu.sh", "OCR Menu\t"),
-        ("󰐳", LOCAL_BIN / "fav" / "qrmenu.sh", "QR Menu\t"),
-        ("", LOCAL_BIN / "fav" / "winemenu.sh", "Wine Menu\t"),
+        ("󰩬", LOCAL_BIN / "screenshots" / "screenshot_menu.py", "Screenshot Menu\t"),
+        ("󰐳", LOCAL_BIN / "qr" / "qrmenu.sh", "QR Menu\t"),
+        ("", LOCAL_BIN / "wine" / "winemenu.sh", "Wine Menu\t"),
     ]
 
     @classmethod

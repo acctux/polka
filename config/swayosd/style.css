@@ -1,6 +1,6 @@
 window#osd {
-  font-family: "FiraMono Nerd Font Light", "SF Pro Text", sans-serif;
-  font-size: 15px;
+  font-family: "Liberation Sans", "SF Pro Text", sans-serif;
+  font-size: 16px;
   border-radius: 10px;
   border: 1px solid rgba(51, 204, 255, 0.7);
   background: rgba(16, 16, 19, 0.7); /* original background */

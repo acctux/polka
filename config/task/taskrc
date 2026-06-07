@@ -2,7 +2,7 @@
 data.location=/home/nick/.config/task
 verbose=affected,blank,context,edit,header,footnote,label,new-id,project,special,sync,recur
 uda.priority.values=H,M,,L
-
+include holidays.en-US.rc
 include dark-blue-256.theme
 # Remove age, tags from task next report.
 # taskwarrior-tui reads the labels and columns from these options to display tasks the same way taskwarrior does

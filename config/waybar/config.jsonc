@@ -196,16 +196,16 @@
     "on-click-middle": "~/.local/bin/keyboard/emoji_select.sh"
   },
   "custom/fav": {
-    "exec": "~/.local/bin/fav/fav.py",
+    "exec": "~/.local/bin/waybar/fav.py",
     "signal": 9,
     "return-type": "json",
     "format": "{}",
     "tooltip": true,
     "interval": 3,
-    "on-click": "~/.local/bin/fav/fav.py exec",
-    "on-click-right": "~/.local/bin/fav/fav.py up",
-    "on-scroll-up": "~/.local/bin/fav/fav.py up",
-    "on-scroll-down": "~/.local/bin/fav/fav.py down"
+    "on-click": "~/.local/bin/waybar/fav.py exec",
+    "on-click-right": "~/.local/bin/waybar/fav.py up",
+    "on-scroll-up": "~/.local/bin/waybar/fav.py up",
+    "on-scroll-down": "~/.local/bin/waybar/fav.py down"
   },
   "custom/wifi": {
     "format": "{}",
@@ -291,7 +291,7 @@
     "format": "{}",
     "escape": true,
     "return-type": "json",
-    "exec": "~/.local/bin/steam/steam.sh",
+    "exec": "~/.local/bin/waybar/steam.sh",
     "interval": 10,
     "hide-empty-text": true,
     "on-click": "steam",
@@ -301,7 +301,7 @@
     "format": "{}",
     "escape": true,
     "return-type": "json",
-    "exec": "~/.local/bin/telegram/ayugram.sh",
+    "exec": "~/.local/bin/waybar/ayugram.sh",
     "interval": 30,
     "on-click": "AyuGram & disown",
     "on-click-right": "kitty --hold nchat"
