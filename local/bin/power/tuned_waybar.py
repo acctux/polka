@@ -1,125 +1,109 @@
 #!/usr/bin/env python3
-import json
-import sys
-import subprocess
+
+from dataclasses import dataclass
 from pathlib import Path
-import re
+import json
+import subprocess
+import sys
+
+# ---------------- CONFIG ----------------
+INDEX_FILE = Path.home() / ".cache" / "powerscroll" / "power_index"
+POWER_SCRIPT = Path.home() / "Lit" / "polka" / "local" / "bin" / "power" / "tuned.py"
 
 
-class HzScroller:
-    CACHE_DIR = Path.home() / ".cache"
-    INDEX_FILE = CACHE_DIR / "hz_scroll_index"
-    STATE_FILE = CACHE_DIR / "hz_scroll_state"
-    COMMANDS = [
-        ("󱙷", "laptop-battery-powersave", "60"),
-        ("󰌪", "laptop-ac-powersave", "165"),
-        ("󰗑", "balanced", "165"),
-        ("", "desktop", "165"),
-    ]
-    TLP_SCRIPT = Path.home() / "Lit/polka/local/bin/power/tuned.py"
+@dataclass(frozen=True)
+class PowerState:
+    profile: str
+    hz: int
+    icon: str
 
-    @classmethod
-    def ensure_cache_dir(cls):
-        cls.CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-    @classmethod
-    def read_int_file(cls, path: Path, default: int) -> int:
-        try:
-            return int(path.read_text().strip())
-        except Exception:
-            return default
+POWER_STATES: list[PowerState] = [
+    PowerState("laptop-battery-powersave", 60, "󱙷"),
+    PowerState("laptop-ac-powersave", 165, "󰌪"),
+    PowerState("balanced", 165, "󰗑"),
+    PowerState("desktop", 165, ""),
+]
 
-    @classmethod
-    def write_int_file(cls, path: Path, value: int):
-        path.write_text(str(value))
 
-    @classmethod
-    def load_index(cls) -> int:
-        cls.ensure_cache_dir()
-        return cls.read_int_file(cls.INDEX_FILE, 0)
+def load_index(index_file: Path) -> int:
+    try:
+        return int(index_file.read_text())
+    except Exception:
+        return 0
 
-    @classmethod
-    def save_index(cls, index: int):
-        cls.ensure_cache_dir()
-        cls.write_int_file(cls.INDEX_FILE, index)
 
-    @classmethod
-    def load_state(cls) -> int:
-        cls.ensure_cache_dir()
-        return cls.read_int_file(cls.STATE_FILE, -1)
+def active_profile() -> str | None:
+    try:
+        cmd = ["tuned-adm", "active"]
+        out = subprocess.check_output(cmd, text=True).strip()
+        return out.split(":", 1)[1].strip()
+    except Exception:
+        return None
 
-    @classmethod
-    def save_state(cls, index: int):
-        cls.ensure_cache_dir()
-        cls.write_int_file(cls.STATE_FILE, index)
 
-    @classmethod
-    def scroll(cls, direction: str):
-        index = cls.load_index()
-        index = (
-            (index + 1) % len(cls.COMMANDS)
-            if direction == "up"
-            else (index - 1) % len(cls.COMMANDS)
-        )
-        cls.save_index(index)
+def refresh_rate() -> str | None:
+    try:
+        cmd = ["hyprctl", "monitors"]
+        out = subprocess.check_output(cmd, text=True)
+        for part in out.split():
+            if "@" in part:
+                return part.split("@")[1].split(".")[0]
+    except Exception:
+        return None
 
-    @classmethod
-    def output_waybar(cls):
-        index = cls.load_index()
-        icon, profile_name, hz = cls.COMMANDS[index]
 
-        active_index = cls.load_state()
-        waybar_class = "active" if index == active_index else ""
-        tooltip_parts = []
-        tooltip_parts.append(f"Selected: {icon} {profile_name} {hz}Hz\t")
-        try:
-            active_output = subprocess.check_output(
-                ["tuned-adm", "active"], text=True
-            ).strip()
-            active_profile = active_output.split(":", 1)[1].strip()
+# ---------------- Actions ----------------
+def scroll(index_file: Path, index: int, direction: str) -> None:
+    delta = 1 if direction == "up" else -1
+    new_i = (index + (delta)) % len(POWER_STATES)
+    index_file.parent.mkdir(parents=True, exist_ok=True)
+    index_file.write_text(str(new_i))
 
-            icon_for_profile = next(
-                (ic for ic, p, _ in cls.COMMANDS if p == active_profile), icon
-            )
 
-            output = subprocess.check_output(["hyprctl", "monitors"], text=True)
-            match = re.search(r"@(\d+)\.", output)
-            if match:
-                tooltip_parts.append(
-                    f"Active: {icon_for_profile} {active_profile} {match.group(1)}Hz\t"
-                )
-        except Exception:
-            tooltip_parts.append("Refresh rate: unknown")
+def exec_current(state: PowerState, power_script: Path) -> None:
+    if not power_script.exists():
+        return
+    cmd = [str(power_script), state.profile, str(state.hz)]
+    subprocess.run(cmd, check=True)
 
-        tooltip = "\n".join(tooltip_parts)
 
-        print(json.dumps({"text": icon, "tooltip": tooltip, "class": waybar_class}))
+# ---------------- Output ----------------
+def output(power_states: list[PowerState], index: int) -> None:
+    state = power_states[index]
+    klass = ""
+    cmd = ["tuned-adm", "active"]
+    out_str = subprocess.check_output(cmd, text=True).strip()
+    active = out_str.split(":", 1)[1].strip()
+    refresh = refresh_rate()
+    if active == state.profile:
+        klass = "active"
+    tooltip = [f"{state.icon} {state.profile} {state.hz}Hz\t"]
+    if active and refresh:
+        tooltip.append(f"{active} {refresh}Hz\t")
+    waybar_dict = {
+        "text": state.icon,
+        "tooltip": "\n".join(tooltip),
+        "class": klass,
+    }
+    print(json.dumps(waybar_dict, ensure_ascii=False))
 
-    @classmethod
-    def exec_current(cls):
-        index = cls.load_index()
-        _, mode, hz = cls.COMMANDS[index]
-        if cls.TLP_SCRIPT.exists():
-            try:
-                subprocess.run([str(cls.TLP_SCRIPT), mode, hz], check=True)
-                cls.save_state(index)
-            except subprocess.CalledProcessError as e:
-                print(f"Failed to execute {cls.TLP_SCRIPT}: {e}")
 
-    @classmethod
-    def run(cls, args):
-        if not args:
-            cls.output_waybar()
-            return
-        for arg in args:
-            if arg in ("up", "down"):
-                cls.scroll(arg)
-                return
-            elif arg == "exec":
-                cls.exec_current()
-                return
-        cls.output_waybar()
+# ---------------- Main ----------------
+def main():
+    selected_index = load_index(INDEX_FILE)
+    if len(sys.argv) == 1:
+        output(POWER_STATES, selected_index)
+        return
+    cmd = sys.argv[1]
+    if cmd == "up":
+        scroll(INDEX_FILE, selected_index, "up")
+    elif cmd == "down":
+        scroll(INDEX_FILE, selected_index, "down")
+    elif cmd == "exec":
+        selected_state = POWER_STATES[selected_index]
+        exec_current(selected_state, POWER_SCRIPT)
 
 
 if __name__ == "__main__":
-    HzScroller.run(sys.argv[1:])
+    main()

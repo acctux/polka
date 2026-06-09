@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 HOME = Path.home()
-STATE_FILE = HOME / ".cache" / "hyprsunset_state"
+STATE_FILE = HOME / ".cache" / "sunsetcache" / "hyprsunset_state"
 PROFILES = [
     {"temperature": 1000, "gamma": 0.8},
     {"temperature": 2000, "gamma": 0.85},
@@ -42,6 +42,7 @@ def main(
     state_file: Path = STATE_FILE, profile: list[dict[str, int | float]] = PROFILES
 ):
     sunset_conf = HOME / ".config" / "hypr" / "hyprsunset.conf"
+    state_file.parent.mkdir(parents=True, exist_ok=True)
     if state_file.exists():
         current = int(state_file.read_text().strip())
         state = (current + 1) % len(profile)
@@ -49,7 +50,6 @@ def main(
         state = 0
     config_text = render_config(profile[state])
     sunset_conf.write_text(config_text)
-    state_file.parent.mkdir(parents=True, exist_ok=True)
     state_file.write_text(str(state))
     restart_hyprsunset()
     print(f"Applied profile {state}: {profile[state]}")
@@ -57,4 +57,3 @@ def main(
 
 if __name__ == "__main__":
     main()
-

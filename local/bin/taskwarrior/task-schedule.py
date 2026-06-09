@@ -1,26 +1,57 @@
 #!/usr/bin/env python3
 
-import json
+import sys
 import logging
 import subprocess
+import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from pathlib import Path
 import yaml
 
-# Configurations
-CONFIG_FILE = Path.home() / ".local" / "bin" / "taskwarrior" / "dates.yaml"
-CONTACTS_DIR = Path.home() / "Desktop" / "Contacts"
-KHALENDAR = "private"
 
-logging.basicConfig(level=logging.INFO, format="\033[96mPolka\033[0m: %(message)s")
+######################################
+# LOG LOGIC
+######################################
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        logging.INFO: "\033[36m",
+        logging.WARNING: "\033[93m",
+        logging.ERROR: "\033[31m",
+    }
+    RESET = "\033[0m"
+    NAME = "\033[93m"
+
+    def format(self, record):
+        name = f"{self.NAME}{record.name}{self.RESET}"
+        msg = f"{self.COLORS.get(record.levelno, '')}{record.getMessage()}{self.RESET}"
+        return f"{name}: {msg}"
 
 
+def get_logger(log_name=None, level=logging.INFO):
+    log = logging.getLogger(log_name)
+    if log.handlers:
+        return log
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(ColorFormatter())
+    log.addHandler(handler)
+    log.setLevel(level)
+    log.propagate = False
+    return log
+
+
+log = get_logger("Polka")
+
+
+######################################
+# Event
+######################################
 @dataclass(frozen=True)
 class Event:
     title: str
-    target_date: datetime
-    due_in_days: int
+    due_in: int
+    target_date: date
+    schedule_date: date
 
     @property
     def date_str(self) -> str:
@@ -30,67 +61,90 @@ class Event:
     def next_week_str(self) -> str:
         return (self.target_date + timedelta(days=7)).strftime("%Y-%m-%d")
 
-    @property
-    def schedule_date(self) -> datetime:
-        return self.target_date - timedelta(days=self.due_in_days)
 
-
-class EventSource:
-    def __init__(self, today: datetime):
+#######################################
+# EventLoader
+#######################################
+class EventLoader:
+    def __init__(self, today: date):
         self.today = today
-        self.weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-    def _get_target_date(self, month: int, day: int) -> datetime:
-        dt = datetime(self.today.year, month, day)
-        return dt if dt >= self.today else dt.replace(year=self.today.year + 1)
-
-    def load_from_yaml(self, config_file: Path) -> list[Event]:
-        if not config_file.exists():
-            logging.warning(f"Configuration file missing at {config_file}")
-            return []
-        events: list[Event] = []
-        try:
-            data = yaml.safe_load(config_file.read_text()) or {}
-            raw_events = data.get("weekly", []) + data.get("scheduled", [])
-            for item in raw_events:
-                name = item.get("name")
-                if not name:
-                    continue
-                days_ahead = item.get("due_in", 0)
-                if "weekday" in item:
-                    try:
-                        abreveation = item["weekday"][:3]
-                        target_idx = self.weekdays.index(abreveation)
-                        days_delta = (target_idx - self.today.weekday()) % 7
-                        target_date = self.today + timedelta(days=days_delta)
-                        events.append(Event(name, target_date, days_ahead))
-                    except ValueError:
-                        logging.warning(f"Invalid weekday specified: {item['weekday']}")
-                elif "date" in item:
-                    try:
-                        month, day = map(int, item["date"].split("-"))
-                        events.append(
-                            Event(name, self._get_target_date(month, day), days_ahead)
-                        )
-                    except ValueError:
-                        logging.warning(
-                            f"Invalid date format in config: {item['date']}"
-                        )
-        except Exception as e:
-            logging.error(f"Error reading YAML configuration: {e}")
+    def load_all(
+        self, yaml_conf: Path, contacts_dir: Path, default_due_in: int = 5
+    ) -> list[Event]:
+        events = []
+        events.extend(self._load_from_yaml(yaml_conf))
+        events.extend(self._load_from_vcards(contacts_dir, default_due_in))
         return events
 
-    def load_from_vcards(self, contacts_dir: Path) -> list["Event"]:
-        """
-        Load birthdays from vCard files in 'family' and 'friends' subfolders.
-        Supports BDAY formats:
-          - YYYYMMDD
-          - YYMMDD
-          - --MMDD (yearless)
-          - MMDD
-          - YYYY-MM-DD
-        """
-        events: list["Event"] = []
+    def _load_from_yaml(self, yaml_conf: Path) -> list[Event]:
+        if not yaml_conf.exists():
+            return []
+        try:
+            data = yaml.safe_load(yaml_conf.read_text())
+        except (yaml.YAMLError, OSError):
+            return []
+        if not data or not isinstance(data, dict):
+            return []
+        events = []
+        for item in data.get("weekly", []):
+            if isinstance(item, dict) and "weekday" in item:
+                events.append(self._parse_weekly(item))
+        for item in data.get("scheduled", []):
+            if isinstance(item, dict) and "date" in item:
+                events.append(self._parse_scheduled(item))
+        return events
+
+    def _parse_weekly(self, item: dict) -> Event:
+        title = item["name"]
+        day_str = str(item["weekday"])[:3].title()
+        due_in_val = item.get("due_in", 0)
+        WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        idx = WEEKDAYS.index(day_str)
+        days_ahead = (idx - self.today.weekday()) % 7
+        target_date = self.today + timedelta(days=days_ahead)
+        schedule_date = target_date - timedelta(days=due_in_val)
+        due_in_days = (target_date - self.today).days
+        return Event(title, due_in_days, target_date, schedule_date)
+
+    def _parse_scheduled(self, item: dict) -> Event:
+        title = item["name"]
+        raw_date = str(item["date"]).strip()
+        due_in_val = item.get("due_in", 0)
+        if "-" in raw_date and len(raw_date.split("-")) == 2:
+            try:
+                target_date = date.fromisoformat(f"{self.today.year}-{raw_date}")
+                if target_date < self.today:
+                    target_str = f"{self.today.year + 1}-{raw_date}"
+                    target_date = date.fromisoformat(target_str)
+            except ValueError:
+                target_date = self.today
+        else:
+            try:
+                target_date = date.fromisoformat(raw_date)
+            except ValueError:
+                target_date = self.today
+        schedule_date = target_date - timedelta(days=due_in_val)
+        due_in = (target_date - self.today).days
+        return Event(title, due_in, target_date, schedule_date)
+
+    def _get_target_date(self, month: int, day: int) -> date:
+        try:
+            target_date = date(self.today.year, month, day)
+            if target_date < self.today:
+                target_date = date(self.today.year + 1, month, day)
+            return target_date
+        except ValueError:
+            if month == 2 and day == 29:
+                return self._get_target_date(3, 1)
+            return self.today
+
+    def _load_from_vcards(
+        self,
+        contacts_dir: Path,
+        default_due_in=5,
+    ) -> list[Event]:
+        events: list[Event] = []
         for folder_name in ("family", "friends"):
             folder = contacts_dir / folder_name
             if not folder.exists():
@@ -107,27 +161,30 @@ class EventSource:
                     bday = vcard.get("BDAY")
                     if not (name and bday):
                         continue
-                    bday_raw = ""
-                    for c in bday:
-                        if c.isdigit():
-                            bday_raw += c
-                    if len(bday_raw) == 8:  # YYYYMMDD
+                    bday_raw = "".join(c for c in bday if c.isdigit())
+                    if len(bday_raw) == 8:
                         month, day = int(bday_raw[4:6]), int(bday_raw[6:8])
-                    elif len(bday_raw) == 6:  # YYMMDD
+                    elif len(bday_raw) == 6:
                         month, day = int(bday_raw[2:4]), int(bday_raw[4:6])
-                    elif len(bday_raw) == 4:  # --MMDD or MMDD
+                    elif len(bday_raw) == 4:
                         month, day = int(bday_raw[:2]), int(bday_raw[2:4])
                     else:
-                        logging.warning(f"Unrecognized format {file.name}: {bday}")
                         continue
                     target_date = self._get_target_date(month, day)
-                    events.append(Event(f"{name}'s Birthday", target_date, 5))
+                    schedule_date = target_date - timedelta(days=default_due_in)
+                    due_in = (target_date - self.today).days
+                    events.append(
+                        Event(f"{name}'s Birthday", due_in, target_date, schedule_date)
+                    )
                 except Exception as e:
-                    logging.warning(f"Error parsing vCard {file.name}: {e}")
+                    log.warning(f"Error parsing vCard {file.name}: {e}")
         return events
 
 
-class SyncEngine:
+#######################################
+# EventEngine
+#######################################
+class EventEngine:
     def __init__(self, calendar: str):
         self.calendar = calendar
 
@@ -150,25 +207,13 @@ class SyncEngine:
             )
             tasks_data = json.loads(res.stdout)
             task_tuples = set()
-            window_start = datetime.now() - timedelta(days=7)
             for task in tasks_data:
-                title = str(task.get("description", "")).strip()
-                status = task.get("status")
-                if not title or not status:
-                    continue
+                name = str(task.get("description", "")).strip()
                 due_date_str = _parse_tw_date(task.get("due", ""))
-                if status in ("pending", "recurring"):
-                    task_tuples.add((title, due_date_str))
-                elif status == "completed" and "end" in task:
-                    end_dt_str = _parse_tw_date(task["end"])
-                    if (
-                        end_dt_str
-                        and datetime.strptime(end_dt_str, "%Y-%m-%d") >= window_start
-                    ):
-                        task_tuples.add((title, due_date_str))
+                task_tuples.add((name, due_date_str))
             return task_tuples
         except Exception as e:
-            logging.error(f"Failed to read Taskwarrior data: {e}")
+            log.error(f"Failed to read Taskwarrior data: {e}")
             return set()
 
     def fetch_khal_events(self, start_str: str, end_str: str) -> set[tuple[str, str]]:
@@ -197,67 +242,88 @@ class SyncEngine:
                     events.add((title.strip(), date_str.strip()))
             return events
         except Exception as e:
-            logging.error(f"Failed to read Khal events: {e}")
+            log.error(f"Failed to read Khal events: {e}")
             return set()
 
     def push_to_khal(self, title: str, date_str: str) -> None:
-        logging.info(f"\033[36m[syncing -> khal]\033[0m {title} -> {date_str}")
+        log.info(f"[Sync -> Khal] Adding yearly event: {title} on {date_str}")
         cmd = ["khal", "new", date_str, title, "-r", "yearly"]
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def push_to_taskwarrior(self, title: str, date_str: str) -> None:
-        logging.info(f"\033[36m[syncing -> task]\033[0m {title} -> {date_str}")
-        cmd = ["task", "add", title, f"due:{date_str}", "recur:annual"]
+        log.info(f"[Sync -> Taskwarrior] Provisioning new task: {title} due {date_str}")
+        cmd = ["task", "add", title, f"due:{date_str}"]
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+#######################################
+# DateSyncManager
+#######################################
 class DateSyncManager:
-    def __init__(self, config_file: Path, contact_dir: Path, calendar: str):
-        self.config_file = config_file
+    default_due_in = 5
+
+    def __init__(self, yaml_conf: Path, contact_dir: Path, calendar: str) -> None:
+        self.yaml_conf = yaml_conf
         self.contact_dir = contact_dir
-        self.today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        self.now_str = self.today.strftime("%Y-%m-%d")
-        self.next_yr_str = self.today.replace(year=self.today.year + 1).strftime(
-            "%Y-%m-%d"
-        )
-        self.source = EventSource(self.today)
-        self.engine = SyncEngine(calendar)
+        self.today: date = date.today()
+        self.now_str: str = self.today.strftime("%Y-%m-%d")
+        self.next_yr_str: str = (self.today + timedelta(days=365)).strftime("%Y-%m-%d")
+        self.event_loader: EventLoader = EventLoader(self.today)
+        self.events_engine: EventEngine = EventEngine(calendar)
 
     def run(self) -> None:
-        logging.info("Initializing system sync engines.")
-        existing_tasks = self.engine.fetch_taskwarrior_tasks()
-        existing_khal = self.engine.fetch_khal_events(self.now_str, self.next_yr_str)
-        all_events = self.source.load_from_yaml(
-            self.config_file
-        ) + self.source.load_from_vcards(self.contact_dir)
-        for event in all_events:
+        log.info("Initializing system execution sync engines.")
+        events = self.event_loader.load_all(
+            self.yaml_conf,
+            self.contact_dir,
+            self.default_due_in,
+        )
+        for event in events:
+            existing_tasks = self.events_engine.fetch_taskwarrior_tasks()
+            existing_khal = self.events_engine.fetch_khal_events(
+                self.now_str, self.next_yr_str
+            )
             self._process_event(event, existing_tasks, existing_khal)
-        logging.info("\nDone.")
+        log.info("Sync transaction completed successfully.\n")
 
     def _process_event(
-        self, event: Event, existing_tasks: set, existing_khal: set
+        self,
+        event: Event,
+        existing_tasks: set[tuple[str, str]],
+        existing_khal: set[tuple[str, str]],
     ) -> None:
         in_task = (event.title, event.date_str) in existing_tasks
         in_khal = (event.title, event.date_str) in existing_khal
         if in_task and in_khal:
-            logging.info(
+            log.info(
                 f"[Present] {event.title} -> "
-                f"Last Scheduled: {event.schedule_date.strftime('%Y-%m-%d')} "
-                f"Due: {event.date_str} (Next Scheduled: {event.next_week_str})"
+                f"Scheduled Threshold Window Opened: {event.schedule_date.strftime('%Y-%m-%d')} "
+                f"Due Target: {event.date_str} (Next Roll Window: {event.next_week_str})"
             )
             return
         if not in_khal:
-            self.engine.push_to_khal(event.title, event.date_str)
+            log.info(
+                f"[Added] {event.title} -> "
+                f"Scheduled Threshold Window Opened: {event.schedule_date.strftime('%Y-%m-%d')} "
+                f"Due Target: {event.date_str} (Next Roll Window: {event.next_week_str})"
+            )
+            self.events_engine.push_to_khal(event.title, event.date_str)
         if not in_task:
             if self.today < event.schedule_date:
-                logging.info(
-                    f"[Skipped] {event.title} -> Due: {event.date_str} "
-                    f"(Schedules on: {event.schedule_date.strftime('%Y-%m-%d')})"
+                log.info(
+                    f"[Skipped] {event.title} -> Due Target: {event.date_str} "
+                    f"(Preparation threshold opens on: {event.schedule_date.strftime('%Y-%m-%d')})"
                 )
             else:
-                self.engine.push_to_taskwarrior(event.title, event.date_str)
+                self.events_engine.push_to_taskwarrior(event.title, event.date_str)
 
 
+#######################################
+# MAIN
+#######################################
 if __name__ == "__main__":
-    polka = DateSyncManager(CONFIG_FILE, CONTACTS_DIR, KHALENDAR)
-    polka.run()
+    YAML_PATH = Path.home() / ".local" / "bin" / "taskwarrior" / "dates.yaml"
+    CONTACTS_PATH = Path.home() / "Desktop" / "Contacts"
+    CALENDAR_NAME = "private"
+    manager = DateSyncManager(YAML_PATH, CONTACTS_PATH, CALENDAR_NAME)
+    manager.run()

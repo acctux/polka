@@ -4,6 +4,8 @@ from pathlib import Path
 import yaml
 import subprocess
 
+FUZZEL_CONFIG = Path.home() / ".config/fuzzel/waybar.ini"
+
 
 class EventManager:
     def __init__(self, file_path: Path):
@@ -75,8 +77,8 @@ class EventManager:
 
 
 class MenuUI:
-    def __init__(self):
-        self.fuzzel_config = Path.home() / ".config/fuzzel/fav-menu.ini"
+    def __init__(self, fuzzel_config: Path = FUZZEL_CONFIG):
+        self.fuzzel_config = fuzzel_config
 
     def run_fuzzel(self, options: list[str], prompt: str) -> str | None:
         if not options:
@@ -173,4 +175,3 @@ if __name__ == "__main__":
     DATA_FILE = Path(__file__).parent / "dates.yaml"
     app = App(DATA_FILE)
     app.run()
-

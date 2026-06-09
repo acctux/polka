@@ -8,38 +8,52 @@ HOME = Path.home()
 
 def get_ac_state(path: str) -> str:
     with open(path) as f:
-        return "ac" if f.read().strip() == "1" else "battery"
+        state = "battery"
+        if f.read().strip() == 1:
+            state = "ac"
+        return state
 
 
 def notify(msg: str, profile: str):
-    subprocess.run(
-        [
-            "notify-send",
-            msg,
-            profile,
-            "-i",
-            "/usr/share/icons/WhiteSur-dark/devices/scalable/battery.svg",
-        ]
-    )
+    cmd = [
+        "notify-send",
+        msg,
+        profile,
+        "-i",
+        "/usr/share/icons/WhiteSur-dark/devices/scalable/battery.svg",
+    ]
+    subprocess.run(cmd)
 
 
-def run_tuned(msg: str, profile: str, hz: int):
-    subprocess.run([str(HOME / ".local/bin/power/tuned.py"), profile, str(hz)])
+def run_tuned(power_script: Path, msg: str, profile: str, hz: int):
+    cmd = [str(power_script), profile, str(hz)]
+    subprocess.run(cmd)
     notify(msg, f"Profile: {profile} | Refresh rate: {hz}Hz")
 
 
 def main(
-    path: str = "/sys/class/power_supply/ADP0/online",
+    online_path: str = "/sys/class/power_supply/ADP0/online",
     interval: float = 1.5,
+    power_script_path: Path = HOME / ".local/bin/power/tuned.py",
 ):
-    last_state = get_ac_state(path)
+    last_state = get_ac_state(online_path)
     while True:
-        state = get_ac_state(path)
+        state = get_ac_state(online_path)
         if state != last_state:
             if state == "battery":
-                run_tuned("On battery", "laptop-battery-powersave", 60)
+                run_tuned(
+                    power_script_path,
+                    "On battery",
+                    "laptop-battery-powersave",
+                    60,
+                )
             elif state == "ac":
-                run_tuned("On AC", "balanced", 165)
+                run_tuned(
+                    power_script_path,
+                    "On AC",
+                    "balanced",
+                    165,
+                )
             last_state = state
         time.sleep(interval)
 

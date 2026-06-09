@@ -249,13 +249,15 @@
   },
   "custom/timer": {
     "format": "{}",
+    "signal": 5,
+    "interval": 1,
     "return-type": "json",
-    "exec": "~/.local/bin/timer/timer_waybar.py",
-    "on-click": "~/.local/bin/timer/set_timer.py --toggle",
-    "on-click-right": "~/.local/bin/timer/set_timer.py --unit",
-    "on-click-middle": "~/.local/bin/timer/set_timer.py --stop",
-    "on-scroll-up": "~/.local/bin/timer/set_timer.py --up",
-    "on-scroll-down": "~/.local/bin/timer/set_timer.py --down"
+    "exec": "~/.local/bin/timer/topwatch.py --status",
+    "on-click": "~/.local/bin/timer/topwatch.py --toggle",
+    "on-click-right": "~/.local/bin/timer/topwatch.py --unit",
+    "on-click-middle": "~/.local/bin/timer/topwatch.py --stop",
+    "on-scroll-up": "~/.local/bin/timer/topwatch.py --up",
+    "on-scroll-down": "~/.local/bin/timer/topwatch.py --down"
   },
   "custom/taskwarrior": {
     "exec": "~/.local/bin/taskwarrior/tw_count.py",

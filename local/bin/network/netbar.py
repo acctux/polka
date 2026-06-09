@@ -71,26 +71,19 @@ def parse_info_joint(iface: str) -> tuple[str, float, float, int]:
     info = run(["iw", "dev", iface, "link"]).splitlines()
     rx_bitrate = tx_bitrate = iwd_strength = 0
     network = "Disconnected"
-
     for line in info:
         line = line.lstrip()
-
         if line.startswith("rx bitrate:"):
             rx_bitrate = float(line.split()[2])
-
         elif line.startswith("tx bitrate:"):
             tx_bitrate = float(line.split()[2])
-
         elif line.startswith("SSID:"):
             network = line.split("SSID:", 1)[1].strip()
-
         elif line.startswith("signal:"):
             rssi = int(line.split()[1])
             iwd_strength = max(0, min(100, 100 - ((rssi + 100) // 2)))
-
     rx_bitrate_mb = rx_bitrate / 8
     tx_bitrate_mb = tx_bitrate / 8
-
     return network, rx_bitrate_mb, tx_bitrate_mb, iwd_strength
 
 
@@ -98,20 +91,15 @@ def main():
     iface = find_interface()
     vpn = run(["wg", "show", "interfaces"])
     firewall_status = get_ufw_status()
-
     net_name, tx, rx, strength = parse_info_joint(iface)
-
     if is_running("NetworkManager"):
         service = "NetworkManager"
         strength = parse_info_nm()
-
     elif is_running("iwd"):
         service = "IWD"
     else:
         service = "No WiFi Service Running"
-
     icon = ICONS[min(strength // 20, 4)]
-
     tooltip = [
         f"󰖂 : {vpn if vpn else 'No VPN'}",
         f"󱨑 : {firewall_status}",
@@ -121,7 +109,6 @@ def main():
         f"↑ : {int(rx)}M\t",
         f"↓ : {int(tx)}M\t",
     ]
-
     print(
         json.dumps(
             {

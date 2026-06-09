@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess
 
 
-CONFIG_PATH = Path.home() / ".config" / "fuzzel" / "prompt.ini"
+CONFIG_PATH = Path.home() / ".config" / "fuzzel" / "clipboard.ini"
 MAX_WIDTH = 44
 MAX_LINES = 30
 

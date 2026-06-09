@@ -3,7 +3,7 @@
 # -----------------------------
 # Config
 # -----------------------------
-CONFIG="$HOME/.config/fuzzel/fav-menu.ini"
+CONFIG="$HOME/.config/fuzzel/waybar.ini"
 # -----------------------------
 # Menu items
 # -----------------------------

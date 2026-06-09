@@ -5,6 +5,7 @@ eval "$(mcfly init zsh)"
 eval "$(starship init zsh)"
 eval "$(zoxide init --cmd cd zsh)"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+export SUDO_PROMPT="$(tput setaf 6)Password for$(tput sgr0) $(tput setaf 5)%p$(tput sgr0): "
 HISTSIZE=10000
 SAVEHIST=10000
 HISTORY_IGNORE="(ls|ls *|exit|)"

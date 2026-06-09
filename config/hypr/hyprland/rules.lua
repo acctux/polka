@@ -60,10 +60,10 @@ hl.window_rule({
 	move = { "(monitor_w*.5-window_w*.5)", "(monitor_h-window_h-12)" },
 })
 
--- --- Tearing ---
-hl.window_rule({ match = { title = ".*\\.exe" }, immediate = true })
-hl.window_rule({ match = { class = "^(steam_app).*" }, immediate = true })
-
+-- -- --- Tearing ---
+-- hl.window_rule({ match = { title = ".*\\.exe" }, immediate = true })
+-- hl.window_rule({ match = { class = "^(steam_app).*" }, immediate = true })
+--
 -- No shadow for tiled windows
 hl.window_rule({ match = { float = 0 }, no_shadow = true })
 

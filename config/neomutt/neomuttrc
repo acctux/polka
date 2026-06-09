@@ -1,22 +1,27 @@
-source "$XDG_CONFIG_HOME/neomutt/muttmacros"
-source "$XDG_CONFIG_HOME/neomutt/user"
 source "$XDG_CONFIG_HOME/neomutt/secret"
-source "$XDG_CONFIG_HOME/neomutt/ambar_blue.theme"
 # ==========================================
 # PATHS
 # ==========================================
 set alias_file="$XDG_CONFIG_HOME/neomutt/alias"
-# Note: NeoMutt will not automatically source this file
-source "$XDG_CONFIG_HOME/neomutt/alias"
+source "$XDG_CONFIG_HOME/neomutt/alias" # NeoMutt will not automatically source
 set mime_type_query_command = "file --mime-type -b %s"
 set header_cache = "$XDG_CACHE_HOME/neomutt/headers/"
 set mailcap_path = "$XDG_CONFIG_HOME/neomutt/mailcap"
+# ==========================================
+# INTEGRATION
+# ==========================================
+set sendmail="/usr/bin/msmtp"
+set query_command = "khard email --parsable %s"
+bind editor <Tab> complete-query
+bind editor ^T    complete
+set nm_default_uri = "notmuch://$XDG_DATA_HOME/mail/proton"
+set nm_record = yes
+set nm_record_tags = "sent"
 # ==========================================
 # GPGME
 # ==========================================
 set crypt_use_pka
 set crypt_use_gpgme
-set pgp_default_key = "0xF3AE65D00B8E317A"
 set pgp_self_encrypt = yes
 set crypt_autopgp = yes # = may/may not automatically encrypt/sign
 set crypt_autosign=yes
@@ -47,7 +52,7 @@ set include               # Always quote source message text
 # ==========================================
 set date_format="%y-%m-%d"
 set attach_format="%u%D%I %t%4n %T%f %> [%m/%M, %s]"
-set index_format="%2C| %zs[%d] %-20.20F %?X?📎?%s"
+set index_format="%2C| %zs[%d] %-20.20F (%-4.4c) %?X?📎?%s"
 set folder_format="%2C %t %N %F %2l %-8.8u %-8.8g %8s %d %i"
 set sidebar_format = "%B %* [%?N?%N/?%S]"
 # ==========================================
@@ -61,12 +66,115 @@ set sidebar_short_path # shorten names relative to the previous name
 set sidebar_sort_method=path
 set sidebar_width = 20
 # ==========================================
-# INTEGRATION
+# COLORS
 # ==========================================
-set sendmail="/usr/bin/msmtp"
-set query_command = "khard mutt --search '%s'"
-macro index,pager a "<pipe-message>khard mutt --add-email<return>" "add sender to khard" # open attachments with mailcap with <return>
-set nm_default_uri = "notmuch://$XDG_DATA_HOME/mail/proton"
+color header cyan default "^From:"
+color header cyan default "^Subject:"
+color header brightwhite default "^(CC|BCC)"
+color hdrdefault brightblue default
+mono bold bold
+mono underline underline
+mono indicator reverse
+mono error bold
+mono body bold "^gpg: Good signature"
+color normal default default
+color indicator black cyan
+color error red default
+color status white brightblack
+color tilde cyan default
+color sidebar_divider brightblue default
+color sidebar_ordinary white default
+color sidebar_flagged brightred default
+color sidebar_unread cyan default
+color sidebar_highlight black cyan
+color index_number blue default
+color index_date green default
+color index brightblue default "~N"     # new messages
+color index cyan default "~U"           # unread
+color index red default "~F"            # flagged
+color index brightred default "~D"      # deleted
+color index brightyellow default "~T"   # tagged emails
+color index_author blue default "~U"
+color index_author brightyellow default "~T"
+color body brightgreen default "(https?|ftp)://[\-\.+,/%~_:?&=\#a-zA-Z0-9]+"
+color body brightgreen default "[\-\.+_a-zA-Z0-9]+@[\-\.a-zA-Z0-9]+"
+color body green default "\`[^\`]*\`"
+color body brightblue default "^# \.*"
+color body brightcyan default "^## \.*"
+color body brightgreen default "^### \.*"
+color body yellow default "^(\t| )*(-|\\*) \.*"
+color body brightcyan default "[;:][-o][)/(|]"
+color body brightcyan default "[;:][)(|]"
+color body brightcyan default "[ ][*][^*]*[*][ ]?"
+color body brightcyan default "[ ]?[*][^*]*[*][ ]"
+color body red default "(BAD signature)"
+color body cyan default "(Good signature)"
+color body brightblack default "^gpg: Good signature .*"
+color body brightyellow default "^gpg: "
+color body brightyellow red "^gpg: BAD signature from.*"
+color attachment magenta default
+color signature brightwhite default
+color search brightred black
+color quoted cyan default
+color quoted1 brightcyan default
+color quoted2 blue default
+color quoted3 green default
+color quoted4 yellow default
+color quoted5 red default
+color tree white default
+color progress black cyan
+# ====================================================================
+# BINDINGS
+# ====================================================================
 bind index \Cf vfolder-from-query
-set nm_record = yes
-set nm_record_tags = "sent"
+bind index,pager i noop
+bind index,pager g noop
+bind index,pager M noop
+bind index,pager C noop
+bind index j next-entry
+bind index k previous-entry
+bind index l display-message
+bind index K first-entry
+bind index J last-entry
+bind pager j next-line
+bind pager k previous-line
+bind pager l view-attachments
+bind pager K top
+bind pager J bottom
+bind index L limit
+bind index U undelete-message
+bind index,pager S sync-mailbox
+bind index,pager \CK sidebar-prev
+bind index,pager \CJ sidebar-next
+bind index,pager \CL sidebar-open
+bind index,pager \CH sidebar-toggle-visible
+bind index,pager q exit
+bind index / search
+macro index <space> "t" "toggle tag"
+bind attach <return> view-mailcap
+# ==========================================
+# MACROS
+# ==========================================
+macro index \cN "<tag-pattern>~N<enter><tag-prefix><clear-flag>N<untag-pattern>.<enter>" "mark all new as read"
+macro attach \cS "<save-entry>$XDG_DOWNLOAD_DIR<eol>" "save attachment"
+macro index \cO "<shell-escape>$HOME/.local/bin/email/emailsync.sh<enter>" "fetch and index email"
+macro index,pager \cB "<pipe-message>urlscan<Enter>" "extract URLs from message"
+macro attach,compose \cB "<pipe-entry>urlscan<Enter>" "extract URLs from entry"
+macro index,pager \cA "<pipe-message>khard add-email --skip-already-added<return>" "add the sender email address to khard" #--headers=from,cc
+macro index gg "<first-entry>" "go to top"
+macro pager gg "<top>" "go to top"
+macro index,pager gi "<change-folder>=Inbox<enter>" "go to Inbox"
+macro index,pager Mi "<save-message>=Inbox<enter>" "move to Inbox"
+macro index,pager Ci "<copy-message>=Inbox<enter>" "copy to Inbox"
+macro index,pager gd "<change-folder>=Drafts<enter>" "go to Drafts"
+macro index,pager Md "<save-message>=Drafts<enter>" "move to Drafts"
+macro index,pager Cd "<copy-message>=Drafts<enter>" "copy to Drafts"
+macro index,pager gt "<change-folder>=Trash<enter>" "go to Trash"
+macro index,pager Mt "<save-message>=Trash<enter>" "move to Trash"
+macro index,pager Ct "<copy-message>=Trash<enter>" "copy to Trash"
+macro index,pager gs "<change-folder>=Sent<enter>" "go to Sent"
+macro index,pager Ms "<save-message>=Sent<enter>" "move to Sent"
+macro index,pager Cs "<copy-message>=Sent<enter>" "copy to Sent"
+macro index,pager gl "<change-folder>=Folders/Important Docs<enter>" "go to Important Docs"
+macro index,pager Ml "<save-message>=Folders/Important Docs<enter>" "move to Important Docs"
+macro index,pager Cl "<copy-message>=Folders/Important Docs<enter>" "copy to Important Docs"

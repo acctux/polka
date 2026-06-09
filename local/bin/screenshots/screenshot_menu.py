@@ -8,7 +8,7 @@ from pathlib import Path
 # -----------------------------
 SCREENSHOTS_DIR = Path.home() / "Desktop" / "Pictures" / "Screenshots"
 SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
-CONFIG = Path.home() / ".config/fuzzel/fav-menu.ini"
+CONFIG = Path.home() / ".config/fuzzel/waybar.ini"
 CACHE_FILE = Path.home() / ".cache" / "ocr_copy" / "ocr_region.png"
 
 

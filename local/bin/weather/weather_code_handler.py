@@ -348,7 +348,7 @@ class WeatherProcessor:
                     self.color_map[code] = group.color
 
     # =========================================================
-    # FORMATTING UTILITIES (Internal)
+    # FORMATTING UTILITIES
     # =========================================================
     def _fmt_temp(
         self, series: pd.Series, show_unit: bool = True, soil: bool = False
@@ -379,12 +379,6 @@ class WeatherProcessor:
         return series.map(fmt)
 
     def _fmt_water_need(self, mm: float) -> str:
-        """
-        Format water needed for display.
-        Metric: mm / L per m²
-        Imperial: gallons per ft²
-        Strips unnecessary leading/trailing zeros.
-        """
         if pd.isna(mm) or mm <= 0:
             return ""
         if self.imperial:
@@ -422,7 +416,7 @@ class WeatherProcessor:
         return series.map(fmt)
 
     # =========================================================
-    # DATA ENRICHMENT (Internal)
+    # DATA ENRICHMENT
     # =========================================================
     def enrich(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
@@ -658,8 +652,11 @@ class WeatherApp:
             ]
             + daily_rows
         )
+        text = now.strftime("%H:%M")
+        if daily_df["additional_water_needed_icon"][0]:
+            text = f"{text}<span size='6pt'> </span><span size='13pt'>󱒂</span><span size='6pt'> </span>"
         return {
-            "text": now.strftime("%H:%M"),
+            "text": text,
             "tooltip": "\n".join(tooltip),
             "class": hourly_df["color"].iloc[0],
         }

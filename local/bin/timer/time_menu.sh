@@ -10,14 +10,14 @@ $CHOICE_3
 Cancel"
 
 LINES=$(echo "$MENU" | wc -l)
-CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --hide-prompt --lines "$LINES" --config="$HOME/.config/fuzzel/timemenu.ini")
+CHOICE=$(printf "%s\n" "$MENU" | fuzzel --dmenu --hide-prompt --lines "$LINES" --config="$HOME/.config/fuzzel/waybar.ini" --anchor="top-left")
 
 case "$CHOICE" in
 "$CHOICE_1")
   kitty ikhal &
   ;;
 "$CHOICE_2")
-  "$HOME/.local/bin/timer/set_timer.py"
+  "$HOME/.local/bin/timer/topwatch.py"
   ;;
 "$CHOICE_3")
   CURRENT_TZ=$(timedatectl show --property=Timezone --value)
