@@ -63,6 +63,7 @@ tooltip label {
 #custom-steam,
 #backlight,
 #custom-kdeconnect,
+#custom-email,
 #bluetooth,
 #custom-wifi,
 #custom-fav,
@@ -75,6 +76,7 @@ tooltip label {
 }
 /* === Border Radius === */
 #custom-wifi,
+#custom-email,
 #custom-tuned,
 #custom-deluge,
 #custom-fav,
@@ -98,6 +100,7 @@ tooltip label {
 }
 #custom-tuned.active,
 #custom-updates,
+#custom-email,
 #bluetooth.connected,
 #custom-deluge.downloading,
 #custom-kdeconnect.mounted,
@@ -164,6 +167,10 @@ tooltip label {
   padding-right: 9px;
   padding-left: 5px;
 }
+#custom-email {
+  padding-right: 9px;
+  padding-left: 4px;
+}
 #custom-wifi {
   padding-right: 10px;
   padding-left: 3px;
@@ -222,6 +229,7 @@ tooltip label {
 /* === Hover Effects === */
 #custom-kdeconnect:hover,
 #custom-timer:hover,
+#custom-email:hover,
 #custom-steam:hover,
 #backlight:hover,
 #custom-tuned:hover,

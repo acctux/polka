@@ -1,79 +1,87 @@
 #!/usr/bin/env python3
-import sys
-import subprocess
+import argparse
 import json
+import subprocess
+import sys
 from pathlib import Path
 
+WAYBAR_SIGNAL = 9
+LOCAL_BIN = Path.home() / ".local" / "bin"
+INDEX_FILE = Path.home() / ".cache" / "fav_index"
+COMMANDS = [
+    ("󰅍", LOCAL_BIN / "clipboard" / "clippy.py", "Clipboard\t"),
+    ("󰚝", LOCAL_BIN / "folders" / "foldermenu.py", "Folders\t"),
+    ("󰩬", LOCAL_BIN / "screenshots" / "screenshot_menu.py", "Screenshots\t"),
+    ("󰐳", LOCAL_BIN / "qr" / "qrmenu.sh", "QR\t"),
+    ("", LOCAL_BIN / "wine" / "winemenu.sh", "Wine\t"),
+]
 
-class HzScroller:
-    LOCAL_BIN = Path.home() / ".local" / "bin"
-    CACHE_DIR = Path.home() / ".cache"
-    INDEX_FILE = CACHE_DIR / "fav_index"
-    COMMANDS = [
-        ("󰅍", LOCAL_BIN / "clipboard" / "clippy.py", "Clipboard History\t"),
-        ("󰉐", LOCAL_BIN / "folders" / "mountencrypted.sh", "Mount Encrypted Folder\t"),
-        ("󰩬", LOCAL_BIN / "screenshots" / "screenshot_menu.py", "Screenshot Menu\t"),
-        ("󰐳", LOCAL_BIN / "qr" / "qrmenu.sh", "QR Menu\t"),
-        ("", LOCAL_BIN / "wine" / "winemenu.sh", "Wine Menu\t"),
-    ]
 
-    @classmethod
-    def ensure_cache_dir(cls):
-        cls.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+def read_index() -> int:
+    try:
+        return int(INDEX_FILE.read_text().strip()) % len(COMMANDS)
+    except (FileNotFoundError, ValueError):
+        return 0
 
-    @classmethod
-    def read_index(cls) -> int:
-        cls.ensure_cache_dir()
-        try:
-            return int(cls.INDEX_FILE.read_text().strip())
-        except Exception:
-            return 0
 
-    @classmethod
-    def write_index(cls, index: int):
-        cls.ensure_cache_dir()
-        cls.INDEX_FILE.write_text(str(index))
+def write_index(index: int) -> None:
+    INDEX_FILE.parent.mkdir(parents=True, exist_ok=True)
+    INDEX_FILE.write_text(str(index))
 
-    @classmethod
-    def output(cls):
-        index = cls.read_index()
-        icon, _, desc = cls.COMMANDS[index]
-        print(json.dumps({"text": icon, "tooltip": desc}))
 
-    @classmethod
-    def scroll(cls, direction: str):
-        index = cls.read_index()
-        if direction == "up":
-            index = (index + 1) % len(cls.COMMANDS)
-        elif direction == "down":
-            index = (index - 1) % len(cls.COMMANDS)
-        cls.write_index(index)
+def refresh_waybar() -> None:
+    try:
+        cmd = ["pkill", f"-RTMIN+{WAYBAR_SIGNAL}", "waybar"]
+        subprocess.run(cmd, check=False, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        pass
 
-    @classmethod
-    def exec_current(cls):
-        index = cls.read_index()
-        _, script, _ = cls.COMMANDS[index]
-        if script.exists():
-            try:
-                subprocess.run([str(script)], check=True)
-            except subprocess.CalledProcessError as e:
-                print(f"Execution failed: {e}")
-        else:
-            print(f"Script not found: {script}")
 
-    @classmethod
-    def run(cls, args):
-        if not args:
-            cls.output()
-            return
+def handle_cycle(direction: str) -> None:
+    current_index = read_index()
+    step = 1 if direction == "up" else -1
+    new_index = (current_index + step) % len(COMMANDS)
+    write_index(new_index)
+    refresh_waybar()
 
-        if args[0] in ("up", "down"):
-            cls.scroll(args[0])
-        elif args[0] == "exec":
-            cls.exec_current()
-        else:
-            cls.output()
+
+def handle_exec() -> None:
+    _, script, _ = COMMANDS[read_index()]
+    if not script.exists():
+        print(f"Script not found: {script}", file=sys.stderr)
+        sys.exit(1)
+    try:
+        subprocess.run([script], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Execution failed: {e}", file=sys.stderr)
+        sys.exit(e.returncode)
+
+
+def handle_print() -> None:
+    icon, _, desc = COMMANDS[read_index()]
+    print(json.dumps({"text": icon, "tooltip": desc}))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Cycle and execute favorite scripts in Waybar."
+    )
+    parser.add_argument(
+        "action",
+        choices=["up", "down", "exec", "print"],
+        nargs="?",
+        default="print",
+        help="Action to perform (default: print Waybar JSON)",
+    )
+    args = parser.parse_args()
+    if args.action in ("up", "down"):
+        handle_cycle(args.action)
+    elif args.action == "exec":
+        handle_exec()
+    else:
+        handle_print()
 
 
 if __name__ == "__main__":
-    HzScroller.run(sys.argv[1:])
+    main()
+

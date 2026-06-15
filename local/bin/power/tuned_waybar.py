@@ -19,10 +19,26 @@ class PowerState:
 
 
 POWER_STATES: list[PowerState] = [
-    PowerState("laptop-battery-powersave", 60, "󱙷"),
-    PowerState("laptop-ac-powersave", 165, "󰌪"),
-    PowerState("balanced", 165, "󰗑"),
-    PowerState("desktop", 165, ""),
+    PowerState(
+        profile="laptop-battery-powersave",
+        hz=60,
+        icon="󱙷",
+    ),
+    PowerState(
+        profile="laptop-ac-powersave",
+        hz=165,
+        icon="󰌪",
+    ),
+    PowerState(
+        profile="balanced",
+        hz=165,
+        icon="󰗑",
+    ),
+    PowerState(
+        profile="desktop",
+        hz=165,
+        icon="",
+    ),
 ]
 
 

@@ -6,7 +6,9 @@ export BROWSER=firedragon
 # theme
 export TERM=xterm-256color
 export XCURSOR_THEME=capitaine-cursors-light
+export HYPRCURSOR_THEME=capitaine-cursors-light
 export XCURSOR_SIZE=24
+export HYPRCURSOR_SIZE=24
 export GTK_THEME=Sweet-Ambar-Blue-Dark-v40
 export QT_AUTO_SCREEN_SCALE_FACTOR=1
 export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
@@ -26,6 +28,7 @@ export SUDO_ASKPASS="/usr/lib/seahorse/ssh-askpass"
 # Data dir
 export MPD_HOST=127.0.0.1
 export TASKRC="$XDG_CONFIG_HOME/task/taskrc"
+export TASKDATA="$XDG_CONFIG_HOME/task"
 export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
 export HISTFILE="$XDG_CONFIG_HOME/zsh/zsh_history"
 export STARSHIP_CONFIG="$XDG_CONFIG_HOME/starship/starship.toml"

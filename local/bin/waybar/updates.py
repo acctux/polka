@@ -21,9 +21,8 @@ def check_lock_files() -> None:
 
 def get_updates() -> list:
     try:
-        output = subprocess.check_output(
-            ["checkupdates"], text=True, stderr=subprocess.DEVNULL
-        )
+        cmd = ["checkupdates"]
+        output = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL)
         return [line.split()[0] for line in output.splitlines()]
     except subprocess.CalledProcessError:
         return []
@@ -42,11 +41,11 @@ def generate_tooltip(packages: list, max_lines: int, keywords: list) -> str:
     return "\n".join(tooltip_lines)
 
 
-def get_css_class(updates: int) -> str:
+def get_css_class(threshold_yellow: int, threshold_red: int, updates: int) -> str:
     css_class = ""
-    if updates > THRESHOLD_YELLOW:
+    if updates > threshold_yellow:
         css_class = "yellow"
-    if updates > THRESHOLD_RED:
+    if updates > threshold_red:
         css_class = "red"
     return css_class
 
@@ -58,18 +57,15 @@ def main():
     if num_updates < THRESHOLD:
         print(json.dumps({"text": ""}))
         return
-    css_class = get_css_class(num_updates)
+    css_class = get_css_class(THRESHOLD_YELLOW, THRESHOLD_RED, num_updates)
     tooltip = generate_tooltip(packages, MAX_TOOLTIP_LINES, KEYWORDS)
-    print(
-        json.dumps(
-            {
-                "text": str(num_updates),
-                "alt": str(num_updates),
-                "tooltip": tooltip or "Click to update",
-                "class": css_class,
-            }
-        )
-    )
+    waybar_dict = {
+        "text": str(num_updates),
+        "alt": str(num_updates),
+        "tooltip": tooltip,
+        "class": css_class,
+    }
+    print(json.dumps(waybar_dict))
 
 
 if __name__ == "__main__":

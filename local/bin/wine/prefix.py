@@ -26,21 +26,22 @@ def initialize_wine(prefix_path: Path) -> None:
 
 def get_game_name() -> str:
     try:
+        cmd = [
+            "zenity",
+            "--entry",
+            "--title",
+            "Game Name",
+            "--text",
+            "Enter directory name:",
+        ]
         result = subprocess.run(
-            [
-                "zenity",
-                "--entry",
-                "--title",
-                "Game Name",
-                "--text",
-                "Enter directory name:",
-            ],
+            cmd,
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
         )
-        return result.stdout.strip()  # Remove any trailing newlines
+        return result.stdout.strip()
     except subprocess.CalledProcessError as e:
         print(f"Error getting game name from zenity: {e}")
         sys.exit(1)

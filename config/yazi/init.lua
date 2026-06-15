@@ -2,7 +2,7 @@
 -- RECYCLE BIN
 -- ---------------------------------------------------------------------------
 require("recycle-bin"):setup({
-	trash_dir = "~/.local/share/Trash/files", -- Uncomment to use specific directory
+	-- 	trash_dir = "~/.local/share/Trash/files", -- Uncomment to use specific directory
 })
 
 -- ---------------------------------------------------------------------------
@@ -73,6 +73,5 @@ end
 -- BORDER
 -- ---------------------------------------------------------------------------
 require("full-border"):setup({
-	-- Available values: ui.Border.PLAIN, ui.Border.ROUNDED
 	type = ui.Border.ROUNDED,
 })

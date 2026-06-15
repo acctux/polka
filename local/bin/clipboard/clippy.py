@@ -12,9 +12,8 @@ def clipboard_fuzzel_menu(
     config_path=CONFIG_PATH, max_width=MAX_WIDTH, max_lines=MAX_LINES
 ) -> None:
     def run_cmd(cmd: list[str], input_text: str | None = None) -> str:
-        return subprocess.run(
-            cmd, input=input_text, text=True, capture_output=True
-        ).stdout.strip()
+        out = subprocess.run(cmd, input=input_text, text=True, capture_output=True)
+        return out.stdout.strip()
 
     entries = []
     output = run_cmd(["cliphist", "list"])
@@ -33,22 +32,22 @@ def clipboard_fuzzel_menu(
     longest_entry_len = min(max_width, max(lengths))
     separator = "_" * longest_entry_len
     options = [clear_option, separator] + entries
-    selection = run_cmd(
-        [
-            "fuzzel",
-            "--dmenu",
-            "--config",
-            str(config_path),
-            f"--lines={min(max_lines, len(options))}",
-            f"--width={longest_entry_len + 2}",
-            "--x-margin=10",
-        ],
-        "\n".join(options),
-    )
+    cmd = [
+        "fuzzel",
+        "--dmenu",
+        "--config",
+        str(config_path),
+        f"--lines={min(max_lines, len(options))}",
+        f"--width={longest_entry_len + 2}",
+        "--x-margin=10",
+    ]
+    selection = run_cmd(cmd, "\n".join(options))
     if selection == clear_option:
-        run_cmd(["cliphist", "wipe"])
+        cmd = ["cliphist", "wipe"]
+        run_cmd(cmd)
     elif selection and selection != separator:
-        run_cmd(["wl-copy"], input_text=selection)
+        cmd = ["wl-copy"]
+        run_cmd(cmd, input_text=selection)
 
 
 if __name__ == "__main__":

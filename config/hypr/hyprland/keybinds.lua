@@ -21,7 +21,7 @@ hl.bind(
 --##################################################
 -- APP LAUNCH BINDINGS
 --##################################################
--- hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("uwsm stop"))
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("uwsm stop"))
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(browser))
@@ -79,9 +79,10 @@ hl.bind("Scroll_Lock", hl.dsp.exec_cmd("swayosd-client --scroll-lock"))
 -- SCREENSHOTS
 --##################################################
 --"grim -o \"$(hyprctl activeworkspace -j | jq -r '.monitor')\""
-hl.bind(mainMod .. " + PRINT", hl.dsp.exec_cmd("hyprshot -m window"))
-hl.bind(shiftMod .. " + PRINT", hl.dsp.exec_cmd("hyprshot -m region"))
-hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("~/.local/bin/ocr/maim.sh"))
+hl.bind("Print", hl.dsp.exec_cmd("hyprshot -zm output"))
+hl.bind(mainMod .. " + PRINT", hl.dsp.exec_cmd("hyprshot -zm window"))
+hl.bind(shiftMod .. " + PRINT", hl.dsp.exec_cmd("hyprshot -zm region"))
+hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("~/.local/bin/screenshots/maim_pdf.py --region"))
 --##################################################
 -- WORKSPACES
 --##################################################
@@ -104,7 +105,6 @@ for i = 1, 4 do
 	hl.bind("SUPER + SHIFT + " .. arrowkey[i], hl.dsp.window.move({ direction = focusdir[i] }))
 end
 --# Window split ratio
---#/# binde = SUPER, ;/',, -- Adjust split ratio
 hl.bind("SUPER + Semicolon", hl.dsp.layout("splitratio -0.1"), { repeating = true })
 hl.bind("SUPER + Apostrophe", hl.dsp.layout("splitratio +0.1"), { repeating = true })
 --##################################################

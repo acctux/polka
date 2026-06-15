@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sqlite3
 import sys
 import logging
 import subprocess
@@ -8,6 +9,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, date
 from pathlib import Path
 import yaml
+
+DB_PATH = Path.home() / ".config" / "task" / "taskchampion.sqlite3"
+YAML_PATH = Path.home() / ".local" / "bin" / "taskwarrior" / "dates.yaml"
+CONTACTS_PATH = Path.home() / "Desktop" / "Contacts"
+CALENDAR_NAME = "private"
 
 
 ######################################
@@ -188,33 +194,36 @@ class EventEngine:
     def __init__(self, calendar: str):
         self.calendar = calendar
 
-    def fetch_taskwarrior_tasks(self) -> set[tuple[str, str]]:
-        def _parse_tw_date(date_raw: str) -> str:
+    DB_PATH = Path.home() / ".config" / "task" / "taskchampion.sqlite3"
+
+    def fetch_taskwarrior_tasks(self, db_path: Path) -> set[tuple[str, str]]:
+        def normalize_due(due_raw: str | None) -> str:
+            if not due_raw:
+                return ""
             try:
-                dt = datetime.strptime(date_raw.replace("Z", ""), "%Y%m%dT%H%M%S")
+                # TaskChampion / Taskwarrior format: 20260609T000000Z or epoch
+                if due_raw.isdigit():
+                    dt = datetime.fromtimestamp(int(due_raw))
+                else:
+                    dt = datetime.strptime(due_raw.replace("Z", ""), "%Y%m%dT%H%M%S")
                 return dt.strftime("%Y-%m-%d")
-            except ValueError:
+            except Exception:
                 return ""
 
-        try:
-            cmd = ["task", "export"]
-            res = subprocess.run(
-                cmd,
-                text=True,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            tasks_data = json.loads(res.stdout)
-            task_tuples = set()
-            for task in tasks_data:
-                name = str(task.get("description", "")).strip()
-                due_date_str = _parse_tw_date(task.get("due", ""))
-                task_tuples.add((name, due_date_str))
-            return task_tuples
-        except Exception as e:
-            log.error(f"Failed to read Taskwarrior data: {e}")
-            return set()
+        tasks = set()
+        with sqlite3.connect(db_path) as conn:
+            rows = conn.execute("SELECT data FROM tasks").fetchall()
+        for (blob,) in rows:
+            try:
+                task = json.loads(blob)
+            except json.JSONDecodeError:
+                continue
+            desc = (task.get("description") or "").strip()
+            if not desc:
+                continue
+            due_str = normalize_due(task.get("due"))
+            tasks.add((desc, due_str))
+        return tasks
 
     def fetch_khal_events(self, start_str: str, end_str: str) -> set[tuple[str, str]]:
         try:
@@ -246,12 +255,12 @@ class EventEngine:
             return set()
 
     def push_to_khal(self, title: str, date_str: str) -> None:
-        log.info(f"[Sync -> Khal] Adding yearly event: {title} on {date_str}")
-        cmd = ["khal", "new", date_str, title, "-r", "yearly"]
+        log.info(f"[Sync -> Khal] Adding event: {title} on {date_str}")
+        cmd = ["khal", "new", date_str, title]
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def push_to_taskwarrior(self, title: str, date_str: str) -> None:
-        log.info(f"[Sync -> Taskwarrior] Provisioning new task: {title} due {date_str}")
+        log.info(f"[Sync -> Taskwarrior] Adding task: {title} due {date_str}")
         cmd = ["task", "add", title, f"due:{date_str}"]
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -278,12 +287,12 @@ class DateSyncManager:
             self.contact_dir,
             self.default_due_in,
         )
+        tw_tasks = self.events_engine.fetch_taskwarrior_tasks(DB_PATH)
+        khal_tasks = self.events_engine.fetch_khal_events(
+            self.now_str, self.next_yr_str
+        )
         for event in events:
-            existing_tasks = self.events_engine.fetch_taskwarrior_tasks()
-            existing_khal = self.events_engine.fetch_khal_events(
-                self.now_str, self.next_yr_str
-            )
-            self._process_event(event, existing_tasks, existing_khal)
+            self._process_event(event, tw_tasks, khal_tasks)
         log.info("Sync transaction completed successfully.\n")
 
     def _process_event(
@@ -322,8 +331,5 @@ class DateSyncManager:
 # MAIN
 #######################################
 if __name__ == "__main__":
-    YAML_PATH = Path.home() / ".local" / "bin" / "taskwarrior" / "dates.yaml"
-    CONTACTS_PATH = Path.home() / "Desktop" / "Contacts"
-    CALENDAR_NAME = "private"
     manager = DateSyncManager(YAML_PATH, CONTACTS_PATH, CALENDAR_NAME)
     manager.run()

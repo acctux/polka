@@ -3,4 +3,4 @@ Description=Taskwarrior notify-send reminder
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/taskwarrior/task_notify.py
+ExecStart=%h/.local/bin/taskwarrior/tw_notify.py

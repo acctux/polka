@@ -33,16 +33,15 @@ def main() -> None:
         crit = "normal"
         if urgent:
             crit = "critical"
-        subprocess.run(
-            [
-                "notify-send",
-                f"--urgency={crit}",
-                "-i",
-                "/usr/share/icons/WhiteSur-dark/apps/scalable/com.todotxt.sleek.svg",
-                "To-Do Reminder",
-                body,
-            ]
-        )
+        cmd = [
+            "notify-send",
+            f"--urgency={crit}",
+            "-i",
+            "/usr/share/icons/WhiteSur-dark/apps/scalable/com.todotxt.sleek.svg",
+            "To-Do Reminder",
+            body,
+        ]
+        subprocess.run(cmd)
 
 
 if __name__ == "__main__":

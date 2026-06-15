@@ -4,6 +4,9 @@ import time
 import subprocess
 
 HOME = Path.home()
+ONLINE_PATH = "/sys/class/power_supply/ADP0/online"
+INTERVAL = 1.5
+SCRIPT_PATH = HOME / ".local/bin/power/tuned.py"
 
 
 def get_ac_state(path: str) -> str:
@@ -32,9 +35,9 @@ def run_tuned(power_script: Path, msg: str, profile: str, hz: int):
 
 
 def main(
-    online_path: str = "/sys/class/power_supply/ADP0/online",
-    interval: float = 1.5,
-    power_script_path: Path = HOME / ".local/bin/power/tuned.py",
+    online_path: str = ONLINE_PATH,
+    interval: float = INTERVAL,
+    power_script_path: Path = SCRIPT_PATH,
 ):
     last_state = get_ac_state(online_path)
     while True:
@@ -42,17 +45,17 @@ def main(
         if state != last_state:
             if state == "battery":
                 run_tuned(
-                    power_script_path,
-                    "On battery",
-                    "laptop-battery-powersave",
-                    60,
+                    power_script=power_script_path,
+                    msg="On battery",
+                    profile="laptop-battery-powersave",
+                    hz=60,
                 )
             elif state == "ac":
                 run_tuned(
-                    power_script_path,
-                    "On AC",
-                    "balanced",
-                    165,
+                    power_script=power_script_path,
+                    msg="On AC",
+                    profile="balanced",
+                    hz=165,
                 )
             last_state = state
         time.sleep(interval)

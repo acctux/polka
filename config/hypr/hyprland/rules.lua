@@ -49,9 +49,18 @@ hl.window_rule({
 	match = { title = "^([Pp]icture[-\\s]?[Ii]n[-\\s]?[Pp]icture)(.*)$" },
 	size = { "(monitor_w*0.25)", "(monitor_h*0.25)" },
 })
-hl.window_rule({ match = { title = "^([Pp]icture[-\\s]?[Ii]n[-\\s]?[Pp]icture)(.*)$" }, float = true })
-hl.window_rule({ match = { title = "^([Pp]icture[-\\s]?[Ii]n[-\\s]?[Pp]icture)(.*)$" }, pin = true })
-
+-- Picture-in-Picture
+hl.window_rule({
+	name = "Picture-in-Picture",
+	match = {
+		title = "^([Pp]icture[-\\s]?[Ii]n[-\\s]?[Pp]icture)(.*)$",
+	},
+	float = true,
+	pin = true,
+	focus_on_activate = false,
+	no_initial_focus = true,
+	suppress_event = "activate",
+})
 -- Screen sharing
 hl.window_rule({ match = { title = ".*is sharing (a window|your screen).*" }, float = true })
 hl.window_rule({ match = { title = ".*is sharing (a window|your screen).*" }, pin = true })
@@ -59,44 +68,45 @@ hl.window_rule({
 	match = { title = ".*is sharing (a window|your screen).*" },
 	move = { "(monitor_w*.5-window_w*.5)", "(monitor_h-window_h-12)" },
 })
-
 -- -- --- Tearing ---
 -- hl.window_rule({ match = { title = ".*\\.exe" }, immediate = true })
 -- hl.window_rule({ match = { class = "^(steam_app).*" }, immediate = true })
 --
 -- No shadow for tiled windows
 hl.window_rule({ match = { float = 0 }, no_shadow = true })
-
 -- No animations
 hl.layer_rule({ match = { namespace = "gtk4-layer-shell" }, no_anim = true })
-
 -- ######## Layer rules ########
 hl.layer_rule({
-	match = { namespace = "swaync-control-center" },
+	match = { namespace = "^(swaync-control-center)$" },
 	blur = true,
 	-- no_anim = true,
 	blur_popups = true,
 	ignore_alpha = 0.1,
 })
 hl.layer_rule({
-	match = { namespace = "swaync-notification-window" },
+	match = { namespace = "^(swaync-notification-window)$" },
 	blur = true,
 	blur_popups = true,
 	ignore_alpha = 0.1,
 })
 hl.layer_rule({
-	match = { namespace = "waybar" },
+	match = { namespace = "^(waybar)$" },
 	blur = true,
 	blur_popups = true,
 	ignore_alpha = 0.1,
 })
 hl.layer_rule({
-	match = { class = "fuzzel" },
+	match = { class = "^(fuzzel)$" },
 	blur = true,
 	blur_popups = true,
 	ignore_alpha = 0.1,
 })
-
+hl.layer_rule({
+	match = { namespace = "^(selection)$" },
+	no_anim = true,
+	blur = false,
+})
 -- ######## Window rules ########
 hl.window_rule({
 	match = { class = "^(org\\.pulseaudio\\.pavucontrol)$" },

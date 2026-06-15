@@ -4,7 +4,6 @@ Description=Run Taskwarrior scheduler once a day
 [Timer]
 OnCalendar=08:00:00
 Persistent=true
-Unit=task-schedule.service
 
 [Install]
 WantedBy=timers.target

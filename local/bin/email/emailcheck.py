@@ -5,70 +5,86 @@ import subprocess
 from pathlib import Path
 
 
-class NotMuchNotify:
-    def __init__(self, state_file: Path):
-        self.state_file = state_file
+state_file = Path.home() / ".cache" / "emailcheck" / "last_email.json"
 
-    def run(self, cmd: list[str]) -> subprocess.CompletedProcess:
-        return subprocess.run(cmd, check=True, capture_output=True, text=True)
 
-    def refresh_mail(self) -> None:
-        self.run(["systemctl", "--user", "start", "protonmail-bridge.service"])
+def run(cmd: list[str]) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, check=True, capture_output=True, text=True)
+
+
+def refresh_mail() -> None:
+    check_cmd = [
+        "systemctl",
+        "--user",
+        "is-active",
+        "--quiet",
+        "protonmail-bridge.service",
+    ]
+    if not run(check_cmd).returncode == 0:
+        start_cmd = ["systemctl", "--user", "start", "protonmail-bridge.service"]
+        run(start_cmd)
         time.sleep(60)
-        self.run(["mbsync", "-Va"])
-        self.run(["notmuch", "new"])
+    cmd = ["mbsync", "-Va"]
+    run(cmd)
+    time.sleep(1)
+    cmd = ["notmuch", "new"]
+    run(cmd)
 
-    def youve_got_mail(self, emails: list[tuple[str, str, str]]) -> None:
-        latest_id = emails[0][0]
-        self.state_file.parent.mkdir(parents=True, exist_ok=True)
-        self.state_file.write_text(json.dumps({"id": latest_id}))
-        for _, sender, subject in reversed(emails):
-            cmd = ["notify-send", sender, subject, "--icon=thunderbird"]
-            self.run(cmd)
 
-    def get_msg_ids(self, max=10) -> list[tuple[str, str, str]]:
-        cmd = [
-            "notmuch",
-            "search",
-            "--output=messages",
-            "--limit",
-            str(max),
-            "--format=json",
-            "tag:inbox",
-        ]
-        msg_ids: list[str] = json.loads(self.run(cmd).stdout)
-        last_seen = self._load_last_id()
-        new_emails = []
-        for msg_id in msg_ids:
-            if msg_id == last_seen:
-                break
-            cmd = ["notmuch", "show", "--format=json", f"id:{msg_id}"]
-            raw = json.loads(self.run(cmd).stdout)[0][0][0]
-            try:
-                headers = raw["headers"]
-                sender = headers.get("From", "")
-                subject = headers.get("Subject", "")
-            except Exception:
-                pass
-            new_emails.append((msg_id, sender, subject))
-        return new_emails
+def youve_got_mail(new_emails: list[tuple[str, str, str]]) -> None:
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    email_data = []
+    for email_id, sender, subject in new_emails:
+        email_dict = {"id": email_id, "sender": sender, "subject": subject}
+        email_data.append(email_dict)
+    state_file.write_text(json.dumps(email_data, indent=2))
+    for _, sender, subject in reversed(new_emails):
+        cmd = ["notify-send", sender, subject, "--icon=thunderbird"]
+        run(cmd)
 
-    def _load_last_id(self) -> str:
-        if not self.state_file.exists():
-            return ""
+
+def _load_last_id() -> str:
+    if not state_file.exists():
+        return ""
+    try:
+        data = json.loads(state_file.read_text())
+        if isinstance(data, list) and len(data) > 0:
+            return data[0].get("id", "")
+        return ""
+    except Exception:
+        return ""
+
+
+def get_msg_ids(max=10) -> list[tuple[str, str, str]]:
+    cmd = [
+        "notmuch",
+        "search",
+        "--output=messages",
+        "--limit",
+        str(max),
+        "--format=json",
+        "tag:inbox",
+    ]
+    msg_ids: list[str] = json.loads(run(cmd).stdout)
+    last_seen = _load_last_id()
+    new_emails = []
+    for msg_id in msg_ids:
+        if msg_id == last_seen:
+            break
+        cmd = ["notmuch", "show", "--format=json", f"id:{msg_id}"]
+        raw = json.loads(run(cmd).stdout)[0][0][0]["headers"]
         try:
-            return json.loads(self.state_file.read_text())["id"]
+            sender = raw.get("From", "")
+            subject = raw.get("Subject", "")
         except Exception:
-            return ""
-
-    def get_email(self):
-        self.refresh_mail()
-        new_emails = self.get_msg_ids()
-        if new_emails:
-            print(new_emails)
-            self.youve_got_mail(new_emails)
+            pass
+        new_emails.append((msg_id, sender, subject))
+    return new_emails
 
 
 if __name__ == "__main__":
-    notifier = NotMuchNotify(state_file=Path.home() / ".cache" / "last_email.json")
-    notifier.get_email()
+    refresh_mail()
+    new_emails = get_msg_ids()
+    if new_emails:
+        print(new_emails)
+        youve_got_mail(new_emails)

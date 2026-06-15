@@ -8,6 +8,10 @@ import subprocess
 from pathlib import Path
 import logging
 
+DOT_DIRS = ["Lit/polka", "Lit/Docs/secdots"]
+SKIP_DIRS = [".git", "__pycache__", ".venv"]
+SKIIP_FILES = [".gitignore"]
+
 
 #########################
 # LOG
@@ -105,8 +109,6 @@ class PolkaDots:
 
 
 config = PolkaConfig(
-    dotfiles_dirs=["Lit/polka", "Lit/Docs/secdots"],
-    skip_dirs=[".git", "__pycache__", ".venv"],
-    skip_files=[".gitignore"],
+    dotfiles_dirs=DOT_DIRS, skip_dirs=SKIP_DIRS, skip_files=SKIIP_FILES
 )
 PolkaDots(config).deploy()
