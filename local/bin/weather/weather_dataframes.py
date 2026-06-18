@@ -55,6 +55,7 @@ def fetch_weather_response():
             "soil_moisture_9_to_27cm",
             "is_day",
         ],
+        "past_days": 3,
         "timezone": TZ,
         "forecast_days": 14,
     }

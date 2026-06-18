@@ -74,7 +74,7 @@
       ""
     ],
     "scroll-step": 10,
-    "on-click": "~/.local/bin/hyprsunset/toggle-sunset.py"
+    "on-click": "~/.local/bin/hyprsunset/toggle-sunset.py & disown"
   },
   "battery": {
     "interval": 60,
@@ -96,11 +96,17 @@
     "on-click": "kitty jolt",
     "full-at": 79,
     "format-icons": [
-      " ",
-      " ",
-      " ",
-      " ",
-      " "
+      "󰂎",
+      "󰁺",
+      "󰁻",
+      "󰁼",
+      "󰁽",
+      "󰁾",
+      "󰁿",
+      "󰂀",
+      "󰂁",
+      "󰂂",
+      "󰁹"
     ]
   },
   "temperature": {
@@ -210,7 +216,7 @@
     "return-type": "json",
     "format": "{}",
     "tooltip": true,
-    "on-click": "~/.local/bin/waybar/fav.py exec",
+    "on-click": "~/.local/bin/waybar/fav.py exec & disown",
     "on-click-right": "~/.local/bin/waybar/fav.py up",
     "on-scroll-up": "~/.local/bin/waybar/fav.py up",
     "on-scroll-down": "~/.local/bin/waybar/fav.py down"
@@ -220,9 +226,9 @@
     "exec": "~/.local/bin/network/netbar.py",
     "interval": 2,
     "return-type": "json",
-    "on-click": "~/.local/bin/network/vpnmenu.py",
+    "on-click": "~/.local/bin/network/vpnmenu.py & disown",
     "on-click-middle": "firewall-config",
-    "on-click-right": "python ~/.local/bin/network/vpnmenu.py"
+    "on-click-right": "~/.local/bin/network/vpnmenu.py & disown"
   },
   "custom/volume": {
     "exec": "~/.local/bin/mpd/mypulseaudio.py",
@@ -251,7 +257,7 @@
     "tooltip": true,
     "interval": 10,
     "exec": "~/.local/bin/weather/.venv/bin/python ~/.local/bin/weather/weather_code_handler.py",
-    "on-click": "~/.local/bin/timer/time_menu.sh",
+    "on-click": "~/.local/bin/timer/time_menu.sh & disown",
     "on-click-right": "~/.local/bin/weather/.venv/bin/python ~/.local/bin/weather/weather_code_handler.py --metric",
     "return-type": "json"
   },
@@ -274,8 +280,8 @@
     "format": "<span size='9pt'> </span>{}",
     "interval": 300,
     "signal": 8,
-    "on-click": "kitty taskwarrior-tui",
-    "on-click-right": "~/.local/bin/taskwarrior/tw_add.py"
+    "on-click": "kitty taskwarrior-tui & disown",
+    "on-click-right": "~/.local/bin/taskwarrior/tw_add.py & disown"
   },
   "custom/updates": {
     "format": "{}<span size='4pt'> </span>",

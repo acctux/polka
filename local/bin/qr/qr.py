@@ -14,8 +14,7 @@ log = logging.getLogger("QR")
 
 
 def handle_decoded(raw_payload: str) -> None:
-    """Parses zbarimg output formats and executes contextual system triggers."""
-    # zbarimg outputs 'TYPE:content' (e.g., 'QR-Code:https://...'). Strip the prefix.
+    # zbarimg output: 'TYPE:content' Strip prefix.
     decoded = raw_payload.split(":", 1)[1] if ":" in raw_payload else raw_payload
     decoded = decoded.strip()
     if decoded.startswith(("http://", "https://")):
@@ -30,7 +29,6 @@ def handle_decoded(raw_payload: str) -> None:
 
 
 def connect_wifi(decoded: str, scan_sleep: int = 4) -> None:
-    """Parses credentials and attempts iwd connection."""
     ssid_match = re.search(r"S:([^;]+);", decoded)
     pass_match = re.search(r"P:([^;]+);", decoded)
     if not ssid_match:

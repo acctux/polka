@@ -5,11 +5,6 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-LOCKED_DIR = Path.home() / "Desktop/Private"
-PLAIN_DIR = Path.home() / "Desktop/Decrypted"
-FUZZEL_CONFIG = Path.home() / ".config/fuzzel/waybar.ini"
-PLAIN_ICON = "file:///usr/share/icons/WhiteSur-dark/places/scalable/folder-unlocked.svg"
-
 
 @dataclass(frozen=True)
 class FolderItem:
@@ -28,19 +23,21 @@ class FolderItem:
 
 FOLDERS = [
     FolderItem("Documents", "󱧶", "~/Desktop/Documents"),
-    FolderItem("Music", "󱧶", "~/Desktop/Music"),
     FolderItem("Downloads", "󰉍", "~/Desktop/Downloads"),
     FolderItem("Videos", "", "~/Desktop/Videos"),
     FolderItem("Pictures", "󰉏", "~/Desktop/Pictures"),
     FolderItem("Projects", "󱧼", "~/Desktop/Projects"),
-    FolderItem("Configs", "", "~/.config"),
+    FolderItem("Etc", "", "/etc"),
 ]
 
 
 class VaultMenu:
-    def __init__(self):
-        cmd = ["mountpoint", "-q", str(PLAIN_DIR)]
-        self.is_mounted = subprocess.run(cmd).returncode == 0
+    def __init__(self, plain_dir: Path, locked_dir: Path):
+        self.plain_dir = plain_dir
+        self.locked_dir = locked_dir
+        self.is_mounted = (
+            subprocess.run(["mountpoint", "-q", str(plain_dir)]).returncode == 0
+        )
 
     def get_password(self, title: str):
         cmd = ["zenity", "--password", f"--title={title}"]
@@ -54,37 +51,38 @@ class VaultMenu:
             subprocess.run(["gocryptfs"] + args + ["--passfile", f.name], check=True)
 
     def handle_vault(self):
-        LOCKED_DIR.mkdir(parents=True, exist_ok=True)
-        if not (LOCKED_DIR / "gocryptfs.conf").exists():
+        self.locked_dir.mkdir(parents=True, exist_ok=True)
+        if not (self.locked_dir / "gocryptfs.conf").exists():
             if password := self.get_password("Enter init password"):
-                self.run_gocrypt(["-init", str(LOCKED_DIR)], password)
+                self.run_gocrypt(["-init", str(self.locked_dir)], password)
             return
         if self.is_mounted:
-            subprocess.run(["fusermount3", "-u", str(PLAIN_DIR)], check=True)
+            subprocess.run(["fusermount3", "-u", str(self.plain_dir)], check=True)
             try:
-                PLAIN_DIR.rmdir()
+                self.plain_dir.rmdir()
             except OSError:
                 pass
         else:
-            PLAIN_DIR.mkdir(parents=True, exist_ok=True)
-            cmd = ["gio", "set", str(PLAIN_DIR), "metadata::custom-icon", PLAIN_ICON]
+            self.plain_dir.mkdir(parents=True, exist_ok=True)
+            cmd = ["gio", "set", str(self.plain_dir)]
+            if UNLOCKED_ICON.exists():
+                cmd += ["metadata::custom-icon", f"file://{UNLOCKED_ICON}"]
             subprocess.run(cmd, stderr=subprocess.DEVNULL)
             if password := self.get_password("Enter gocryptfs password"):
-                self.run_gocrypt([str(LOCKED_DIR), str(PLAIN_DIR)], password)
-                subprocess.Popen(["xdg-open", str(PLAIN_DIR)])
+                self.run_gocrypt([str(self.locked_dir), str(self.plain_dir)], password)
+                subprocess.Popen(["xdg-open", str(self.plain_dir), "&", "disown"])
 
-    def run_menu(self):
+    def run_menu(self, fuzzel_config: Path):
         vault_label = "󰉐 Lock Vault" if self.is_mounted else "󰉑 Unlock Vault"
         menu_options = {vault_label: "VAULT_ACTION", **{f.label: f for f in FOLDERS}}
         cmd = [
             "fuzzel",
             "--dmenu",
-            f"--width={max(len(k) for k in menu_options.keys()) + 2}",
+            f"--width={max(len(k) for k in menu_options.keys())}",
             f"--lines={len(menu_options)}",
-            "--x-margin=15",
         ]
-        if FUZZEL_CONFIG.exists():
-            cmd += ["--config", str(FUZZEL_CONFIG)]
+        if fuzzel_config.exists():
+            cmd += ["--config", str(fuzzel_config)]
         res = subprocess.run(
             cmd, input="\n".join(menu_options.keys()), text=True, capture_output=True
         )
@@ -98,4 +96,10 @@ class VaultMenu:
 
 
 if __name__ == "__main__":
-    VaultMenu().run_menu()
+    UNLOCKED_ICON: Path = Path(
+        "/usr/share/icons/WhiteSur-dark/places/scalable/folder-unlocked.svg"
+    )
+    FUZZEL_CONFIG = Path.home() / ".config" / "fuzzel" / "waybar.ini"
+    PLAIN_DIR = Path.home() / "Desktop/Decrypted"
+    LOCKED_DIR = Path.home() / "Desktop/Private"
+    VaultMenu(PLAIN_DIR, LOCKED_DIR).run_menu(FUZZEL_CONFIG)

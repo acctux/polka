@@ -8,8 +8,8 @@ CONFIG="$HOME/.config/fuzzel/waybar.ini"
 # Menu items
 # -----------------------------
 declare -A MENU_MAP=(
-  ["Show WiFi QR"]="kitty --hold /home/nick/Lit/polka/local/bin/qr/wifiqr.py"
-  ["Scan QR From Screenshot"]="python /home/nick/Lit/polka/local/bin/qr/qr.py"
+  ["Show WiFi QR"]="kitty --hold $HOME/.local/bin/qr/wifiqr.py"
+  ["Scan QR From Screenshot"]="$HOME/.local/bin/qr/qr.py"
   ["Scan QR From Webcam"]="zbarcam-gtk"
   ["Cancel"]="exit 0"
 )

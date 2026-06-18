@@ -4,40 +4,26 @@ import re
 import subprocess
 import sys
 
-# Standard, clean logging setup
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger("WiFi-QR")
 
 
 def get_current_ssid(iface: str) -> str | None:
     try:
-        # Running iwctl directly
-        res = subprocess.run(
-            ["iwctl", "station", iface, "show"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        # Simple, common search for the targeted line
+        cmd = ["iwctl", "station", iface, "show"]
+        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
         for line in res.stdout.splitlines():
             if "Connected network" in line:
-                # Split on '=' and strip spaces/hidden characters
-                return line.split("=", 1)[1].strip()
+                return line.split()[2].strip()
     except subprocess.CalledProcessError:
         log.error(f"Failed to query interface '{iface}'.")
     return None
 
 
 def get_wifi_password(ssid: str) -> str | None:
-    """Reads the passphrase directly from the standard iwd storage path."""
     try:
-        # Use sudo -A to cat the network file
-        res = subprocess.run(
-            ["sudo", "-A", "cat", f"/var/lib/iwd/{ssid}.psk"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        cmd = ["sudo", "-A", "cat", f"/var/lib/iwd/{ssid}.psk"]
+        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
         for line in res.stdout.splitlines():
             if line.startswith("Passphrase="):
                 return line.split("=", 1)[1].strip()

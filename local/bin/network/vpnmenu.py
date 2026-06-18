@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 import psutil
 
-FUZZEL_CONFIG = Path.home() / ".config/fuzzel/waybar.ini"
+FUZZEL_CONFIG = Path.home() / ".config" / "fuzzel" / "waybar.ini"
 NAMEDCONF_DIR = Path(__file__).resolve().parent / "namedconf"
 WIFI_SERVICES = {
     "iwd.service": "NetworkManager.service",
@@ -62,41 +62,21 @@ class NetworkManager:
         self.wifi_services = wifi_services
 
     def _run(
-        self,
-        cmd: list[str],
-        input: str | None = None,
+        self, cmd: list[str], input: str | None = None
     ) -> subprocess.CompletedProcess:
         log.info(f"run: {' '.join(cmd)}")
-        return subprocess.run(
-            cmd,
-            text=True,
-            capture_output=True,
-            input=input,
-        )
+        return subprocess.run(cmd, text=True, capture_output=True, input=input)
 
-    def _sudo(
-        self,
-        cmd: list[str],
-    ) -> subprocess.CompletedProcess:
+    def _sudo(self, cmd: list[str]) -> subprocess.CompletedProcess:
         full = ["sudo", "-A"] + cmd
         log.info(f"sudo: {' '.join(full)}")
-        return subprocess.run(
-            full,
-            text=True,
-            capture_output=True,
-        )
+        return subprocess.run(full, text=True, capture_output=True)
 
-    def _ui(
-        self,
-        cmd: list[str],
-    ) -> int:
+    def _ui(self, cmd: list[str]) -> int:
         log.info(f"ui: {' '.join(cmd)}")
         return subprocess.run(cmd).returncode
 
-    def fuzzel_menu(
-        self,
-        options: list[str],
-    ) -> str:
+    def fuzzel_menu(self, options: list[str]) -> str:
         menu_text = "\n".join(options)
         width = max(map(len, options))
         lines = str(len(options))

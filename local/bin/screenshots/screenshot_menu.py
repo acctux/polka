@@ -76,8 +76,6 @@ class ScreenshotManager:
             subprocess.run(cmd, check=True)
         except FileNotFoundError:
             self._notify("Swappy not found. Image saved without edits.", is_error=True)
-        except subprocess.CalledProcessError:
-            pass
 
     def open_storage_folder(self) -> None:
         try:
@@ -175,9 +173,9 @@ class OCRProcessor:
                     if has_alpha or has_transparency:
                         # Create a solid white background & paste image onto it to drop alpha
                         background = Image.new("RGB", img.size, (255, 255, 255))
-                        background.paste(
-                            img, mask=img.split()[-1] if img.mode == "RGBA" else None
-                        )
+                        if img.mode == "RGBA":
+                            mask = img.split()[-1]
+                        background.paste(img, mask=mask)
                         background.save(img_path, "PNG")
             # Compile straightened images to standard structural PDF container
             cmd = ["img2pdf", *map(str, screenshots), "-o", str(tmp_pdf)]
@@ -208,15 +206,19 @@ class OCRProcessor:
 
 class ScreenshotApp:
     menu_layout = [
+        "󰹑 Screenshots",
         "Full Screen → Copy",
         "Full Screen → Edit",
         "Region → Copy",
         "Region → Edit",
         "",
-        "Region → Text (Clipboard)",
-        "OCR: Freeze Target Region",
-        "OCR: Snapshot Target Region",
-        "OCR: Compile Snippets to PDF",
+        "󱄺 OCR Text",
+        "Region → Clipboard",
+        "",
+        " OCR PDF",
+        "Set Target Region",
+        "Snapshot Region",
+        "Compile to PDF",
         "",
         "Open Screenshots Folder",
         "Cancel",
@@ -236,13 +238,13 @@ class ScreenshotApp:
             self.manager.handle_capture(is_region=True, edit=False)
         elif choice == "Region → Edit":
             self.manager.handle_capture(is_region=True, edit=True)
-        elif choice == "Region → Text (Clipboard)":
+        elif choice == "Region → Clipboard":
             self.ocr.extract_text_to_clipboard()
-        elif choice == "OCR: Freeze Target Region":
+        elif choice == "Freeze Target Region":
             self.manager.select_persistent_region()
-        elif choice == "OCR: Snapshot Target Region":
+        elif choice == "Snapshot Target Region":
             self.manager.capture_persistent_region()
-        elif choice == "OCR: Compile Snippets to PDF":
+        elif choice == "Compile Snippets to PDF":
             self.ocr.compile_pdf()
         elif choice == "Open Screenshots Folder":
             self.manager.open_storage_folder()

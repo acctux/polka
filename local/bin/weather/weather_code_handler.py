@@ -500,25 +500,31 @@ class WeatherProcessor:
     def _find_shortfall_icon(
         self, precipitation: pd.Series, target_mm: float
     ) -> pd.Series:
-        """
-        Calculate 7-day rolling shortfall and return formatted string for display.
-        """
-        rolling_total = precipitation[::-1].rolling(7, min_periods=1).sum()[::-1]
-        shortfall_mm = (target_mm - rolling_total).clip(lower=0)
+        rolling_total = precipitation.rolling(
+            window=7, center=True, min_periods=1
+        ).sum()
+        window_counts = precipitation.rolling(
+            window=7, center=True, min_periods=1
+        ).count()
+        rolling_average_per_day = rolling_total / window_counts
+        shortfall_mm = (target_mm - rolling_average_per_day).clip(lower=0)
         return shortfall_mm.apply(self._fmt_water_need)
 
     def process_daily(
-        self,
-        daily_df: pd.DataFrame,
-        recommended_rain_mm: float = 25.4,  # ~1 inch
+        self, daily_df: pd.DataFrame, recommended_rain_mm: float = 25.4
     ) -> pd.DataFrame:
         daily_df["precipitation_sum"] = pd.to_numeric(
             daily_df["precipitation_sum"], errors="coerce"
         ).fillna(0)
         df = daily_df.copy()
+        daily_target_mm = recommended_rain_mm / 7.0
         df["additional_water_needed_icon"] = self._find_shortfall_icon(
-            df["precipitation_sum"], recommended_rain_mm
+            df["precipitation_sum"], daily_target_mm
         )
+        df["date"] = pd.to_datetime(df["date"])
+        today = pd.Timestamp.now().normalize().tz_localize(None)
+        df_naive_dates = df["date"].dt.tz_localize(None)
+        df = df[df_naive_dates >= today].copy()
         df["temperature_2m"] = (
             self._fmt_temp(df["temperature_2m_max"], show_unit=False)
             + "/"
@@ -619,7 +625,7 @@ class WeatherApp:
             return (
                 f"{row['date']:%H:%M}"
                 f"<span size='{size}pt'>{icon:^3}</span>"
-                f"{row.get('temperature_2m'):^10}"
+                f"{row.get('temperature_2m'):^9}"
                 f"{row.get('precipitation_probability'):^4}"
                 f"{row.get('precipitation'):^10}"
                 f"{row.get('soil_temperature_0cm')}"
@@ -642,13 +648,13 @@ class WeatherApp:
         tooltip = (
             [
                 f"<span size='20pt'>󰨳</span><span size='13pt'>  {self.today_label(now)}</span>",
-                "────────────────────────────────────────────────",
+                "───────────────────────────────────────────────",
             ]
             + hourly_rows
             + [
                 "",
                 f"<span size='20pt'></span><span size='13pt'>  {now.strftime('%H:%M')}</span>",
-                "────────────────────────────────────────────────",
+                "───────────────────────────────────────────────",
             ]
             + daily_rows
         )
@@ -664,8 +670,12 @@ class WeatherApp:
 
 if __name__ == "__main__":
     processor = WeatherProcessor(
-        groups=GROUPS, codes=CODES, imperial_cache=CACHE_DIR / "settings.json"
+        groups=GROUPS,
+        codes=CODES,
+        imperial_cache=CACHE_DIR / "settings.json",
     )
     WeatherApp(
-        processor=processor, ttl=CACHE_TTL, pkl_cache=CACHE_DIR / "weather.pkl"
+        processor=processor,
+        ttl=CACHE_TTL,
+        pkl_cache=CACHE_DIR / "weather.pkl",
     ).run()
