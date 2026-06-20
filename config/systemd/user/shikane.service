@@ -1,12 +1,12 @@
 [Unit]
 Description=Dynamic output configuration for Wayland compositors
-Documentation=man:kanshi(1)
+Documentation=man:shikane(5)
 PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/kanshi
+ExecStart=/usr/bin/shikane
 Restart=on-failure
 
 [Install]

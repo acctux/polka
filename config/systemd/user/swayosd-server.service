@@ -2,7 +2,6 @@
 Description=Sway OSD Server
 After=graphical-session.target
 PartOf=graphical-session.target
-ConditionEnvironment=WAYLAND_DISPLAY
 
 [Service]
 Type=simple

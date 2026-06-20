@@ -1,0 +1,15 @@
+[[profile]]
+name = "docked"
+
+[[profile.output]]
+search = "HDMI-A-1"
+mode = "1920x1080@60Hz"
+enable = true
+
+[[profile]]
+name = "undocked"
+
+[[profile.output]]
+search = "eDP-1"
+mode = "1920x1200@165Hz"
+enable = true

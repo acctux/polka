@@ -23,6 +23,7 @@ prepend_keymap = [
   { on = ["C"], run = "plugin ouch", desc = "Compress with ouch" },
   { on = ["T", "d"], run = "plugin recycle-bin -- delete", desc = "Delete from Trash" },
   { on = ["g", "k"], run = 'shell "dust . | less -R" --block', desc = "Open dust in current directory" },
+  { on = ["b", "r"], run = 'shell "renamer \"$@\"" --block', desc = "Bulk rename with pipe-rename" },
 ]
 keymap = [
   { on = "<Esc>", run = "escape", desc = "Exit visual mode, clear selection, or cancel search" },

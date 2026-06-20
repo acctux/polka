@@ -238,7 +238,7 @@
     "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5%",
     "format": "{text}",
     "tooltip": true,
-    "on-click": "pavucontrol &",
+    "on-click": "kitty wiremix & disown",
     "on-click-middle": "kitty rmpc & disown",
     "on-click-right": "playerctl play-pause"
   },

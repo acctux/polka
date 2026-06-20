@@ -11,7 +11,7 @@ LAYOUT_ICONS = {
     "Ukrainian": "🇺🇦",
 }
 KEYBOARD_NAME = "at-translated-set-2-keyboard"
-CACHE_FILE = Path.home() / ".cache" / "keyboard_waybar" / "keyboard_layout_cache.json"
+CACHE_FILE = Path.home() / ".cache" / "keyboard_waybar" / "kb_cache.json"
 
 
 def read_cache(cache_file: Path) -> dict:
@@ -24,18 +24,16 @@ def read_cache(cache_file: Path) -> dict:
 def write_cache(cache_file: Path, layout: str, icon: str) -> None:
     try:
         cache_file.parent.mkdir(parents=True, exist_ok=True)
-        cache_file.write_text(
-            json.dumps({"layout": layout, "icon": icon}, ensure_ascii=False)
-        )
+        layout_dict = {"layout": layout, "icon": icon}
+        cache_file.write_text(json.dumps(layout_dict, ensure_ascii=False))
     except OSError:
         pass
 
 
 def get_active_layout(keyboard_name: str) -> str:
     try:
-        devices = json.loads(
-            subprocess.check_output(["hyprctl", "devices", "-j"], text=True)
-        )
+        cmd = ["hyprctl", "devices", "-j"]
+        devices = json.loads(subprocess.check_output(cmd, text=True))
     except subprocess.CalledProcessError:
         return ""
     for keyboard in devices.get("keyboards", []):

@@ -1,0 +1,14 @@
+[Unit]
+Description=Sway OSD Server
+# Fire during the pre-session phase before mainstream apps load
+After=graphical-session-pre.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=/usr/sbin/swaync
+Restart=on-failure
+RestartSec=3
+
+[Install]
+# Pull it into the early initialization phase
+WantedBy=graphical-session-pre.target
