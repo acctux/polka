@@ -1,0 +1,9 @@
+[Unit]
+Description=Inhibit sleep on lid-close
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/bin/systemd-inhibit --what=handle-lid-switch sleep infinity
+
+[Install]
+WantedBy=graphical-session.target

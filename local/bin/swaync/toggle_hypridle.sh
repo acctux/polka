@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-set +e # disable immediate exit on error
+set +e
 
 if systemctl --user is-active --quiet hypridle; then
   systemctl --user stop hypridle
-  notify-send -u "critical" -a "swaync" "Hypridle" "The device won't suspend"
+  systemctl --user start lid-inhibit
+  notify-send -u "critical" -a "swaync" "Hypridle" "The device won't suspend or sleep on close."
 else
   systemctl --user start hypridle
-  notify-send -u "critical" -a "swaync" "Hypridle" "The device will suspend"
+  systemctl --user stop lid-inhibit
+  notify-send -u "critical" -a "swaync" "Hypridle" "Hypridle and lid sleep reset."
 fi
 
 exit 0

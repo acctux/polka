@@ -19,7 +19,7 @@ def neomutt_running() -> bool:
                     process_name = f.read().strip()
                     if process_name == "neomutt":
                         return True
-            except (FileNotFoundError, ProcessLookupError, PermissionError):
+            except Exception:
                 continue
     return False
 
@@ -34,12 +34,7 @@ def refresh_mail() -> None:
     ]
     active = subprocess.run(cmd)
     if active.returncode != 0:
-        cmd = [
-            "systemctl",
-            "--user",
-            "start",
-            "protonmail-bridge.service",
-        ]
+        cmd = ["systemctl", "--user", "start", "protonmail-bridge.service"]
         subprocess.run(cmd)
         time.sleep(60)
     cmd = [f"{Path.home()}/.local/bin/email/emailsync.sh"]

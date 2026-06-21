@@ -11,5 +11,5 @@ name = "undocked"
 
 [[profile.output]]
 search = "eDP-1"
-mode = "1920x1200@165Hz"
+mode = "1920x1200@60Hz"
 enable = true

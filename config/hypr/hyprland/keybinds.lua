@@ -82,7 +82,7 @@ hl.bind("Scroll_Lock", hl.dsp.exec_cmd("swayosd-client --scroll-lock"))
 hl.bind("Print", hl.dsp.exec_cmd("hyprshot -zm output"))
 hl.bind(mainMod .. " + PRINT", hl.dsp.exec_cmd("hyprshot -zm window"))
 hl.bind(shiftMod .. " + PRINT", hl.dsp.exec_cmd("hyprshot -zm region"))
-hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("~/.local/bin/screenshots/screenshot_menu.py --worker-mode capture"))
+hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("~/.local/bin/screenshots/screenshot_menu.py capture"))
 --##################################################
 -- WORKSPACES
 --##################################################

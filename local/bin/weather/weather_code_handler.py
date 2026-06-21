@@ -10,6 +10,7 @@ import json
 from tzlocal import get_localzone
 from weather_dataframes import load_weather_dataframes
 from dataclasses import dataclass
+import numpy as np
 
 # =========================================================
 # CACHE
@@ -422,18 +423,11 @@ class WeatherProcessor:
         df = df.copy()
         df["description"] = df["weather_code"].map(self.codes)
         df["color"] = df["weather_code"].map(self.color_map)
-        icons = df["weather_code"].map(self.icon_map)
-        is_day = pd.Series(1, index=df.index)
-        if "is_day" in df.columns:
-            is_day = df["is_day"]
-        rendered_icons: list[str] = []
-        for icon_pair, day_value in zip(icons, is_day):
-            if not isinstance(icon_pair, tuple):
-                icon_pair = (icon_pair, icon_pair)
-            day_icon, night_icon = icon_pair
-            icon = day_icon if day_value == 1 else night_icon
-            rendered_icons.append(icon)
-        df["icon"] = rendered_icons
+        icons = df["weather_code"].map(self.icon_map).fillna((None, None))
+        icon_matrix = np.stack(icons.values)
+        is_day = df["is_day"] if "is_day" in df.columns else 1
+        col_idx = np.where(is_day == 1, 0, 1)
+        df["icon"] = icon_matrix[np.arange(len(df)), col_idx]
         return df
 
     # =========================================================
@@ -669,13 +663,5 @@ class WeatherApp:
 
 
 if __name__ == "__main__":
-    processor = WeatherProcessor(
-        groups=GROUPS,
-        codes=CODES,
-        imperial_cache=CACHE_DIR / "settings.json",
-    )
-    WeatherApp(
-        processor=processor,
-        ttl=CACHE_TTL,
-        pkl_cache=CACHE_DIR / "weather.pkl",
-    ).run()
+    processor = WeatherProcessor(GROUPS, CODES, CACHE_DIR / "settings.json")
+    WeatherApp(processor, CACHE_TTL, CACHE_DIR / "weather.pkl").run()

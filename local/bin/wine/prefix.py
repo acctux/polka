@@ -7,17 +7,13 @@ from pathlib import Path
 BASE_DIR = Path.home() / "Desktop" / "Games"
 
 
-def create_prefix(base_dir: Path, game_name: str) -> Path:
-    prefix_path = base_dir / game_name
-    prefix_path.mkdir(parents=True, exist_ok=True)
-    return prefix_path
-
-
 def initialize_wine(prefix_path: Path) -> None:
+    prefix_path.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env["WINEPREFIX"] = str(prefix_path)
     try:
-        subprocess.run(["wineboot", "--init"], env=env, check=True)
+        cmd = ["wineboot", "--init"]
+        subprocess.run(cmd, env=env, check=True)
         print(f"Created Wine prefix at {prefix_path}")
     except subprocess.CalledProcessError as e:
         print(f"Error initializing Wine prefix: {e}")
@@ -34,14 +30,13 @@ def get_game_name() -> str:
             "--text",
             "Enter directory name:",
         ]
-        result = subprocess.run(
+        return subprocess.run(
             cmd,
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-        )
-        return result.stdout.strip()
+        ).stdout.strip()
     except subprocess.CalledProcessError as e:
         print(f"Error getting game name from zenity: {e}")
         sys.exit(1)
@@ -52,7 +47,7 @@ def main():
     if not game_name:
         print("No game name provided.")
         sys.exit(1)
-    prefix_path = create_prefix(BASE_DIR, game_name)
+    prefix_path = BASE_DIR / game_name
     initialize_wine(prefix_path)
 
 

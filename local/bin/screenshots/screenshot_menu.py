@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import argparse
 import sys
 import subprocess
 from datetime import datetime
@@ -136,8 +135,6 @@ class OCRProcessor:
 
     def extract_text_to_clipboard(self) -> None:
         region = self.manager.get_region()
-        if not region:
-            return
         try:
             cmd = ["grim", "-g", region, str(self.manager.ocr_cache_png)]
             subprocess.run(cmd, check=True)
@@ -279,17 +276,8 @@ def main() -> None:
         "capture": manager.capture_persistent_region,
         "ocr": ocr.compile_pdf,
     }
-    parser = argparse.ArgumentParser(
-        description="Unified Wayland Screenshot & OCR Utility Interface"
-    )
-    parser.add_argument(
-        "--worker-mode",
-        choices=list(worker_actions.keys()),
-        help="Internal routing tag execution handling specific sub-process worker actions.",
-    )
-    args = parser.parse_args()
-    if args.worker_mode:
-        worker_actions[args.worker_mode]()
+    if len(sys.argv) >= 2 and sys.argv[1] in worker_actions:
+        worker_actions[sys.argv[1]]()
         sys.exit(0)
     app = ScreenshotApp(manager, ocr)
     app.run()

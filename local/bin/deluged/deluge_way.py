@@ -1,64 +1,53 @@
 #!/usr/bin/env python3
 import json
-import os
-import re
 import subprocess
-
-MAX_LEN = 35
 
 
 def run(cmd, timeout=3):
     try:
         return subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=timeout,
-            env={**os.environ, "PYTHONWARNINGS": "ignore"},
+            cmd, capture_output=True, text=True, timeout=timeout
         ).stdout
     except Exception:
         return ""
 
 
-def trim(s):
-    return s if len(s) <= MAX_LEN else s[: MAX_LEN - 1] + "…"
-
-
-def parse_downloads(text):
+def parse_downloads():
     downloads = []
-    name = None
-    for line in text.splitlines():
+    pending_name = None
+    lines = run(["deluge-console", "info"]).splitlines()
+    for line in lines:
+        line = line.strip()
         if line.startswith("["):
             raw = line.split("]", 1)[1].strip()
-            name = trim(re.sub(r"\s+[a-fA-F0-9]{40}$", "", raw))
-        elif name and "ETA:" in line:
+            pending_name = raw.rsplit(" ", 1)[0]
+        elif pending_name and "ETA:" in line:
             eta = line.split("ETA:", 1)[1].strip()
             if eta != "-":
-                downloads.append((name, eta))
-            name = None
+                downloads.append((pending_name, eta))
+            pending_name = None
     return downloads
+
+
+def print_bar(text: str = "", tooltip: str = "", way_class: str = ""):
+    print(json.dumps({"text": text, "tooltip": tooltip, "class": way_class}))
 
 
 def main():
     cmd = ["systemctl", "--user", "is-active", "deluged"]
     if run(cmd, 1).strip() != "active":
-        print(json.dumps({"text": ""}))
+        print_bar()
         return
-    downloads = parse_downloads(run(["deluge-console", "info"]))
-    print(
-        json.dumps(
-            {
-                "text": "",
-                "tooltip": (
-                    "\n".join(f"{n}\t\nETA: {e}" for n, e in downloads)
-                    if downloads
-                    else "No active downloads"
-                ),
-                "class": "downloading" if downloads else "idle",
-            }
-        )
-    )
+    downloads = parse_downloads()
+    tooltip = "No active downloads"
+    way_class = "idle"
+    if downloads:
+        lines = []
+        for name, eta in downloads:
+            lines.append(f"{name}\t\nETA: {eta}")
+        tooltip = "\n".join(lines)
+        way_class = "downloading"
+    print_bar("", tooltip, way_class)
 
 
 if __name__ == "__main__":

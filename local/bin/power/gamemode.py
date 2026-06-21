@@ -1,60 +1,26 @@
 #!/usr/bin/env python3
 
+import sys
 import subprocess
 
-SERVICES = ["kdeconnectd", "swaync", "waybar", "swww-daemon", "hypridle"]
+SERVICES = ["kdeconnectd", "swaync", "waybar", "awww-daemon", "hypridle"]
 
 
-def service_running(service: str) -> bool:
-    result = subprocess.run(
-        ["systemctl", "--user", "is-active", service], capture_output=True, text=True
-    )
-    return result.stdout.strip() == "active"
-
-
-def start_service(service: str) -> None:
-    subprocess.run(
-        ["systemctl", "--user", "start", service],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    print(f"Started: {service}")
-
-
-def stop_service(service: str) -> None:
-    subprocess.run(
-        ["systemctl", "--user", "stop", service],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    print(f"Stopped: {service}")
-
-
-def get_running_services() -> list[str]:
-    return [service for service in SERVICES if service_running(service)]
-
-
-def toggle_services(services: list[str] = SERVICES) -> None:
-    running_services = get_running_services()
-    running_count = len(running_services)
-    stopped_count = len(services) - running_count
-    print(f"Running: {running_count}")
-    print(f"Stopped: {stopped_count}\n")
-    should_stop = running_count > stopped_count
-    if should_stop:
-        print("Majority are running.")
-        print("Stopping all managed user services...\n")
-        for service in services:
-            stop_service(service)
-        print("\nAll services stopped.")
-    else:
-        print("Majority are stopped (or tied).")
-        print("Starting all managed user services...\n")
-        for service in services:
-            start_service(service)
-        print("\nAll services started.")
+def manage_services(gamemode_action: str, services: list[str] = SERVICES) -> None:
+    action_map = {
+        "start": "stop",
+        "stop": "start",
+    }
+    systemd_action = action_map[gamemode_action]
+    for service in services:
+        cmd = ["systemctl", "--user", systemd_action, service]
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(f"Service '{service}' has been {systemd_action}ed.")
 
 
 if __name__ == "__main__":
-    toggle_services()
+    if len(sys.argv) != 2 or sys.argv[1] not in ["start", "stop"]:
+        print("Usage: ./script.py [start|stop]")
+        sys.exit(1)
+    manage_services(sys.argv[1])
 
