@@ -6,13 +6,6 @@ import time
 from pathlib import Path
 import psutil
 
-FUZZEL_CONFIG = Path.home() / ".config" / "fuzzel" / "waybar.ini"
-NAMEDCONF_DIR = Path(__file__).resolve().parent / "namedconf"
-WIFI_SERVICES = {
-    "iwd.service": "NetworkManager.service",
-    "NetworkManager.service": "iwd.service",
-}
-
 
 #########################
 # LOGGING
@@ -50,31 +43,22 @@ log = get_logger()
 # ALL-IN-ONE MANAGER
 #########################
 class NetworkManager:
-    def __init__(
-        self,
-        fuzzel_config: Path = FUZZEL_CONFIG,
-        namedconf_dir: Path = NAMEDCONF_DIR,
-        wifi_services: dict[str, str] = WIFI_SERVICES,
-    ):
-        self.vpn_list = Path("/var/cache/mysysinfo/vpn.list")
-        self.fuzzel_config = fuzzel_config
-        self.namedconf_dir = namedconf_dir
-        self.wifi_services = wifi_services
+    fuzzel_config = Path.home() / ".config" / "fuzzel" / "waybar.ini"
+    namedconf_dir = Path(__file__).resolve().parent / "namedconf"
+    resolvconf_dir = Path(__file__).resolve().parent / "resolvconf"
+    wifi_services = {
+        "iwd.service": "NetworkManager.service",
+        "NetworkManager.service": "iwd.service",
+    }
+    vpn_list = Path("/var/cache/mysysinfo/vpn.list")
 
     def _run(
-        self, cmd: list[str], input: str | None = None
+        self, cmd: list[str], sudo: bool, input: str | None = None
     ) -> subprocess.CompletedProcess:
-        log.info(f"run: {' '.join(cmd)}")
+        if sudo:
+            cmd = ["sudo", "-A"] + cmd
+        log.info(f"Running {cmd}")
         return subprocess.run(cmd, text=True, capture_output=True, input=input)
-
-    def _sudo(self, cmd: list[str]) -> subprocess.CompletedProcess:
-        full = ["sudo", "-A"] + cmd
-        log.info(f"sudo: {' '.join(full)}")
-        return subprocess.run(full, text=True, capture_output=True)
-
-    def _ui(self, cmd: list[str]) -> int:
-        log.info(f"ui: {' '.join(cmd)}")
-        return subprocess.run(cmd).returncode
 
     def fuzzel_menu(self, options: list[str]) -> str:
         menu_text = "\n".join(options)
@@ -90,12 +74,12 @@ class NetworkManager:
             "--config",
             str(self.fuzzel_config),
         ]
-        return self._run(cmd, input=menu_text).stdout.strip()
+        return self._run(cmd, False, input=menu_text).stdout.strip()
 
     def reset_wifi(self) -> None:
         for current, target in self.wifi_services.items():
             cmd = ["systemctl", "is-active", current]
-            if self._run(cmd).stdout.strip() != "active":
+            if self._run(cmd, False).stdout.strip() != "active":
                 continue
             cmd = [
                 "zenity",
@@ -103,48 +87,53 @@ class NetworkManager:
                 "--text",
                 f"{current} running. Switch to {target}?",
             ]
-            if self._ui(cmd) != 0:
+            if self._run(cmd, False).returncode != 0:
                 log.info("Wi-Fi reset aborted by user.")
                 return
             log.info(f"Switching from {current} to {target}...")
-            result = self._sudo(["systemctl", "stop", current])
-            if result != 0:
-                return
-            self._sudo(["modprobe", "-r", "rtw89_8852be"])
+            self._run(["systemctl", "stop", current], True)
+            self._run(["modprobe", "-r", "rtw89_8852be"], True)
             time.sleep(1)
-            self._sudo(["modprobe", "rtw89_8852be"])
+            self._run(["modprobe", "rtw89_8852be"], True)
             time.sleep(10)
-            self._sudo(["systemctl", "start", target])
+            self._run(["systemctl", "start", target], True)
             log.info(f"Switched from {current} to {target} successfully.")
             return
         log.info("Neither iwd nor NetworkManager is active. No changes made.")
 
     # --- VPN ---
-    def _set_network(self, ipv4: bool) -> subprocess.CompletedProcess | None:
+    def set_network(self, ipv4: bool) -> None:
         val = "1" if ipv4 else "0"
         for iface in ["all", "default", "lo"]:
-            result = self._sudo(["sysctl", f"net.ipv6.conf.{iface}.disable_ipv6={val}"])
-            if result != 0:
-                return result
-        if val == "1":
-            for iface in Path("/sys/class/net").iterdir():
+            self._run(["sysctl", f"net.ipv6.conf.{iface}.disable_ipv6={val}"], True)
+        if ipv4:
+            interfaces = []
+            net_dir = Path("/sys/class/net")
+            for iface in net_dir.iterdir():
                 if iface.is_dir():
-                    self._sudo(["ip", "-6", "addr", "flush", "dev", iface.name])
-        conf = self.namedconf_dir / f"namedipv{'4' if ipv4 else '6'}.conf"
-        self._sudo(["cp", str(conf), "/etc/named.conf"])
-        self._sudo(["systemctl", "restart", "named"])
+                    interfaces.append(iface.name)
+            for name in interfaces:
+                self._run(["ip", "-6", "addr", "flush", "dev", name], True)
+        target_conf = self.resolvconf_dir / f"resolvconf{'4' if ipv4 else '6'}.conf"
+        print(target_conf)
+        self._run(["cp", str(target_conf), "/etc/resolvconf.conf"], True)
+        time.sleep(0.5)
+        self._run(["resolvconf", "-u"], True)
+        self._run(["systemctl", "stop" if ipv4 else "start", "named"], True)
 
     def connect_vpn(self, choice: str) -> None:
-        status = self._sudo(["wg", "show"]).stdout
+        status = self._run(["wg", "show"], True).stdout
         for line in status.splitlines():
             if line.startswith("interface:"):
                 iface = line.split(":", 1)[1].strip()
-                self._run(["wg-quick", "down", iface])
-        self._set_network(False)
-        time.sleep(2)
+                self._run(["wg-quick", "down", iface], sudo=False)
+        self.set_network(ipv4=False)
+        time.sleep(1)
         if choice != "Disconnect":
-            ok = self._run(["wg-quick", "up", choice]).returncode == 0
-            self._set_network(ok)
+            ipv4 = True
+            if self._run(["wg-quick", "up", choice], sudo=False).returncode != 0:
+                ipv4 = False
+            self.set_network(ipv4=ipv4)
 
     def main_menu(self) -> None:
         options = ["Wi-Fi Manager", "VPN Menu", "Change Wi-Fi Backend", "Cancel"]
@@ -152,9 +141,9 @@ class NetworkManager:
         if choice == "Wi-Fi Manager":
             procs_dict = {p.name() for p in psutil.process_iter(attrs=["name"])}
             if "NetworkManager" in procs_dict:
-                self._ui(["kitty", "nmtui"])
+                self._run(["kitty", "nmtui"], True)
             elif "iwd" in procs_dict:
-                self._ui(["kitty", "impala"])
+                self._run(["kitty", "impala"], True)
             else:
                 log.warning("No Wi-Fi backend running")
         elif choice == "VPN Menu":
