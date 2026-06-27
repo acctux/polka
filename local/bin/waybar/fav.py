@@ -48,8 +48,9 @@ def main():
         step = 1 if action == "up" else -1
         new_idx = (idx + step) % len_commands
         INDEX_FILE.write_text(str(new_idx))
-        cmd = ["pkill", f"-RTMIN+{WAYBAR_SIGNAL}", "waybar"]
-        subprocess.run(cmd, capture_output=True)
+        subprocess.run(
+            ["pkill", f"-RTMIN+{WAYBAR_SIGNAL}", "waybar"], capture_output=True
+        )
     elif action == "exec":
         subprocess.Popen([COMMANDS[idx].script_str])
     else:

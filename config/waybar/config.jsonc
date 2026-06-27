@@ -160,7 +160,7 @@
   "custom/email": {
     "exec": "~/.local/bin/email/waybar_email.py",
     "return-type": "json",
-    "interval": 120,
+    "signal": 6,
     "on-click": "~/.local/bin/email/neomutt_launch.sh",
     "on-click-right": "~/.local/bin/power/tuned_waybar.py up",
     "on-scroll-up": "~/.local/bin/power/tuned_waybar.py up",
@@ -203,7 +203,6 @@
   },
   "custom/kb-switch": {
     "exec": "~/.local/bin/keyboard/kb-current.py",
-    "signal": 6,
     "return-type": "json",
     "format": "{}",
     "on-click": "hyprctl switchxkblayout at-translated-set-2-keyboard next",

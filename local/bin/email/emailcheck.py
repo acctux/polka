@@ -10,6 +10,8 @@ from dbus_fast.aio import MessageBus
 from dbus_fast.constants import MessageType
 from dbus_fast.message import Message
 
+WAYBAR_SIGNAL = 6
+
 
 def run(cmd: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, check=True, capture_output=True, text=True)
@@ -34,7 +36,7 @@ def refresh_mail() -> None:
         run(check_cmd)
     except subprocess.CalledProcessError:
         # If it raises an error (exit code 3), the service is NOT running.
-        start_cmd = ["systemctl", "--user", "start", "protonmail-bridge.service"]
+        start_cmd = ["systemctl", "--user", "start", "protonmail-bridge"]
         run(start_cmd)
         time.sleep(60)
     cmd = ["mbsync", "-Va"]
@@ -44,7 +46,9 @@ def refresh_mail() -> None:
     run(cmd)
 
 
-def get_msg_ids(last_id: str, max_email: int) -> list[tuple[str, str, str]]:
+def get_msg_ids(
+    last_id: str, max_email: int
+) -> tuple[list[tuple[str, str, str]], list[tuple[str, str, str]]]:
     cmd = [
         "notmuch",
         "search",
@@ -52,22 +56,22 @@ def get_msg_ids(last_id: str, max_email: int) -> list[tuple[str, str, str]]:
         "--limit",
         str(max_email),
         "--format=json",
-        "tag:inbox tag:unread",
+        "tag:inbox and tag:unread",
     ]
-    msg_ids: list[str] = json.loads(run(cmd).stdout)
-    new_emails = []
-    for msg_id in msg_ids:
-        if msg_id == last_id:
-            break
+    unread_emails = []
+    new_unread_emails = []
+    stop_counting = False
+    for msg_id in json.loads(run(cmd).stdout):
         cmd = ["notmuch", "show", "--format=json", f"id:{msg_id}"]
         raw = json.loads(run(cmd).stdout)[0][0][0]["headers"]
-        try:
-            sender = raw.get("From", "")
-            subject = raw.get("Subject", "")
-        except Exception:
-            pass
-        new_emails.append((msg_id, sender, subject))
-    return new_emails
+        sender = raw.get("From", "")
+        subject = raw.get("Subject", "")
+        unread_emails.append((msg_id, sender, subject))
+        if msg_id == last_id:
+            stop_counting = True
+        if not stop_counting:
+            new_unread_emails.append((msg_id, sender, subject))
+    return new_unread_emails, unread_emails
 
 
 async def notify_and_listen(new_emails: list[tuple[str, str, str]]) -> None:
@@ -156,13 +160,17 @@ async def main() -> None:
         last_id = json.loads(STATE_FILE.read_text())[0].get("id", "")
     except Exception:
         last_id = ""
-    new_emails = get_msg_ids(last_id, max_email=15)
+    new_emails, unread_emails = get_msg_ids(last_id, max_email=15)
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    cache_list = []
+    for id, author, subject in unread_emails:
+        cache_list.append({"id": id, "sender": author, "subject": subject})
+    STATE_FILE.write_text(json.dumps(cache_list, indent=2))
+    if unread_emails:
+        subprocess.run(
+            ["pkill", f"-RTMIN+{WAYBAR_SIGNAL}", "waybar"], capture_output=True
+        )
     if new_emails:
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        cache_list = []
-        for id, author, subject in new_emails:
-            cache_list.append({"id": id, "sender": author, "subject": subject})
-        STATE_FILE.write_text(json.dumps(cache_list, indent=2))
         await notify_and_listen(new_emails)
 
 
