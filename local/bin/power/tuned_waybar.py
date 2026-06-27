@@ -9,6 +9,7 @@ import sys
 # ---------------- CONFIG ----------------
 INDEX_FILE = Path.home() / ".cache" / "powerscroll" / "power_index"
 POWER_SCRIPT = Path.home() / "Lit" / "polka" / "local" / "bin" / "power" / "tuned.py"
+FUZZEL_CONF = Path.home() / ".config" / "fuzzel" / "waybar.ini"
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,19 @@ def refresh_rate() -> str | None:
         return None
 
 
+def get_available_hz() -> list[str]:
+    out = subprocess.check_output(["hyprctl", "monitors"], text=True)
+    available_hz = set()
+    for line in out.splitlines():
+        if "availableModes" in line:
+            modes_str = line.split(":", 1)[1].strip()
+            modes = modes_str.split()
+            for mode in modes:
+                hz = mode.split("@")[1].split(".")[0]
+                available_hz.add(hz)
+    return sorted(list(available_hz), key=int)
+
+
 # ---------------- Actions ----------------
 def scroll(index_file: Path, index: int, direction: str) -> None:
     delta = 1 if direction == "up" else -1
@@ -82,6 +96,42 @@ def exec_current(state: PowerState, power_script: Path) -> None:
         return
     cmd = [str(power_script), state.profile, str(state.hz)]
     subprocess.run(cmd, check=True)
+
+
+# ---------------- FUZZEL ----------------
+def fuzzel_menu(fuzz_conf: Path, options: list[str], prompt: str) -> str:
+    menu_text = "\n".join(options)
+    # Adding +2 for a little padding to the width
+    width = max((len(opt) for opt in options), default=20) + 2
+    cmd = [
+        "fuzzel",
+        "--dmenu",
+        f"--prompt={prompt}",
+        f"--width={str(width)}",
+        "--x-margin=60",
+        "--anchor=top-left",
+        "--lines",
+        str(len(options)),
+        "--config",
+        str(fuzz_conf),
+    ]
+    result = subprocess.run(
+        cmd, input=menu_text, capture_output=True, text=True, check=False
+    )
+    return result.stdout.strip()
+
+
+def show_menu(fuzz_conf: Path, states: list[PowerState]) -> None:
+    profiles = [state.profile for state in states]
+    selected_name = fuzzel_menu(fuzz_conf, profiles, "Select Profile: ")
+    if not selected_name:
+        return
+    hz_options = get_available_hz()
+    target_hz_str = fuzzel_menu(fuzz_conf, hz_options, "Select Hz: ")
+    if not target_hz_str:
+        return
+    new_state = PowerState(profile=selected_name, hz=int(target_hz_str), icon="")
+    exec_current(new_state, POWER_SCRIPT)
 
 
 # ---------------- Output ----------------
@@ -119,6 +169,8 @@ def main():
     elif cmd == "exec":
         selected_state = POWER_STATES[selected_index]
         exec_current(selected_state, POWER_SCRIPT)
+    elif sys.argv[1] == "menu":
+        show_menu(FUZZEL_CONF, POWER_STATES)
 
 
 if __name__ == "__main__":

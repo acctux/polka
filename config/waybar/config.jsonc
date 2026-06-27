@@ -153,7 +153,7 @@
     "return-type": "json",
     "interval": 3,
     "on-click": "~/.local/bin/power/tuned_waybar.py exec",
-    "on-click-right": "~/.local/bin/power/tuned_waybar.py up",
+    "on-click-right": "~/.local/bin/power/tuned_waybar.py menu",
     "on-scroll-up": "~/.local/bin/power/tuned_waybar.py up",
     "on-scroll-down": "~/.local/bin/power/tuned_waybar.py down"
   },
