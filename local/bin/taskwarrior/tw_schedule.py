@@ -10,9 +10,10 @@ from datetime import datetime, timedelta, date
 from pathlib import Path
 import yaml
 
-DB_PATH = Path.home() / ".config" / "task" / "taskchampion.sqlite3"
-YAML_PATH = Path.home() / ".local" / "bin" / "taskwarrior" / "dates.yaml"
-CONTACTS_PATH = Path.home() / "Desktop" / "Contacts"
+HOME = Path.home()
+DB_PATH = HOME / ".config" / "task" / "taskchampion.sqlite3"
+YAML_PATH = HOME / ".local" / "bin" / "taskwarrior" / "dates.yaml"
+CONTACTS_PATH = HOME / "Desktop" / "Contacts"
 CALENDAR_NAME = "private"
 
 
@@ -194,7 +195,7 @@ class EventEngine:
     def __init__(self, calendar: str):
         self.calendar = calendar
 
-    DB_PATH = Path.home() / ".config" / "task" / "taskchampion.sqlite3"
+    DB_PATH = HOME / ".config" / "task" / "taskchampion.sqlite3"
 
     def fetch_taskwarrior_tasks(self, db_path: Path) -> set[tuple[str, str]]:
         def normalize_due(due_raw: str | None) -> str:

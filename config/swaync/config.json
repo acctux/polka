@@ -103,11 +103,11 @@
           "update-command": "sh -c '~/.local/bin/swaync/update_bluetooth.sh'"
         },
         {
-          "label": "󱏧",
+          "label": "󱈑",
           "type": "toggle",
           "active": true,
-          "command": "sh -c 'swaync-client -d -sw'",
-          "update-command": "sh -c 'set +e;swaync-client -D'"
+          "command": "sh -c '~/.local/bin/swaync/toggle_bat.sh'",
+          "update-command": "sh -c '~/.local/bin/swaync/update_bat.sh'"
         },
         {
           "label": "",

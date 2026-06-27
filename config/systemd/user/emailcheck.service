@@ -1,5 +1,5 @@
 [Unit]
-Description=Check ProtonMail via Bridge and send notifications
+Description=ProtonMail notifications
 
 [Service]
 Type=oneshot

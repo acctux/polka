@@ -3,7 +3,7 @@ Description=Run Taskwarrior daily scheduling script
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/taskwarrior/task-schedule.py
+ExecStart=%h/.local/bin/taskwarrior/tw_schedule.py
 
 [Install]
 WantedBy=default.target

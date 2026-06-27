@@ -1,5 +1,5 @@
 [Unit]
-Description=Run ProtonMail email check every 30 minutes
+Description=ProtonMail email check timer
 
 [Timer]
 OnBootSec=5min

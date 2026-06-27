@@ -48,6 +48,7 @@ hl.bind(shiftMod .. " + Escape", hl.dsp.exec_cmd("hyprctl kill"), { description 
 --##################################################
 -- FUNCTION KEYS (OSD style bindings)
 --##################################################
+hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("swayosd-client --playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("swayosd-client --playerctl next"), { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("swayosd-client --playerctl previous"), { locked = true })
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("~/.local/bin/keyboard/mute-input.sh"), { locked = true })
@@ -72,6 +73,8 @@ hl.bind(
 	hl.dsp.exec_cmd("swayosd-client --brightness lower --device amdgpu_bl1"),
 	{ locked = true, repeating = true }
 )
+hl.bind("XF86Favorites", hl.dsp.exec_cmd("libreoffice --calc"), { locked = true })
+hl.bind("XF86Calculator", hl.dsp.exec_cmd("qalculate-qt"), { locked = true })
 hl.bind("Caps_Lock", hl.dsp.exec_cmd("swayosd-client --caps-lock"))
 hl.bind("Num_Lock", hl.dsp.exec_cmd("swayosd-client --num-lock"))
 hl.bind("Scroll_Lock", hl.dsp.exec_cmd("swayosd-client --scroll-lock"))
@@ -79,6 +82,11 @@ hl.bind("Scroll_Lock", hl.dsp.exec_cmd("swayosd-client --scroll-lock"))
 -- SCREENSHOTS
 --##################################################
 --"grim -o \"$(hyprctl activeworkspace -j | jq -r '.monitor')\""
+hl.bind(
+	mainMod .. " + SHIFT + s",
+	hl.dsp.exec_cmd("hyprshot -zm region"),
+	{ locked = true, description = "fn+print screen" }
+)
 hl.bind("Print", hl.dsp.exec_cmd("hyprshot -zm output"))
 hl.bind(mainMod .. " + PRINT", hl.dsp.exec_cmd("hyprshot -zm window"))
 hl.bind(shiftMod .. " + PRINT", hl.dsp.exec_cmd("hyprshot -zm region"))

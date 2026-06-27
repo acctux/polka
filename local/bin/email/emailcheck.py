@@ -11,6 +11,10 @@ from dbus_fast.constants import MessageType
 from dbus_fast.message import Message
 
 
+def run(cmd: list[str]) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, check=True, capture_output=True, text=True)
+
+
 def neomutt_running() -> bool:
     for pid in os.listdir("/proc"):
         if pid.isdigit():
@@ -25,40 +29,50 @@ def neomutt_running() -> bool:
 
 
 def refresh_mail() -> None:
-    cmd = [
+    check_cmd = [
         "systemctl",
         "--user",
         "is-active",
         "--quiet",
         "protonmail-bridge.service",
     ]
-    active = subprocess.run(cmd)
-    if active.returncode != 0:
-        cmd = ["systemctl", "--user", "start", "protonmail-bridge.service"]
-        subprocess.run(cmd)
-        time.sleep(60)
-    cmd = [f"{Path.home()}/.local/bin/email/emailsync.sh"]
-    subprocess.run(cmd, capture_output=True)
-    if not neomutt_running():
-        cmd = ["systemctl", "--user", "stop", "protonmail-bridge.service"]
-        subprocess.run(cmd)
-
-
-def get_new_emails(last_id: str, max_limit: int) -> list[tuple[str, str, str]]:
-    cmd = ["notmuch", "search", f"--limit={max_limit}", "--format=json", "tag:inbox"]
-    res = subprocess.run(cmd, capture_output=True, text=True)
     try:
-        data = json.loads(res.stdout)
-    except json.JSONDecodeError:
-        return []
+        run(check_cmd)
+    except subprocess.CalledProcessError:
+        # If it raises an error (exit code 3), the service is NOT running.
+        start_cmd = ["systemctl", "--user", "start", "protonmail-bridge.service"]
+        run(start_cmd)
+        time.sleep(60)
+    cmd = ["mbsync", "-Va"]
+    run(cmd)
+    time.sleep(1)
+    cmd = ["notmuch", "new"]
+    run(cmd)
+
+
+def get_msg_ids(last_id: str, max: int) -> list[tuple[str, str, str]]:
+    cmd = [
+        "notmuch",
+        "search",
+        "--output=messages",
+        "--limit",
+        str(max),
+        "--format=json",
+        "tag:inbox",
+    ]
+    msg_ids: list[str] = json.loads(run(cmd).stdout)
     new_emails = []
-    for item in data:
-        msg_id = item.get("thread")
+    for msg_id in msg_ids:
         if msg_id == last_id:
             break
-        author = item.get("authors", "")
-        subject = item.get("subject", "")
-        new_emails.append((msg_id, author, subject))
+        cmd = ["notmuch", "show", "--format=json", f"id:{msg_id}"]
+        raw = json.loads(run(cmd).stdout)[0][0][0]["headers"]
+        try:
+            sender = raw.get("From", "")
+            subject = raw.get("Subject", "")
+        except Exception:
+            pass
+        new_emails.append((msg_id, sender, subject))
     return new_emails
 
 
@@ -149,7 +163,7 @@ async def main() -> None:
     except Exception:
         last_id = ""
     max_emails = 15
-    new_emails = get_new_emails(last_id, max_emails)
+    new_emails = get_msg_ids(last_id, max_emails)
     if last_id and len(new_emails) == max_emails:
         new_emails = []
     if new_emails:

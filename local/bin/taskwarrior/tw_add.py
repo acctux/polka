@@ -67,7 +67,9 @@ class EventManager:
 
     def add(self, name: str, date: str, due_days: int) -> str:
         """Appends a new event and returns its deduced category type."""
-        event_type = "weekly" if len(date) == 3 and date.isalpha() else "scheduled"
+        event_type = "scheduled"
+        if len(date) == 3 and date.isalpha():
+            event_type = "weekly"
         events = self.load()
         events.append(
             {"name": name, "date": date, "due_days": due_days, "type": event_type}
