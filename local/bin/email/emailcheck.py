@@ -29,13 +29,7 @@ def neomutt_running() -> bool:
 
 
 def refresh_mail() -> None:
-    check_cmd = [
-        "systemctl",
-        "--user",
-        "is-active",
-        "--quiet",
-        "protonmail-bridge.service",
-    ]
+    check_cmd = ["systemctl", "--user", "is-active", "--quiet", "protonmail-bridge"]
     try:
         run(check_cmd)
     except subprocess.CalledProcessError:
@@ -50,15 +44,15 @@ def refresh_mail() -> None:
     run(cmd)
 
 
-def get_msg_ids(last_id: str, max: int) -> list[tuple[str, str, str]]:
+def get_msg_ids(last_id: str, max_email: int) -> list[tuple[str, str, str]]:
     cmd = [
         "notmuch",
         "search",
         "--output=messages",
         "--limit",
-        str(max),
+        str(max_email),
         "--format=json",
-        "tag:inbox",
+        "tag:inbox tag:unread",
     ]
     msg_ids: list[str] = json.loads(run(cmd).stdout)
     new_emails = []
@@ -162,10 +156,7 @@ async def main() -> None:
         last_id = json.loads(STATE_FILE.read_text())[0].get("id", "")
     except Exception:
         last_id = ""
-    max_emails = 15
-    new_emails = get_msg_ids(last_id, max_emails)
-    if last_id and len(new_emails) == max_emails:
-        new_emails = []
+    new_emails = get_msg_ids(last_id, max_email=15)
     if new_emails:
         STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
         cache_list = []
