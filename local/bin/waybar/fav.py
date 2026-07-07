@@ -27,12 +27,36 @@ class FavConf:
 WAYBAR_SIGNAL = 9
 BASE = Path.home() / ".local" / "bin"
 COMMANDS = [
-    FavConf("󰅍", "Clipboard", BASE / "clipboard/clippy.py"),
-    FavConf("󰚝", "Folders", BASE / "folders/foldermenu.py"),
-    FavConf("󰩬", "Screenshots", BASE / "screenshots/screenshot_menu.py"),
-    FavConf("󰐳", "QR", BASE / "qr/qrmenu.sh"),
-    FavConf("", "Wine", BASE / "wine/winemenu.sh"),
-    FavConf("󰊿", "Translate", BASE / "translate/translator.py"),
+    FavConf(
+        icon="󰅍",
+        desc="Clipboard",
+        script_path=BASE / "clipboard" / "clippy.py",
+    ),
+    FavConf(
+        icon="󰚝",
+        desc="Folders",
+        script_path=BASE / "folders" / "foldermenu.py",
+    ),
+    FavConf(
+        icon="󰩬",
+        desc="Screenshots",
+        script_path=BASE / "screenshots" / "screenshot_menu.py",
+    ),
+    FavConf(
+        icon="󰐳",
+        desc="QR",
+        script_path=BASE / "qr" / "qrmenu.sh",
+    ),
+    FavConf(
+        icon="",
+        desc="Wine",
+        script_path=BASE / "wine" / "winemenu.sh",
+    ),
+    FavConf(
+        icon="󰊿",
+        desc="Translate",
+        script_path=BASE / "translate" / "translator.py",
+    ),
 ]
 
 

@@ -46,6 +46,10 @@ def refresh_mail() -> None:
     run(cmd)
 
 
+def remove_inbox_tag(msg_id: str):
+    run(["notmuch", "tag", "-inbox", f"id:{msg_id}"])
+
+
 def get_msg_ids(
     last_id: str, max_email: int
 ) -> tuple[list[tuple[str, str, str]], list[tuple[str, str, str]]]:

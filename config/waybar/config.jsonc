@@ -93,8 +93,7 @@
     "format-discharging": "{icon}{capacity}%",
     "format-alt": "{icon} {time}",
     "format-full": "",
-    "on-click": "kitty jolt",
-    "full-at": 79,
+    "on-click-right": "kitty jolt",
     "format-icons": [
       "󰂎",
       "󰁺",
@@ -203,6 +202,7 @@
   },
   "custom/kb-switch": {
     "exec": "~/.local/bin/keyboard/kb-current.py",
+    "signal": 3,
     "return-type": "json",
     "format": "{}",
     "on-click": "hyprctl switchxkblayout at-translated-set-2-keyboard next",

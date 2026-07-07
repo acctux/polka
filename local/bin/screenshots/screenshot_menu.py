@@ -203,19 +203,16 @@ class OCRProcessor:
 
 class ScreenshotApp:
     menu_layout = [
-        "󰹑 Screenshots",
         "Full Screen → Copy",
         "Full Screen → Edit",
         "Region → Copy",
         "Region → Edit",
         "",
-        "󱄺 OCR Text",
         "Region → Clipboard",
         "",
-        " OCR PDF",
-        "Set Target Region",
-        "Snapshot Region",
-        "Compile to PDF",
+        "Region -> Cache File",
+        "Cache File -> Snap Region",
+        "Snapshots -> PDF",
         "",
         "Open Screenshots Folder",
         "Cancel",

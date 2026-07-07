@@ -24,6 +24,11 @@ prepend_keymap = [
   { on = ["T", "d"], run = "plugin recycle-bin -- delete", desc = "Delete from Trash" },
   { on = ["g", "k"], run = 'shell "dust . | less -R" --block', desc = "Open dust in current directory" },
   { on = ["b", "r"], run = 'shell "renamer \"$@\"" --block', desc = "Bulk rename with pipe-rename" },
+  { on = ["i", "r"], run = 'shell --block --confirm "magick \"$0\" -resize 75% \"${0%.*}_small.${0##*.}\""', desc = "Resize 50%" },
+  { on = ["i", "s"], run = 'shell --block --confirm "magick \"$0\" -resize 50% \"${0%.*}_small.${0##*.}\""', desc = "Resize 50%" },
+  { on = ["i", "t"], run = 'shell --block --confirm "magick \"$0\" -resize 25% \"${0%.*}_small.${0##*.}\""', desc = "Resize 50%" },
+  { on = ["i", "o"], run = 'shell --block --confirm "magick \"$0\" -rotate 90 \"$0\""', desc = "Rotate 90°" },
+  { on = ["i", "g"], run = 'shell --block --confirm "magick \"$0\" -colorspace Gray \"$0\""', desc = "Convert to Grayscale" },
 ]
 keymap = [
   { on = "<Esc>", run = "escape", desc = "Exit visual mode, clear selection, or cancel search" },
