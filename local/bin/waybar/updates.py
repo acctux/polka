@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import subprocess
+
 import json
 import os
+import subprocess
 import time
 from pathlib import Path
 

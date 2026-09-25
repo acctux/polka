@@ -4,10 +4,11 @@ import re
 import subprocess
 import threading
 from pathlib import Path
+
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Gdk, GLib
+from gi.repository import Gdk, GLib, Gtk
 
 CACHE = Path.home() / ".cache" / "quicktranslate_langs.data"
 
@@ -156,7 +157,7 @@ class TranslateWindow(Gtk.ApplicationWindow):
             )
             output = res.stdout if res.stdout else "No output returned."
         except Exception as e:
-            output = f"Error: {str(e)}"
+            output = f"Error: {e}"
         GLib.idle_add(self._on_finished, output)
 
     def _on_finished(self, res):

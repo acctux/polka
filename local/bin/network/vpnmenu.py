@@ -46,11 +46,14 @@ class NetworkManager:
     fuzzel_config = Path.home() / ".config" / "fuzzel" / "waybar.ini"
     namedconf_dir = Path(__file__).resolve().parent / "namedconf"
     resolvconf_dir = Path(__file__).resolve().parent / "resolvconf"
-    wifi_services = {
-        "iwd.service": "NetworkManager.service",
-        "NetworkManager.service": "iwd.service",
-    }
+
     vpn_list = Path("/var/cache/mysysinfo/vpn.list")
+
+    def __init__(self):
+        self.wifi_services = {
+            "iwd.service": "NetworkManager.service",
+            "NetworkManager.service": "iwd.service",
+        }
 
     def _run(
         self, cmd: list[str], sudo: bool, input: str | None = None
@@ -122,6 +125,8 @@ class NetworkManager:
         self._run(["systemctl", "stop" if ipv4 else "start", "named"], True)
 
     def connect_vpn(self, choice: str) -> None:
+        self._run(["systemctl", "restart", "systemd-networkd"], True)
+        time.sleep(1)
         status = self._run(["wg", "show"], True).stdout
         for line in status.splitlines():
             if line.startswith("interface:"):
@@ -141,9 +146,9 @@ class NetworkManager:
         if choice == "Wi-Fi Manager":
             procs_dict = {p.name() for p in psutil.process_iter(attrs=["name"])}
             if "NetworkManager" in procs_dict:
-                self._run(["kitty", "nmtui"], True)
+                self._run(["kitty", "nmtui"], False)
             elif "iwd" in procs_dict:
-                self._run(["kitty", "impala"], True)
+                self._run(["kitty", "impala"], False)
             else:
                 log.warning("No Wi-Fi backend running")
         elif choice == "VPN Menu":

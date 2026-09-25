@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
-import sys
-from pathlib import Path
-import pickle
-import time
-from typing import Any
-import pandas as pd
 import json
-from tzlocal import get_localzone
-from weather_dataframes import load_weather_dataframes
+import pickle
+import sys
+import time
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+from tzlocal import get_localzone
+
+from weather_dataframes import load_weather_dataframes
 
 # =========================================================
 # CACHE
@@ -373,7 +375,7 @@ class WeatherProcessor:
                 return ""
             if x < 15:
                 return ""
-            return f"{int(round(x))}%󰖌"
+            return f"{round(x)}%󰖌"
 
         series = pd.to_numeric(series, errors="coerce")
         return series.map(fmt)

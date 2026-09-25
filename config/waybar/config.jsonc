@@ -89,7 +89,7 @@
     },
     "format": "",
     "format-charging": "󱐋{capacity}%",
-    "format-plugged": "{capacity}%",
+    "format-plugged": "",
     "format-discharging": "{icon}{capacity}%",
     "format-alt": "{icon} {time}",
     "format-full": "",

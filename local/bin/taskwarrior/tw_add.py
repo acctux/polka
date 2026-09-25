@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-import yaml
 import subprocess
+
+import yaml
 
 FUZZEL_CONFIG = Path.home() / ".config/fuzzel/waybar.ini"
 

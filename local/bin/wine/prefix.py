@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import sys
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 BASE_DIR = Path.home() / "Desktop" / "Games"
@@ -33,8 +33,7 @@ def get_game_name() -> str:
         return subprocess.run(
             cmd,
             check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
         ).stdout.strip()
     except subprocess.CalledProcessError as e:

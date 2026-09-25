@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 FILE = Path("/var/cache/mysysinfo/sysinfo.txt")
 

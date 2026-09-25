@@ -202,26 +202,26 @@ class OCRProcessor:
 
 
 class ScreenshotApp:
-    menu_layout = [
-        "Full Screen → Copy",
-        "Full Screen → Edit",
-        "Region → Copy",
-        "Region → Edit",
-        "",
-        "Region → Clipboard",
-        "",
-        "Region -> Cache File",
-        "Cache File -> Snap Region",
-        "Snapshots -> PDF",
-        "",
-        "Open Screenshots Folder",
-        "Cancel",
-    ]
     config_path = Path.home() / ".config" / "fuzzel" / "waybar.ini"
 
     def __init__(self, manager: ScreenshotManager, ocr: OCRProcessor) -> None:
         self.manager = manager
         self.ocr = ocr
+        self.menu_layout = [
+            "Full Screen → Copy",
+            "Full Screen → Edit",
+            "Region → Copy",
+            "Region → Edit",
+            "",
+            "Region → Clipboard",
+            "",
+            "Region -> Cache File",
+            "Cache File -> Snap Region",
+            "Snapshots -> PDF",
+            "",
+            "Open Screenshots Folder",
+            "Cancel",
+        ]
 
     def execute_choice(self, choice: str) -> None:
         if choice == "Full Screen → Copy":

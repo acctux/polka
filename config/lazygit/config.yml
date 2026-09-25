@@ -2,7 +2,7 @@ gui:
   nerdFontsVersion: "3"
   sidePanelWidth: 0.25
 git:
-  pagers:
-    - pager: delta --dark --paging=never
+  diffRenderers:
+    - command: delta --dark --paging=never
   autoRefresh: false
 notARepository: skip

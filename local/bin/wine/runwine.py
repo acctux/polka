@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import sys
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 BASE_DIR = Path.home() / "Desktop" / "Games"

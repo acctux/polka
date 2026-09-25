@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import sys
 import subprocess
+import sys
 
 SERVICES = ["kdeconnectd", "swaync", "waybar", "awww-daemon", "hypridle"]
 
@@ -23,4 +23,3 @@ if __name__ == "__main__":
         print("Usage: ./script.py [start|stop]")
         sys.exit(1)
     manage_services(sys.argv[1])
-

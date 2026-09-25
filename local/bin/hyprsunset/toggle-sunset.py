@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from textwrap import dedent
 import subprocess
 from pathlib import Path
+from textwrap import dedent
 
 HOME = Path.home()
 STATE_FILE = HOME / ".cache" / "sunsetcache" / "hyprsunset_state"
