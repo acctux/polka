@@ -5,14 +5,16 @@ import json
 import html
 from pathlib import Path
 
-TOOLTIP_FUNCTIONS = "\nLeft: Pavucontrol\t\nRight: Pause/Play\t\nMiddle: Rmpc\t"
+TOOLTIP_FUNCTIONS = "\nLeft: Wiremix\t\nRight: Pause/Play\t\nMiddle: Rmpc\t"
 ICONS_MAP = [(0, "󰝟"), (29, "󰕿"), (64, "󰖀"), (100, "󰕾")]
 SEPERATOR = "  "
 
 
 def playerctl_info(cmd) -> str:
     full_cmd = ["playerctl"] + cmd
-    return subprocess.run(full_cmd, capture_output=True, text=True).stdout.strip()
+    return subprocess.run(
+        full_cmd, capture_output=True, text=True, check=False
+    ).stdout.strip()
 
 
 def get_active_player(excluded: list[str]) -> str:

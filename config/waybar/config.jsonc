@@ -205,7 +205,7 @@
     "signal": 3,
     "return-type": "json",
     "format": "{}",
-    "on-click": "hyprctl switchxkblayout at-translated-set-2-keyboard next",
+    "on-click": "hyprctl switchxkblayout at-raw-set-2-keyboard next",
     "on-click-right": "~/.local/bin/keyboard/osk_handle.sh",
     "on-click-middle": "~/.local/bin/keyboard/emoji_select.sh"
   },

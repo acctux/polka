@@ -20,23 +20,6 @@ hl.window_rule({ match = { title = "^(.*)(wants to save)$" }, center = true })
 hl.window_rule({ match = { title = "^(.*)(wants to save)$" }, float = true })
 hl.window_rule({ match = { title = "^(.*)(wants to open)$" }, center = true })
 hl.window_rule({ match = { title = "^(.*)(wants to open)$" }, float = true })
-hl.window_rule({ match = { class = "^(pavucontrol)$" }, float = true })
-hl.window_rule({
-	match = { class = "^(pavucontrol)$" },
-	size = { "(monitor_w*0.45)", "(monitor_h*0.45)" },
-})
-hl.window_rule({ match = { class = "^(pavucontrol)$" }, center = true })
-hl.window_rule({ match = { class = "^(org.pulseaudio.pavucontrol)$" }, float = true })
-hl.window_rule({
-	match = { class = "^(org.pulseaudio.pavucontrol)$" },
-	size = { "(monitor_w*0.45)", "(monitor_h*0.45)" },
-})
-hl.window_rule({ match = { class = "^(org.pulseaudio.pavucontrol)$" }, center = true })
-hl.window_rule({ match = { class = "org.freedesktop.impl.portal.desktop.kde" }, float = true })
-hl.window_rule({
-	match = { class = "org.freedesktop.impl.portal.desktop.kde" },
-	size = { "(monitor_w*0.60)", "(monitor_h*0.65)" },
-})
 
 -- Picture-in-Picture
 hl.window_rule({ match = { title = "^([Pp]icture[-\\s]?[Ii]n[-\\s]?[Pp]icture)(.*)$" }, float = true })
@@ -78,14 +61,14 @@ hl.window_rule({ match = { float = 0 }, no_shadow = true })
 hl.layer_rule({ match = { namespace = "gtk4-layer-shell" }, no_anim = true })
 -- ######## Layer rules ########
 hl.layer_rule({
-	match = { namespace = "^(swaync-control-center)$" },
+	match = { namespace = "^(swaync)$" },
 	blur = true,
 	-- no_anim = true,
 	blur_popups = true,
 	ignore_alpha = 0.1,
 })
 hl.layer_rule({
-	match = { namespace = "^(swaync-notification-window)$" },
+	match = { namespace = "^(swaync-control-center|swaync-notification-window|swaync-client)$" },
 	blur = true,
 	blur_popups = true,
 	ignore_alpha = 0.1,
@@ -108,11 +91,6 @@ hl.layer_rule({
 	blur = false,
 })
 -- ######## Window rules ########
-hl.window_rule({
-	match = { class = "^(org\\.pulseaudio\\.pavucontrol)$" },
-	float = true,
-	size = { 700, 600 },
-})
 hl.window_rule({
 	match = { class = "^(satty)$" },
 	float = true,

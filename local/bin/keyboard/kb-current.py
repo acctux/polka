@@ -10,7 +10,7 @@ LAYOUT_ICONS = {
     "Russian (phonetic)": "🇷🇺",
     "Ukrainian": "🇺🇦",
 }
-KEYBOARD_NAME = "at-translated-set-2-keyboard"
+KEYBOARD_NAME = "at-raw-set-2-keyboard"
 
 
 def get_active_layout(keyboard_name: str) -> str:
