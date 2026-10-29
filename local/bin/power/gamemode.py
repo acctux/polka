@@ -3,7 +3,7 @@
 import subprocess
 import sys
 
-SERVICES = ["kdeconnectd", "swaync", "waybar", "awww-daemon", "hypridle"]
+SERVICES = ["kdeconnectd", "swaync", "waybar", "wall", "hypridle"]
 
 
 def manage_services(gamemode_action: str, services: list[str] = SERVICES) -> None:
@@ -14,7 +14,9 @@ def manage_services(gamemode_action: str, services: list[str] = SERVICES) -> Non
     systemd_action = action_map[gamemode_action]
     for service in services:
         cmd = ["systemctl", "--user", systemd_action, service]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
+        )
         print(f"Service '{service}' has been {systemd_action}ed.")
 
 
