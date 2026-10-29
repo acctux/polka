@@ -1,5 +1,10 @@
 -- ######## Window rules ########
-
+local suppressMaximizeRule = hl.window_rule({
+	-- Ignore maximize requests from all apps. You'll probably like this.
+	name = "suppress-maximize-events",
+	match = { class = ".*" },
+	suppress_event = "maximize",
+})
 -- Disable blur for xwayland context menus
 hl.window_rule({ match = { class = "^()$", title = "^()$" }, no_blur = true })
 

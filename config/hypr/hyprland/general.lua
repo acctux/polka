@@ -31,12 +31,13 @@ hl.config({
 		gaps_workspaces = 50,
 		border_size = 1,
 		col = {
-			active_border = "rgba(00ff99ee)",
+			active_border = { colors = { "rgba(00ff99ee)", "rgba(33ccffee)" }, angle = 45 },
 			inactive_border = "rgba(0,114,255,0.7)",
 		},
 		resize_on_border = true,
 		no_focus_fallback = true,
 		allow_tearing = true, -- This just allows the `immediate` window rule to work
+		layout = "dwindle",
 		snap = {
 			enabled = true,
 			window_gap = 4,
@@ -136,6 +137,7 @@ hl.config({
 		force_zero_scaling = true,
 	},
 })
+
 -- Curves
 hl.curve("expressiveFastSpatial", { type = "bezier", points = { { 0.42, 1.67 }, { 0.21, 0.90 } } })
 hl.curve("expressiveSlowSpatial", { type = "bezier", points = { { 0.39, 1.29 }, { 0.35, 0.98 } } })
