@@ -466,14 +466,17 @@ class WeatherProcessor:
         jump_h_minutes: int = 30,
         step: int = 2,
     ) -> pd.DataFrame:
-        start = now.floor("h")
+        # Round in UTC to avoid ambiguous local times during DST transitions.
+        now_utc = now.tz_convert("UTC")
         if now.minute >= jump_h_minutes:
-            start = now.ceil("h")
+            start = now_utc.ceil("h")
+        else:
+            start = now_utc.floor("h")
+        start = start.tz_convert(now.tz)
         end = start + pd.Timedelta(hours=hours_ahead)
         mask = hourly_df["date"].between(start, end)
-        hourly_filtered = hourly_df.loc[mask]
-        hourly = hourly_filtered.copy()
-        # 1. Apply Formats
+        hourly = hourly_df.loc[mask].copy()
+        # Apply formats.
         hourly["temperature_2m"] = self._fmt_temp(hourly["temperature_2m"])
         hourly["soil_temperature_0cm"] = self._fmt_temp(
             hourly["soil_temperature_0cm"], soil=True
@@ -482,7 +485,7 @@ class WeatherProcessor:
         hourly["precipitation_probability"] = self._fmt_probability(
             hourly["precipitation_probability"]
         )
-        # 2. Extract Sun Events
+        # Extract sun events.
         hourly = hourly.iloc[::step].reset_index(drop=True)
         hourly["sun_event"] = ""
         sunrise_hit = (hourly["sunrise_dt"] >= hourly["date"]) & (
@@ -491,12 +494,14 @@ class WeatherProcessor:
         sunset_hit = (hourly["sunset_dt"] >= hourly["date"]) & (
             hourly["sunset_dt"] < hourly["date"] + pd.Timedelta(hours=step)
         )
-        hourly.loc[sunrise_hit, "sun_event"] = "<span size='15pt'>󰖜</span> " + hourly[
-            "sunrise_dt"
-        ].dt.strftime("%H:%M")
-        hourly.loc[sunset_hit, "sun_event"] = "<span size='15pt'>󰖛</span> " + hourly[
-            "sunset_dt"
-        ].dt.strftime("%H:%M")
+        hourly.loc[sunrise_hit, "sun_event"] = (
+            "<span size='15pt'>󰖜</span> "
+            + hourly.loc[sunrise_hit, "sunrise_dt"].dt.strftime("%H:%M")
+        )
+        hourly.loc[sunset_hit, "sun_event"] = (
+            "<span size='15pt'>󰖛</span> "
+            + hourly.loc[sunset_hit, "sunset_dt"].dt.strftime("%H:%M")
+        )
         return hourly
 
     def _find_shortfall_icon(
