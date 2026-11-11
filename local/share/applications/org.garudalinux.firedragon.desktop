@@ -5,9 +5,8 @@ Name=FireDragon
 GenericName=Web Browser
 Comment=Browse the World Wide Web
 Keywords=Internet;WWW;Browser;Web;Explorer
-Keywords[ar]=انترنت;إنترنت;متصفح;ويب;وب
-Exec=/usr/lib/firedragon/firedragon %u
-Icon=firefox-aurora
+Exec=firedragon %u
+Icon=firefox-nightly
 Terminal=false
 X-MultipleArgs=false
 Type=Application
@@ -19,8 +18,8 @@ Actions=new-window;new-private-window;
 
 [Desktop Action new-window]
 Name=New Window
-Exec=/usr/lib/firedragon/firedragon --new-window %u
+Exec=firedragon --new-window %u
 
 [Desktop Action new-private-window]
 Name=New Private Window
-Exec=/usr/lib/firedragon/firedragon --private-window %u
+Exec=firedragon --private-window %u
