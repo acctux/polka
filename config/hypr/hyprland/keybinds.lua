@@ -15,7 +15,7 @@ hl.device({ name = "logitech-mx-master-3s", sensitivity = -0.8 })
 --##################################################
 hl.bind(
 	"ALT + SPACE",
-	hl.dsp.exec_cmd("hyprctl switchxkblayout at-translated-set-2-keyboard next && pkill -RTMIN+6 waybar"),
+	hl.dsp.exec_cmd("hyprctl switchxkblayout at-raw-set-2-keyboard next && pkill -RTMIN+6 waybar"),
 	{ description = "Language switch" }
 )
 --##################################################

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+
 import logging
 import subprocess
 import sys
 import time
 from pathlib import Path
+
 import psutil
 
 
@@ -11,17 +13,20 @@ import psutil
 # LOGGING
 #########################
 class ColorFormatter(logging.Formatter):
-    COLORS = {
-        logging.INFO: "\033[36m",
-        logging.WARNING: "\033[93m",
-        logging.ERROR: "\033[31m",
-    }
-    RESET = "\033[0m"
-    NAME_COLOR = "\033[93m"
+    def __init__(self) -> None:
+        super().__init__()
+        self.colors = {
+            logging.INFO: "\033[36m",
+            logging.WARNING: "\033[93m",
+            logging.ERROR: "\033[31m",
+        }
+        self.reset = "\033[0m"
+        self.name_color = "\033[93m"
 
     def format(self, record: logging.LogRecord) -> str:
-        name = f"{self.NAME_COLOR}{record.name}{self.RESET}"
-        msg = f"{self.COLORS.get(record.levelno, '')}{record.getMessage()}{self.RESET}"
+        name = f"{self.name_color}{record.name}{self.reset}"
+        color = self.colors.get(record.levelno, "")
+        msg = f"{color}{record.getMessage()}{self.reset}"
         return f"{name}: {msg}"
 
 
@@ -44,9 +49,7 @@ log = get_logger()
 #########################
 class NetworkManager:
     fuzzel_config = Path.home() / ".config" / "fuzzel" / "waybar.ini"
-    namedconf_dir = Path(__file__).resolve().parent / "namedconf"
     resolvconf_dir = Path(__file__).resolve().parent / "resolvconf"
-
     vpn_list = Path("/var/cache/mysysinfo/vpn.list")
 
     def __init__(self):
@@ -61,7 +64,9 @@ class NetworkManager:
         if sudo:
             cmd = ["sudo", "-A"] + cmd
         log.info(f"Running {cmd}")
-        return subprocess.run(cmd, text=True, capture_output=True, input=input)
+        return subprocess.run(
+            cmd, text=True, capture_output=True, input=input, check=False
+        )
 
     def fuzzel_menu(self, options: list[str]) -> str:
         menu_text = "\n".join(options)
@@ -154,11 +159,9 @@ class NetworkManager:
         elif choice == "VPN Menu":
             vpn_name = sys.argv[1] if len(sys.argv) > 1 else None
             if not vpn_name:
-                lines = self.vpn_list.read_text().splitlines() + [
-                    "─────",
-                    "Disconnect",
-                    "Cancel",
-                ]
+                vpn_lines = self.vpn_list.read_text().splitlines()
+                default_lines = ["─────", "Disconnect", "Cancel"]
+                lines = vpn_lines + default_lines
                 vpn_name = self.fuzzel_menu(lines)
             if vpn_name and vpn_name != "Cancel":
                 self.connect_vpn(vpn_name)

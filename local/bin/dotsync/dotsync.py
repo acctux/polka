@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from dataclasses import dataclass
-from typing import List
 import sys
 import os
 import subprocess
@@ -48,9 +47,9 @@ log = get_logger("Polka")
 
 @dataclass
 class PolkaConfig:
-    dotfiles_dirs: List[str]
-    skip_dirs: List[str] | None = None
-    skip_files: List[str] | None = None
+    dotfiles_dirs: list[str]
+    skip_dirs: list[str] | None = None
+    skip_files: list[str] | None = None
 
 
 class PolkaDots:

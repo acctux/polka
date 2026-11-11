@@ -3,7 +3,7 @@
 import subprocess
 import sys
 
-SERVICES = ["kdeconnectd", "swaync", "waybar", "wall", "hypridle"]
+SERVICES = ["kdeconnectd", "swaync", "waybar", "awww-daemon", "hypridle"]
 
 
 def manage_services(gamemode_action: str, services: list[str] = SERVICES) -> None:

@@ -73,7 +73,7 @@
       "",
       ""
     ],
-    "scroll-step": 10,
+    "scroll-step": 5,
     "on-click": "~/.local/bin/hyprsunset/toggle-sunset.py & disown"
   },
   "battery": {
