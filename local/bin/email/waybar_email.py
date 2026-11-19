@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 import json
+from email.utils import parseaddr
+from html import escape
 from pathlib import Path
 
 
 def create_tooltip(emails: list[dict[str, str]], count: int, max_items: int) -> str:
-    lines = [f"<b>{count} Unread Email(s):</b>\n"]
+    lines = [f"<b>{count} Unread Email(s):</b>"]
     for mail in emails[:max_items]:
-        sender = mail.get("sender", "")
-        name, email = sender.split("<")
-        email = email.strip(">")
-        name = name.strip(" '\"\\")
-        subject = mail.get("subject", "No Subject")
-        email_line = f"<b>{name}</b> {email}\t\n{subject[:40]}\t\n"
-        lines.append(email_line)
+        name, address = parseaddr(mail.get("sender", ""))
+        name = name or address or "Unknown sender"
+        subject = mail.get("subject") or "No Subject"
+        lines.append(
+            f"<b>{escape(name)}</b> &lt;{escape(address)}&gt;\n{escape(subject[:40])}"
+        )
     if count > max_items:
         lines.append(f"<i>...and {count - max_items} more</i>")
-    return "\t\n".join(lines)
+    return "\n\n".join(lines)
 
 
 def show_emails(icon: str = "󰇮", max_items: int = 10):

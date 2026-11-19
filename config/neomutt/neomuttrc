@@ -14,7 +14,7 @@ set sendmail="/usr/bin/msmtp"
 set query_command = "khard email --parsable %s"
 bind editor <Tab> complete-query
 bind editor ^T    complete
-set nm_default_uri = "notmuch://$XDG_DATA_HOME/mail/proton"
+set nm_default_uri = "notmuch://$HOME/Desktop/Mail"
 set nm_record = yes
 set nm_record_tags = "sent"
 # ==========================================
