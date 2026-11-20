@@ -1,189 +1,227 @@
 #!/usr/bin/env python3
-import pickle
-import re
+
 import subprocess
 import threading
-from pathlib import Path
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, GLib, Gtk
 
-CACHE = Path.home() / ".cache" / "quicktranslate_langs.data"
 
-
-def copy(text: str) -> bool:
+def get_languages() -> list[str]:
     try:
-        return (
-            subprocess.run(
-                ["wl-copy"], input=text, text=True, capture_output=True
-            ).returncode
-            == 0
+        result = subprocess.run(
+            ["trans", "-list-languages-english"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError, OSError):
+        return ["English", "Russian"]
+
+    languages = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return languages or ["English", "Russian"]
+
+
+def translate(text: str, source: str, target: str) -> str:
+    try:
+        result = subprocess.run(
+            [
+                "trans",
+                "-host",
+                "google",
+                "-source",
+                source,
+                "-target",
+                target,
+                "-no-ansi",
+                text,
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
         )
     except FileNotFoundError:
+        return "Error: `trans` is not installed or could not be found."
+    except OSError as error:
+        return f"Error: {error}"
+
+    return result.stdout.strip() or result.stderr.strip() or "No output returned."
+
+
+def copy_to_clipboard(text: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["wl-copy"],
+            input=text,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        return result.returncode == 0
+    except OSError:
         return False
 
 
-def parse_language_list(output: str) -> dict[str, str]:
-    langs = {}
-    pattern = re.compile(r"^\s*(?P<code>[a-z]{2,3}(?:-[A-Z]+)?)\s+(?P<name>.+)$")
-    for line in output.splitlines():
-        match = pattern.match(line.strip())
-        if match:
-            langs[match.group("name").strip()] = match.group("code").strip()
-    return langs
-
-
-def get_languages() -> dict[str, str]:
-    if CACHE.exists():
-        try:
-            with open(CACHE, "rb") as f:
-                return pickle.load(f)
-        except Exception:
-            pass
-    try:
-        res = subprocess.run(
-            ["trans", "-T"], capture_output=True, text=True, encoding="utf-8"
-        )
-        langs = parse_language_list(res.stdout)
-        if langs:
-            CACHE.parent.mkdir(parents=True, exist_ok=True)
-            with open(CACHE, "wb") as f:
-                pickle.dump(langs, f)
-            return langs
-    except Exception:
-        pass
-    return {"English": "en", "Russian": "ru", "Русский": "ru"}
-
-
 class TranslateWindow(Gtk.ApplicationWindow):
-    def __init__(self, app, lang_map):
+    def __init__(self, app: Gtk.Application, languages: list[str]):
         super().__init__(
             application=app,
             title="Quick Translate",
             default_width=550,
             default_height=400,
         )
-        self.map = lang_map
-        self.names = sorted(lang_map.keys())
-        self._build_ui()
-        self.connect("map", lambda _: self.inp.grab_focus())
+        self.languages = languages
+        self.build_ui()
+        self.connect("map", lambda *_: self.input_view.grab_focus())
 
-    def _build_ui(self):
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        main_box.set_margin_start(12)
-        main_box.set_margin_end(12)
-        main_box.set_margin_top(12)
-        main_box.set_margin_bottom(12)
+    def build_ui(self) -> None:
+        main_box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=10,
+            margin_start=12,
+            margin_end=12,
+            margin_top=12,
+            margin_bottom=12,
+        )
         self.set_child(main_box)
-        head = Gtk.Box(spacing=8)
-        self.src = Gtk.DropDown.new_from_strings(self.names)
-        self.trg = Gtk.DropDown.new_from_strings(self.names)
-        self.src.set_selected(
-            next((i for i, n in enumerate(self.names) if n == "English"), 0)
-        )
-        self.trg.set_selected(
-            next(
-                (i for i, n in enumerate(self.names) if n in ("Russian", "Русский")), 0
-            )
-        )
-        swap = Gtk.Button(label="⇄")
-        swap.connect("clicked", self._on_swap)
-        self.btn = Gtk.Button(label="Translate", css_classes=["suggested-action"])
-        self.btn.connect("clicked", self.translate)
-        for w in [self.src, swap, self.trg, Gtk.Box(hexpand=True), self.btn]:
-            head.append(w)
-        main_box.append(head)
-        self.inp = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD, height_request=100)
-        main_box.append(self.inp)
-        scroll = Gtk.ScrolledWindow(vexpand=True)
-        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.out = Gtk.TextView(
-            editable=False, cursor_visible=False, wrap_mode=Gtk.WrapMode.WORD
-        )
-        scroll.set_child(self.out)
-        main_box.append(scroll)
-        self.stat = Gtk.Label(label="Ready", xalign=0)
-        main_box.append(self.stat)
-        controller = Gtk.EventControllerKey()
-        controller.connect("key-pressed", self._on_key)
-        self.inp.add_controller(controller)
 
-    def _on_swap(self, _):
-        s, t = self.src.get_selected(), self.trg.get_selected()
-        self.src.set_selected(t)
-        self.trg.set_selected(s)
+        header = Gtk.Box(spacing=8)
+        main_box.append(header)
 
-    def _on_key(self, ctrl, key, code, state):
-        if key in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and not (
-            state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK)
+        self.source_dropdown = Gtk.DropDown.new_from_strings(self.languages)
+        self.target_dropdown = Gtk.DropDown.new_from_strings(self.languages)
+        self.source_dropdown.set_selected(self.language_index("English"))
+        self.target_dropdown.set_selected(self.language_index("Russian"))
+
+        swap_button = Gtk.Button(label="⇄")
+        swap_button.connect("clicked", self.swap_languages)
+
+        self.translate_button = Gtk.Button(
+            label="Translate",
+            css_classes=["suggested-action"],
+        )
+        self.translate_button.connect("clicked", self.start_translation)
+
+        for widget in (
+            self.source_dropdown,
+            swap_button,
+            self.target_dropdown,
+            Gtk.Box(hexpand=True),
+            self.translate_button,
         ):
-            self.translate(None)
+            header.append(widget)
+
+        self.input_view = Gtk.TextView(
+            wrap_mode=Gtk.WrapMode.WORD,
+            height_request=100,
+        )
+        main_box.append(self.input_view)
+
+        output_scroll = Gtk.ScrolledWindow(vexpand=True)
+        output_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.output_view = Gtk.TextView(
+            editable=False,
+            cursor_visible=False,
+            wrap_mode=Gtk.WrapMode.WORD,
+        )
+        output_scroll.set_child(self.output_view)
+        main_box.append(output_scroll)
+
+        self.status_label = Gtk.Label(label="Ready", xalign=0)
+        main_box.append(self.status_label)
+
+        key_controller = Gtk.EventControllerKey()
+        key_controller.connect("key-pressed", self.on_key_pressed)
+        self.input_view.add_controller(key_controller)
+
+    def language_index(self, name: str) -> int:
+        try:
+            return self.languages.index(name)
+        except ValueError:
+            return 0
+
+    def swap_languages(self, _button: Gtk.Button) -> None:
+        source = self.source_dropdown.get_selected()
+        target = self.target_dropdown.get_selected()
+        self.source_dropdown.set_selected(target)
+        self.target_dropdown.set_selected(source)
+
+    def on_key_pressed(self, _controller, key, _keycode, state) -> bool:
+        enter_keys = (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
+        modifiers = Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK
+
+        if key in enter_keys and not state & modifiers:
+            self.start_translation()
             return True
+
         return False
 
-    def translate(self, _):
-        buf = self.inp.get_buffer()
-        text = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True).strip()
+    def start_translation(self, _button=None) -> None:
+        buffer = self.input_view.get_buffer()
+        text = buffer.get_text(
+            buffer.get_start_iter(),
+            buffer.get_end_iter(),
+            True,
+        ).strip()
+
         if not text:
             return
-        self.stat.set_text("⏳ Translating...")
-        self.btn.set_sensitive(False)
-        src_code = self.map[self.names[self.src.get_selected()]]
-        trg_code = self.map[self.names[self.trg.get_selected()]]
+
+        source = self.languages[self.source_dropdown.get_selected()]
+        target = self.languages[self.target_dropdown.get_selected()]
+
+        self.status_label.set_text("⏳ Translating...")
+        self.translate_button.set_sensitive(False)
+
         threading.Thread(
-            target=self._run_trans, args=(text, src_code, trg_code), daemon=True
+            target=self.translation_worker,
+            args=(text, source, target),
+            daemon=True,
         ).start()
 
-    def _run_trans(self, text: str, src: str, trg: str) -> None:
-        try:
-            cmd = [
-                "trans",
-                "-host",
-                "google",
-                "-source",
-                src,
-                "-target",
-                trg,
-                "-no-ansi",
-                text,
-            ]
-            res = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-            )
-            output = res.stdout if res.stdout else "No output returned."
-        except Exception as e:
-            output = f"Error: {e}"
-        GLib.idle_add(self._on_finished, output)
+    def translation_worker(self, text: str, source: str, target: str) -> None:
+        result = translate(text, source, target)
+        GLib.idle_add(self.show_result, text, result)
 
-    def _on_finished(self, res):
-        self.btn.set_sensitive(True)
-        self.out.get_buffer().set_text(res)
-        buf = self.inp.get_buffer()
-        input_text = (
-            buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True).strip().lower()
-        )
-        lines = [line.strip() for line in res.splitlines() if line.strip()]
-        for line in lines:
-            clean = line.lower()
+    def show_result(self, original_text: str, result: str) -> bool:
+        self.translate_button.set_sensitive(True)
+        self.output_view.get_buffer().set_text(result)
+
+        for line in result.splitlines():
+            line = line.strip()
+            cleaned = line.lower()
+
             if (
-                clean == input_text
-                or clean.startswith("/")
-                or clean.startswith("[")
-                or "definitions of" in clean
+                not line
+                or cleaned == original_text.lower()
+                or cleaned.startswith(("/", "["))
+                or "definitions of" in cleaned
             ):
                 continue
-            if copy(line):
-                self.stat.set_text(f"📋 Copied: {line}")
-                return
-        self.stat.set_text("Done")
+
+            if copy_to_clipboard(line):
+                self.status_label.set_text(f"📋 Copied: {line}")
+                return GLib.SOURCE_REMOVE
+
+        self.status_label.set_text("Done")
+        return GLib.SOURCE_REMOVE
+
+
+def main() -> int:
+    app = Gtk.Application(application_id="org.nick.quicktranslate")
+    app.connect(
+        "activate",
+        lambda application: TranslateWindow(
+            application,
+            get_languages(),
+        ).present(),
+    )
+    return app.run(None)
 
 
 if __name__ == "__main__":
-    app = Gtk.Application(application_id="org.nick.quicktranslate")
-    app.connect("activate", lambda a: TranslateWindow(a, get_languages()).present())
-    app.run(None)
+    raise SystemExit(main())

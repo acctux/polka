@@ -1,114 +1,115 @@
 #!/usr/bin/env python3
-import sys
+
 import subprocess
 import tempfile
-from dataclasses import dataclass
 from pathlib import Path
 
-
-@dataclass(frozen=True)
-class FolderItem:
-    name: str
-    icon: str
-    location: str
-
-    @property
-    def label(self) -> str:
-        return f"{self.icon} {self.name}"
-
-    @property
-    def path(self) -> Path:
-        return Path(self.location).expanduser()
-
-
-FUZZEL_CONFIG = Path.home() / ".config" / "fuzzel" / "waybar.ini"
-FOLDERS = [
-    FolderItem("Documents", "󱧶", "~/Desktop/Documents"),
-    FolderItem("Downloads", "󰉍", "~/Desktop/Downloads"),
-    FolderItem("Videos", "", "~/Desktop/Videos"),
-    FolderItem("Pictures", "󰉏", "~/Desktop/Pictures"),
-    FolderItem("Projects", "󱧼", "~/Desktop/Projects"),
-    FolderItem("Etc", "", "/etc"),
-]
-PLAIN_DIR = Path.home() / "Desktop/Decrypted"
-LOCKED_DIR = Path.home() / "Desktop/Private"
-UNLOCKED_ICON: Path = Path(
+HOME = Path.home()
+DESKTOP = HOME / "Desktop"
+PLAIN_DIR = DESKTOP / "Decrypted"
+LOCKED_DIR = DESKTOP / "Private"
+FUZZEL_CONFIG = HOME / ".config/fuzzel/waybar.ini"
+UNLOCKED_ICON = Path(
     "/usr/share/icons/WhiteSur-dark/places/scalable/folder-unlocked.svg"
 )
+FOLDERS = {
+    "󱧶 Documents": DESKTOP / "Documents",
+    "󰉍 Downloads": DESKTOP / "Downloads",
+    " Videos": DESKTOP / "Videos",
+    "󰉏 Pictures": DESKTOP / "Pictures",
+    "󱧼 Projects": DESKTOP / "Projects",
+    " Etc": "/etc",
+}
+VAULT_LABELS = {
+    False: "󰉑 Unlock Vault",
+    True: "󰉐 Lock Vault",
+}
 
 
-class FolderMenu:
-    def __init__(
-        self, plain_dir: Path, locked_dir: Path, fuzzel_config: Path, unlock_icon: Path
-    ):
-        self.plain_dir = plain_dir
-        self.locked_dir = locked_dir
-        self.fuzzel_config = fuzzel_config
-        self.unlock_icon = unlock_icon
-        self.is_mounted = self._is_mnt()
-
-    def _is_mnt(self) -> bool:
-        return subprocess.run(["mountpoint", "-q", str(self.plain_dir)]).returncode == 0
-
-    def get_password(self, title: str) -> str:
-        cmd = ["zenity", "--password", f"--title={title}"]
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        return res.stdout.strip() if res.returncode == 0 else ""
-
-    def run_gocrypt(self, args: list[str], password: str) -> None:
-        with tempfile.NamedTemporaryFile(mode="w", delete=True) as f:
-            f.write(password)
-            f.flush()
-            subprocess.run(["gocryptfs"] + args + ["--passfile", f.name], check=True)
-
-    def handle_vault(self, icon: Path) -> None:
-        self.locked_dir.mkdir(parents=True, exist_ok=True)
-        if not (self.locked_dir / "gocryptfs.conf").exists():
-            if password := self.get_password("Enter init password"):
-                self.run_gocrypt(["-init", str(self.locked_dir)], password)
+def manage_vault(mounted: bool) -> None:
+    if mounted:
+        subprocess.run(["fusermount3", "-u", str(PLAIN_DIR)], check=True)
+        PLAIN_DIR.rmdir()
+    else:
+        result = subprocess.run(
+            ["zenity", "--password", "--title=Enter gocryptfs password"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
             return
-        if self.is_mounted:
-            try:
-                cmd = ["fusermount3", "-u", str(self.plain_dir)]
-                subprocess.run(cmd, check=True)
-                self.plain_dir.rmdir()
-            except Exception:
-                pass
-        else:
-            self.plain_dir.mkdir(parents=True, exist_ok=True)
-            cmd = ["gio", "set", str(self.plain_dir)]
-            if icon.exists():
-                cmd += ["metadata::custom-icon", f"file://{icon}"]
-            subprocess.run(cmd, stderr=subprocess.DEVNULL)
-            if password := self.get_password("Enter gocryptfs password"):
-                self.run_gocrypt([str(self.locked_dir), str(self.plain_dir)], password)
-                subprocess.Popen(["xdg-open", str(self.plain_dir), "&", "disown"])
+        cryptpass = result.stdout.strip()
+        PLAIN_DIR.mkdir(parents=True, exist_ok=True)
+        if UNLOCKED_ICON.exists():
+            subprocess.run(
+                [
+                    "gio",
+                    "set",
+                    str(PLAIN_DIR),
+                    "metadata::custom-icon",
+                    UNLOCKED_ICON.as_uri(),
+                ],
+                check=False,
+                stderr=subprocess.DEVNULL,
+            )
+        with tempfile.NamedTemporaryFile(mode="w") as password_file:
+            password_file.write(cryptpass)
+            password_file.flush()
+            subprocess.run(
+                [
+                    "gocryptfs",
+                    str(LOCKED_DIR),
+                    str(PLAIN_DIR),
+                    "--passfile",
+                    password_file.name,
+                ],
+                check=True,
+            )
+        subprocess.Popen(["xdg-open", str(PLAIN_DIR)])
 
-    def run(self) -> None:
-        vault_label = "󰉑 Unlock Vault"
-        if self.is_mounted:
-            vault_label = "󰉐 Lock Vault"
-        menu_options = {vault_label: "VAULT_ACTION", **{f.label: f for f in FOLDERS}}
-        width = max(len(k) for k in menu_options.keys())
-        lines = len(menu_options)
-        cmd = [
+
+def choose_folder(mounted: bool) -> str:
+    options = [VAULT_LABELS[mounted], *FOLDERS]
+    result = subprocess.run(
+        [
             "fuzzel",
             "--dmenu",
-            f"--width={width}",
-            f"--lines={lines}",
+            f"--width={max(map(len, options))}",
+            f"--lines={len(options)}",
             "--config",
-            str(self.fuzzel_config),
-        ]
-        input = "\n".join(menu_options.keys())
-        res = subprocess.run(cmd, input=input, text=True, capture_output=True)
-        if res.returncode != 0:
-            sys.exit(0)
-        action = menu_options.get(res.stdout.strip())
-        if action == "VAULT_ACTION":
-            self.handle_vault(self.unlock_icon)
-        elif isinstance(action, FolderItem):
-            subprocess.Popen(["xdg-open", str(action.path)])
+            str(FUZZEL_CONFIG),
+        ],
+        input="\n".join(options),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        return ""
+
+    return result.stdout.strip()
+
+
+def show_menu() -> None:
+    mounted = (
+        subprocess.run(
+            ["mountpoint", "-q", str(PLAIN_DIR)],
+            check=False,
+        ).returncode
+        == 0
+    )
+
+    selection = choose_folder(mounted)
+    if not selection:
+        return
+
+    if selection in VAULT_LABELS.values():
+        manage_vault(mounted)
+    elif selection in FOLDERS:
+        subprocess.Popen(["xdg-open", str(FOLDERS[selection])])
 
 
 if __name__ == "__main__":
-    FolderMenu(PLAIN_DIR, LOCKED_DIR, FUZZEL_CONFIG, UNLOCKED_ICON).run()
+    show_menu()

@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-import time
-import subprocess
-import json
+
 import html
+import json
+import subprocess
+import time
 from pathlib import Path
 
 TOOLTIP_FUNCTIONS = "\nLeft: Wiremix\t\nRight: Pause/Play\t\nMiddle: Rmpc\t"
 ICONS_MAP = [(0, "󰝟"), (29, "󰕿"), (64, "󰖀"), (100, "󰕾")]
 SEPERATOR = "  "
+CACHE_FILE = Path.home() / ".cache" / "pulse_scroll" / "nowplaying_scroll.json"
 
 
 def playerctl_info(cmd) -> str:
@@ -31,16 +33,6 @@ def get_active_player(excluded: list[str]) -> str:
     return running_player
 
 
-def window_len(
-    text_len: int,
-    min_len: int = 8,
-    max_len: int = 14,
-    div: int = 3,
-) -> int:
-    value = text_len // div
-    return max(min_len, min(value, max_len))
-
-
 def get_metadata(player: str) -> str:
     cmd = ["--player", player, "metadata", "xesam:artist"]
     artist = playerctl_info(cmd)
@@ -60,11 +52,7 @@ def load_state(cache_file: Path) -> tuple[str, int, int]:
         return ("", 0, int(time.time()))
 
 
-def save_state(
-    cache_file: Path,
-    track: str,
-    pos: int,
-) -> None:
+def save_state(cache_file: Path, track: str, pos: int) -> None:
     cache_file.parent.mkdir(parents=True, exist_ok=True)
     audio_dict = {"track": track, "pos": pos, "ts": time.time()}
     cache_file.write_text(json.dumps(audio_dict))
@@ -97,11 +85,7 @@ def get_volume_icon(volume_icons: list[tuple[int, str]]) -> tuple[int, str]:
     return vol, "󰕾"
 
 
-def print_waybar(
-    text: str,
-    tooltip: str,
-    waybar_class: str,
-) -> None:
+def print_waybar(text: str, tooltip: str, waybar_class: str) -> None:
     dict = {
         "text": text,
         "tooltip": tooltip,
@@ -110,12 +94,16 @@ def print_waybar(
     print(json.dumps(dict, ensure_ascii=False))
 
 
+def window_len(text_len: int, min_len=8, max_len=14, div=3) -> int:
+    value = text_len // div
+    return max(min_len, min(value, max_len))
+
+
 def main():
     vol, icon = get_volume_icon(ICONS_MAP)
     if active_player := get_active_player(["JBL_Go_4"]):
         track = get_metadata(active_player)
-        cache_file = Path.home() / ".cache" / "pulse_scroll" / "nowplaying_scroll.json"
-        saved_track, saved_pos, saved_ts = load_state(cache_file)
+        saved_track, saved_pos, saved_ts = load_state(CACHE_FILE)
         win_length = window_len(len(track))
         if track != saved_track:
             pos = 0.0
@@ -136,7 +124,7 @@ def main():
             f"󰕾 {vol}%\n󰐊 {html.escape(track)}\t\n{TOOLTIP_FUNCTIONS}",
             "playing",
         )
-        save_state(cache_file, track, int(pos))
+        save_state(CACHE_FILE, track, int(pos))
     else:
         print_waybar(
             icon,

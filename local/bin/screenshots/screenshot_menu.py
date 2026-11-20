@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-import sys
+
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
+
 from PIL import Image
 
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import logging
 import re
 import subprocess
@@ -46,7 +47,7 @@ def main(iface: str = "wlan0"):
     else:
         log.warning("No password found. Generating open network code.")
         payload = f"WIFI:T:nopass;S:{escaped_ssid};;"
-    subprocess.run(["qrencode", "-t", "ANSIUTF8", payload])
+    subprocess.run(["qrencode", "-t", "ANSIUTF8", payload], check=False)
 
 
 if __name__ == "__main__":

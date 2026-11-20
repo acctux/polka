@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
+
 import json
 import subprocess
 
 
 def run(cmd, timeout=3):
-    try:
-        return subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout
-        ).stdout
-    except Exception:
-        return ""
+    return subprocess.run(
+        cmd, capture_output=True, text=True, timeout=timeout, check=False
+    ).stdout
 
 
 def parse_downloads():

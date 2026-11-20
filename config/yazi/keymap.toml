@@ -5,11 +5,7 @@
 [mgr]
 prepend_keymap = [
   { on = ["f"], run = "plugin jump-to-char", desc = "Jump to char" },
-  { on = ["T", "o"], run = "plugin recycle-bin -- open", desc = "Open Trash" },
-  { on = ["T", "e"], run = "plugin recycle-bin -- empty", desc = "Empty Trash" },
-  { on = ["T", "D"], run = "plugin recycle-bin -- emptyDays", desc = "Empty by days deleted" },
-  { on = ["T", "d"], run = "plugin recycle-bin -- delete", desc = "Delete from Trash" },
-  { on = ["T", "r"], run = "plugin recycle-bin -- restore", desc = "Restore from Trash" },
+  { on = ["T"], run = "plugin omni-trash", desc = "Open Trash" },
   { on = ["M", "m"], run = "plugin gvfs -- select-then-mount", desc = "Select device then mount" },
   { on = ["M", "m"], run = "plugin gvfs -- select-then-mount --jump", desc = "Select device to mount and jump to its mount point" },
   { on = ["M", "R"], run = "plugin gvfs -- remount-current-cwd-device", desc = "Remount device under cwd" },

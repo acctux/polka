@@ -150,6 +150,7 @@
   "custom/tuned": {
     "exec": "~/.local/bin/power/tuned_waybar.py",
     "return-type": "json",
+    "signal": 2,
     "interval": 3,
     "on-click": "~/.local/bin/power/tuned_waybar.py exec",
     "on-click-right": "~/.local/bin/power/tuned_waybar.py menu",

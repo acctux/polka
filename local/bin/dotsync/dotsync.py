@@ -1,45 +1,44 @@
 #!/usr/bin/env python3
 
-from dataclasses import dataclass
-import sys
+import logging
 import os
 import subprocess
+import sys
+from dataclasses import dataclass
 from pathlib import Path
-import logging
 
 DOT_DIRS = ["Lit/polka", "Lit/Docs/secdots"]
 SKIP_DIRS = [".git", "__pycache__", ".venv"]
-SKIIP_FILES = [".gitignore"]
+SKIP_FILES = [".gitignore"]
 
 
-#########################
-# LOG
-#########################
 class ColorFormatter(logging.Formatter):
-    COLORS = {
-        logging.INFO: "\033[36m",
-        logging.WARNING: "\033[93m",
-        logging.ERROR: "\033[31m",
-    }
     RESET = "\033[0m"
     NAME = "\033[93m"
 
-    def format(self, record):
+    def __init__(self):
+        self.COLORS = {
+            logging.INFO: "\033[36m",
+            logging.WARNING: "\033[93m",
+            logging.ERROR: "\033[31m",
+        }
+
+    def format(self, record: logging.LogRecord) -> str:
         name = f"{self.NAME}{record.name}{self.RESET}"
-        msg = f"{self.COLORS.get(record.levelno, '')}{record.getMessage()}{self.RESET}"
-        return f"{name}: {msg}"
+        color = self.COLORS.get(record.levelno, "")
+        message = f"{color}{record.getMessage()}{self.RESET}"
+        return f"{name}: {message}"
 
 
-def get_logger(log_name=None, level=logging.INFO):
-    log = logging.getLogger(log_name)
-    if log.handlers:
-        return log
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(ColorFormatter())
-    log.addHandler(handler)
-    log.setLevel(level)
-    log.propagate = False
-    return log
+def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(ColorFormatter())
+        logger.addHandler(handler)
+        logger.propagate = False
+    logger.setLevel(level)
+    return logger
 
 
 log = get_logger("Polka")
@@ -48,66 +47,72 @@ log = get_logger("Polka")
 @dataclass
 class PolkaConfig:
     dotfiles_dirs: list[str]
-    skip_dirs: list[str] | None = None
-    skip_files: list[str] | None = None
+    skip_dirs: list[str]
+    skip_files: list[str]
 
 
 class PolkaDots:
-    HOME = Path.home()
-
     def __init__(self, config: PolkaConfig):
         self.config = config
+        self.home = Path.home()
         self.dotfiles_paths = self._establish_dirs()
-        self.skip_dirs = config.skip_dirs
-        self.skip_files = config.skip_files
 
     def _establish_dirs(self) -> list[Path]:
         paths = []
-        for d in config.dotfiles_dirs:
-            dot_dir = self.HOME / d
-            if dot_dir.is_dir():
-                paths.append(self.HOME / d)
+        for directory in self.config.dotfiles_dirs:
+            path = self.home / directory
+            if path.is_dir():
+                paths.append(path)
             else:
-                log.warning(f"{dot_dir} not found, skipping.")
+                log.warning("%s not found, skipping.", path)
         return paths
 
-    def _should_skip(self, parts: tuple[str, ...]) -> bool:
-        if self.skip_files:
-            if parts[-1] in self.skip_files:
-                return True
-        if self.skip_dirs:
-            for part in parts:
-                if part in self.skip_dirs:
-                    return True
-        return False
+    def _should_skip(self, relative_path: Path) -> bool:
+        return relative_path.name in self.config.skip_files or any(
+            part in self.config.skip_dirs for part in relative_path.parts
+        )
 
-    def deploy(self):
+    def _destination_for(self, relative_path: Path) -> Path:
+        parts = relative_path.parts
+        return self.home / Path(f".{parts[0]}", *parts[1:])
+
+    def _link_file(self, source: Path, destination: Path) -> bool:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        target = os.path.relpath(source, destination.parent)
+
+        if destination.is_symlink() and os.readlink(destination) == target:
+            return False
+
+        if destination.exists() or destination.is_symlink():
+            destination.unlink()
+            log.info("Removed: %s", destination)
+
+        destination.symlink_to(target)
+        log.info("Linked: %s → %s", destination, target)
+        return True
+
+    def deploy(self) -> None:
         linked = 0
-        for src_dir in self.dotfiles_paths:
-            for src in src_dir.rglob("*"):
-                if not src.is_file():
+
+        for source_dir in self.dotfiles_paths:
+            for source in source_dir.rglob("*"):
+                if not source.is_file():
                     continue
-                parts = src.relative_to(src_dir).parts
-                if self._should_skip(parts):
+
+                relative_path = source.relative_to(source_dir)
+                if self._should_skip(relative_path):
                     continue
-                dst = self.HOME / Path("." + parts[0], *parts[1:])
-                rel = os.path.relpath(src, dst.parent)
-                if dst.is_symlink() and os.readlink(dst) == rel:
-                    continue
-                if dst.exists() or dst.is_symlink():
-                    dst.unlink()
-                    log.info(f"Removed: {dst}")
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                dst.symlink_to(rel)
-                log.info(f"Linked: {dst} → {rel}")
-                linked += 1
-        log.info(f"Total linked: {linked}")
-        if linked > 0:
+
+                destination = self._destination_for(relative_path)
+                linked += self._link_file(source, destination)
+
+        log.info("Total linked: %d", linked)
+
+        if linked:
             subprocess.run(["hyprctl", "reload"], check=False)
             log.info("Hyprland reloaded")
 
 
-config = PolkaConfig(
-    dotfiles_dirs=DOT_DIRS, skip_dirs=SKIP_DIRS, skip_files=SKIIP_FILES
-)
-PolkaDots(config).deploy()
+if __name__ == "__main__":
+    config = PolkaConfig(DOT_DIRS, SKIP_DIRS, SKIP_FILES)
+    PolkaDots(config).deploy()

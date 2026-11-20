@@ -1,82 +1,77 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 import subprocess
+from pathlib import Path
+from typing import Any
 
 import yaml
 
-FUZZEL_CONFIG = Path.home() / ".config/fuzzel/waybar.ini"
+FUZZEL_CONFIG = Path.home() / ".config" / "fuzzel" / "waybar.ini"
+DATA_FILE = Path(__file__).parent / "dates.yaml"
+EVENT_TYPES = ("weekly", "monthly", "yearly")
 
 
 class EventManager:
     def __init__(self, file_path: Path):
         self.file_path = file_path
 
-    def load(self) -> list[dict]:
-        """Loads and flattens weekly and scheduled events, marking their type."""
+    def load(self) -> list[dict[str, Any]]:
         if not self.file_path.exists():
             return []
-        with open(self.file_path, "r") as f:
-            data = yaml.safe_load(f) or {}
-        flattened_events = []
-        for item in data.get("weekly", []):
-            flattened_events.append(
-                {
-                    "name": item.get("name"),
-                    "date": item.get("date"),
-                    "due_days": item.get("due_in"),
-                    "type": "weekly",
-                }
-            )
-        for item in data.get("scheduled", []):
-            flattened_events.append(
-                {
-                    "name": item.get("name"),
-                    "date": item.get("date"),
-                    "due_days": item.get("days_before"),
-                    "type": "scheduled",
-                }
-            )
-        return flattened_events
 
-    def save(self, events: list[dict]) -> None:
-        data = {"weekly": [], "scheduled": []}
+        data = yaml.safe_load(self.file_path.read_text()) or {}
+        events = []
+        for event_type in EVENT_TYPES:
+            for item in data.get(event_type, []):
+                events.append(
+                    {
+                        "name": item.get("name"),
+                        "date": item.get("date"),
+                        "due_in": item.get("due_in"),
+                        "type": event_type,
+                    }
+                )
+
+        return events
+
+    def save(self, events: list[dict[str, Any]]) -> None:
+        data = {event_type: [] for event_type in EVENT_TYPES}
+
         for event in events:
-            if event["type"] == "weekly":
-                data["weekly"].append(
-                    {
-                        "name": event["name"],
-                        "date": event["date"],
-                        "due_in": event["due_days"],
-                    }
-                )
-            else:
-                data["scheduled"].append(
-                    {
-                        "name": event["name"],
-                        "date": event["date"],
-                        "days_before": event["due_days"],
-                    }
-                )
-        with open(self.file_path, "w") as f:
-            yaml.dump(data, f, sort_keys=False)
+            data[event["type"]].append(
+                {
+                    "name": event["name"],
+                    "date": event["date"],
+                    "due_in": event["due_in"],
+                }
+            )
 
-    def delete(self, name: str) -> None:
-        """Removes an event by name and commits changes."""
-        events = self.load()
-        self.save([e for e in events if e["name"] != name])
+        self.file_path.write_text(yaml.safe_dump(data, sort_keys=False))
 
-    def add(self, name: str, date: str, due_days: int) -> str:
-        """Appends a new event and returns its deduced category type."""
-        event_type = "scheduled"
-        if len(date) == 3 and date.isalpha():
+    def add(self, name: str, date_text: str, due_in: int | None) -> str:
+        date_text = date_text.strip()
+
+        if len(date_text) == 3 and date_text.isalpha():
             event_type = "weekly"
+        elif date_text.isdigit() and 1 <= int(date_text) <= 31:
+            event_type = "monthly"
+        else:
+            event_type = "yearly"
+
         events = self.load()
         events.append(
-            {"name": name, "date": date, "due_days": due_days, "type": event_type}
+            {
+                "name": name.strip(),
+                "date": date_text,
+                "due_in": due_in,
+                "type": event_type,
+            }
         )
         self.save(events)
         return event_type
+
+    def delete(self, name: str) -> None:
+        self.save([event for event in self.load() if event["name"] != name])
 
 
 class MenuUI:
@@ -84,14 +79,11 @@ class MenuUI:
         self.fuzzel_config = fuzzel_config
 
     def run_fuzzel(self, options: list[str], prompt: str) -> str | None:
-        if not options:
-            return None
-        width = max(map(len, options)) + 4
-        choice = subprocess.run(
+        result = subprocess.run(
             [
                 "fuzzel",
                 "--dmenu",
-                f"--width={width}",
+                f"--width={max(map(len, options)) + 4}",
                 "--config",
                 str(self.fuzzel_config),
                 "--lines",
@@ -102,23 +94,23 @@ class MenuUI:
             input="\n".join(options),
             text=True,
             capture_output=True,
-        ).stdout.strip()
-        return choice if choice else None
-
-    def run_zenity_entry(self, field_label: str) -> str | None:
-        """Prompts the user for a textual string input using Zenity."""
-        return (
-            subprocess.run(
-                ["zenity", "--entry", "--title=New Event", f"--text={field_label}"],
-                text=True,
-                capture_output=True,
-            ).stdout.strip()
-            or None
+            check=False,
         )
+        return result.stdout.strip() or None
 
-    def run_delete_picker(self, events: list[dict]) -> str | None:
-        """Displays selection layout using Zenity columns and yields target name."""
-        cmd = [
+    @staticmethod
+    def run_zenity_entry(label: str) -> str | None:
+        result = subprocess.run(
+            ["zenity", "--entry", "--title=New Event", f"--text={label}"],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        return result.stdout.strip() or None
+
+    @staticmethod
+    def run_delete_picker(events: list[dict[str, Any]]) -> str | None:
+        command = [
             "zenity",
             "--list",
             "--title=Delete Event",
@@ -131,11 +123,19 @@ class MenuUI:
             "--height=400",
             "--width=600",
         ]
-        for e in events:
-            cmd += [e["name"], str(e["date"]), str(e["due_days"]), e["type"]]
-        return (
-            subprocess.run(cmd, text=True, capture_output=True).stdout.strip() or None
-        )
+
+        for event in events:
+            command.extend(
+                [
+                    str(event["name"]),
+                    str(event["date"]),
+                    str(event["due_in"]),
+                    event["type"],
+                ]
+            )
+
+        result = subprocess.run(command, text=True, capture_output=True, check=False)
+        return result.stdout.strip() or None
 
 
 class App:
@@ -144,37 +144,51 @@ class App:
         self.ui = MenuUI()
 
     def run(self) -> None:
-        options = ["Create Event", "Delete Event", "Cancel"]
-        choice = self.ui.run_fuzzel(options, "Action: ")
-        if choice == "Create Event":
-            name = self.ui.run_zenity_entry("Event name:")
-            if not name:
-                return
-            date = self.ui.run_zenity_entry("Date (e.g., Sun or 02-14):")
-            if not date:
-                return
-            due_days_str = self.ui.run_zenity_entry("Days notice / Due in days:")
-            if not due_days_str:
-                return
-            try:
-                due_days = int(due_days_str)
-            except ValueError:
-                print("! Error: Due days must be an integer.")
-                return
-            event_type = self.manager.add(name, date, due_days)
-            print(f"+ created: {name} ({event_type})")
-        elif choice == "Delete Event":
-            events = self.manager.load()
-            if not events:
-                print("No events found to delete.")
-                return
-            selected = self.ui.run_delete_picker(events)
-            if selected:
-                self.manager.delete(selected)
-                print(f"- deleted: {selected}")
+        choice = self.ui.run_fuzzel(
+            ["Create Event", "Delete Event", "Cancel"],
+            "Action: ",
+        )
+
+        if choice == "Create Recurring Event":
+            self.create_event()
+        elif choice == "Delete Recurring Event":
+            self.delete_event()
+
+    def create_event(self) -> None:
+        name = self.ui.run_zenity_entry("Event name:")
+        if not name:
+            return
+
+        date_text = self.ui.run_zenity_entry(
+            "Enter Weekday e.g. Sun, Monthly date e.g. 15, or Yearly date e.g. 02-14):"
+        )
+        if not date_text:
+            return
+
+        due_text = self.ui.run_zenity_entry("Days notice (blank for none):")
+        if due_text is None:
+            return
+
+        try:
+            due_in = int(due_text) if due_text else None
+        except ValueError:
+            print("! Error: Days notice must be an integer or blank.")
+            return
+
+        event_type = self.manager.add(name, date_text, due_in)
+        print(f"+ created: {name} ({event_type})")
+
+    def delete_event(self) -> None:
+        events = self.manager.load()
+        if not events:
+            print("No events found to delete.")
+            return
+
+        selected = self.ui.run_delete_picker(events)
+        if selected:
+            self.manager.delete(selected)
+            print(f"- deleted: {selected}")
 
 
 if __name__ == "__main__":
-    DATA_FILE = Path(__file__).parent / "dates.yaml"
-    app = App(DATA_FILE)
-    app.run()
+    App(DATA_FILE).run()

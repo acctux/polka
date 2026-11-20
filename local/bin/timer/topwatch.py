@@ -9,6 +9,13 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+TIME_UNITS = (
+    ("hour", "󱦟", 3600),
+    ("minute", "󰔛", 60),
+    ("second", "󰨀", 1),
+)
+STATE_FILE = Path.home() / ".cache" / "timer_state.json"
+
 
 @dataclass
 class TimerState:
@@ -17,189 +24,205 @@ class TimerState:
     paused_rem: int = 0
 
 
+def parse_duration(text: str) -> int:
+    text = text.strip().lower()
+
+    if ":" in text:
+        parts = text.split(":")
+        if not all(part.isdigit() for part in parts):
+            return 0
+        values = list(map(int, parts))
+        if len(values) == 2:
+            return values[0] * 60 + values[1]
+        if len(values) == 3:
+            return values[0] * 3600 + values[1] * 60 + values[2]
+        return 0
+
+    tokens = re.findall(r"(\d+)([hms]?)", text)
+    if not tokens or "".join(value + unit for value, unit in tokens) != text:
+        return 0
+
+    multipliers = {"h": 3600, "m": 60, "s": 1, "": 1}
+    return sum(int(value) * multipliers[unit] for value, unit in tokens)
+
+
+def format_time_left(seconds: int) -> str:
+    hours, remainder = divmod(max(0, seconds), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes:02d}:{seconds:02d}"
+
+
 class WaybarTimer:
-    time_units = [("hour", "󱦟", 3600), ("minute", "󰔛", 60), ("second", "󰨀", 1)]
-
-    def __init__(self, state: TimerState, state_file: Path) -> None:
-        self.state = state
+    def __init__(self, state_file: Path) -> None:
         self.state_file = state_file
-        self._load()
+        self.state = self._load()
 
-    @staticmethod
-    def format_time_left(secs: int) -> str:
-        hours, remainder = divmod(max(0, secs), 3600)
-        minutes, seconds = divmod(remainder, 60)
-        if hours > 0:
-            return f"{hours}:{minutes:02d}:{seconds:02d}"
-        return f"{minutes:02d}:{seconds:02d}"
-
-    def parse_duration(self, text: str) -> int:
-        text = text.strip().lower()
-        if ":" in text:
-            parts = [int(x) for x in text.split(":") if x.isdigit()]
-            if len(parts) == 3:
-                return parts[0] * 3600 + parts[1] * 60 + parts[2]
-            if len(parts) == 2:
-                return parts[0] * 60 + parts[1]
-            return 0
-        tokens = re.findall(r"(\d+)([hms]?)", text)
-        if not tokens:
-            return 0
-        total_seconds = 0
-        for value_str, unit in tokens:
-            value = int(value_str)
-            if unit == "h":
-                total_seconds += value * 3600
-            elif unit == "m":
-                total_seconds += value * 60
-            else:
-                total_seconds += value
-        return total_seconds
-
-    def _load(self) -> None:
-        if self.is_active():
-            try:
-                cfg = json.loads(self.state_file.read_text(encoding="utf-8"))
-                self.state.unit_idx = int(cfg.get("unit_idx", 1)) % len(self.time_units)
-                self.state.target = int(cfg.get("target", 0))
-                self.state.paused_rem = int(cfg.get("paused_rem", 0))
-                return
-            except (json.JSONDecodeError, ValueError):
-                pass
-        self.state = TimerState()
+    def _load(self) -> TimerState:
+        try:
+            config = json.loads(self.state_file.read_text(encoding="utf-8"))
+            return TimerState(
+                unit_idx=int(config.get("unit_idx", 1)) % len(TIME_UNITS),
+                target=int(config.get("target", 0)),
+                paused_rem=int(config.get("paused_rem", 0)),
+            )
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            return TimerState()
 
     def save(self) -> None:
         try:
             self.state_file.parent.mkdir(parents=True, exist_ok=True)
             self.state_file.write_text(
-                json.dumps(asdict(self.state), ensure_ascii=False), encoding="utf-8"
+                json.dumps(asdict(self.state), ensure_ascii=False),
+                encoding="utf-8",
             )
-        except OSError as err:
-            sys.stderr.write(f"[Error]: Failed writing state: {err}\n")
-
-    def is_active(self) -> bool:
-        return self.state_file.exists()
+        except OSError as error:
+            print(f"[Error]: Failed writing state: {error}", file=sys.stderr)
 
     def clear(self) -> None:
         self.state_file.unlink(missing_ok=True)
         self.state = TimerState()
 
-    def get_remaining(self) -> int:
+    def remaining(self) -> int:
         if self.state.paused_rem > 0:
             return self.state.paused_rem
         return max(0, self.state.target - int(time.time()))
 
+    def notify(self, message: str) -> None:
+        subprocess.run(
+            ["notify-send", "-a", "Timer", "-i", "alarm-timer", message],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+
     def start(self, text: str) -> None:
-        total_seconds = self.parse_duration(text)
-        if total_seconds > 0:
-            self.state.target = int(time.time()) + total_seconds
-            self.state.paused_rem = 0
-            self._update_and_notify(f"Started—{self.format_time_left(total_seconds)}")
-            self.save()
+        seconds = parse_duration(text)
+        if seconds <= 0:
+            return
+
+        self.state.target = int(time.time()) + seconds
+        self.state.paused_rem = 0
+        self.save()
+        self.notify(f"Started—{format_time_left(seconds)}")
 
     def toggle_pause(self) -> None:
-        rem = self.get_remaining()
-        if rem <= 0:
+        seconds = self.remaining()
+        if seconds <= 0:
             self.clear()
-            self._update_and_notify("Timer Cleared.")
+            self.notify("Timer Cleared.")
             return
-        if self.state.paused_rem > 0:
-            self.state.target = int(time.time()) + rem
+
+        if self.state.paused_rem:
+            self.state.target = int(time.time()) + seconds
             self.state.paused_rem = 0
-            self._update_and_notify(f"Resumed — {self.format_time_left(rem)}")
+            message = f"Resumed — {format_time_left(seconds)}"
         else:
-            self.state.paused_rem = rem
+            self.state.paused_rem = seconds
             self.state.target = 0
-            self._update_and_notify(f"Paused — {self.format_time_left(rem)}")
+            message = f"Paused — {format_time_left(seconds)}"
+
         self.save()
+        self.notify(message)
 
     def adjust(self, direction: int) -> None:
-        remaining = self.get_remaining()
-        sec_factor = self.time_units[self.state.unit_idx][2]
-        new_rem = max(0, remaining + direction * sec_factor)
-        if new_rem == 0:
-            self._update_and_notify("Timer cleared.")
+        seconds = max(
+            0,
+            self.remaining() + direction * TIME_UNITS[self.state.unit_idx][2],
+        )
+
+        if seconds == 0:
             self.clear()
+            self.notify("Timer cleared.")
+        elif self.state.paused_rem:
+            self.state.paused_rem = seconds
+            self.save()
         else:
-            if self.state.paused_rem > 0:
-                self.state.paused_rem = new_rem
-            else:
-                self.state.target = int(time.time()) + new_rem
+            self.state.target = int(time.time()) + seconds
             self.save()
 
     def cycle_unit(self) -> None:
-        self.state.unit_idx = (self.state.unit_idx + 1) % len(self.time_units)
-        if self.is_active():
+        self.state.unit_idx = (self.state.unit_idx + 1) % len(TIME_UNITS)
+        if self.state_file.exists():
             self.save()
-        self._update_and_notify(
-            f"Scroll Mode: {self.time_units[self.state.unit_idx][0]}"
-        )
+        self.notify(f"Scroll Mode: {TIME_UNITS[self.state.unit_idx][0]}")
 
-    def _update_and_notify(self, msg: str) -> None:
-        try:
-            cmd = ["notify-send", "-a", "Timer", "-i", "alarm-timer", msg]
-            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            print(msg)
-
-    def handle_waybar_output(self) -> None:
-        if not self.is_active():
+    def print_status(self) -> None:
+        if not self.state_file.exists():
             print(json.dumps({"text": ""}))
             return
-        rem = self.get_remaining()
-        txt = self.format_time_left(rem)
-        if self.state.paused_rem > 0:
-            out, tooltip, cls = f"⏸ {txt}", f"Paused\nRemaining: {txt}\t", "paused"
-        elif rem <= 0:
-            out, tooltip, cls = "󰀨 DONE!", "Timer finished!", "finished"
-            cmd = ["paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga"]
-            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        seconds = self.remaining()
+        text = format_time_left(seconds)
+
+        if self.state.paused_rem:
+            result = {
+                "text": f"⏸ {text}",
+                "tooltip": f"Paused\nRemaining: {text}\t",
+                "class": "paused",
+            }
+        elif seconds <= 0:
+            result = {
+                "text": "󰀨 DONE!",
+                "tooltip": "Timer finished!",
+                "class": "finished",
+            }
+            subprocess.Popen(
+                ["paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         else:
-            out, tooltip, cls = (
-                f"{self.time_units[self.state.unit_idx][1]} {txt}",
-                f"Running\nRemaining: {txt}\t",
-                "running",
-            )
-        print(
-            json.dumps(
-                {"text": out, "tooltip": tooltip, "class": cls}, ensure_ascii=False
-            )
-        )
+            result = {
+                "text": f"{TIME_UNITS[self.state.unit_idx][1]} {text}",
+                "tooltip": f"Running\nRemaining: {text}\t",
+                "class": "running",
+            }
+
+        print(json.dumps(result, ensure_ascii=False))
 
 
 def main() -> int:
-    timer = WaybarTimer(TimerState(), Path.home() / ".cache" / "timer_state.json")
     parser = argparse.ArgumentParser(add_help=False)
-    for opt in ["--status", "--stop", "--toggle", "--unit", "--up", "--down"]:
-        parser.add_argument(opt, action="store_true")
+    for option in ("--status", "--stop", "--toggle", "--unit", "--up", "--down"):
+        parser.add_argument(option, action="store_true")
     args, _ = parser.parse_known_args()
-    if not timer.is_active() and any([args.stop, args.toggle, args.down]):
+
+    timer = WaybarTimer(STATE_FILE)
+
+    if not timer.state_file.exists() and (args.stop or args.toggle or args.down):
         return 0
-    actions = [
-        (args.status, timer.handle_waybar_output),
+
+    actions = (
+        (args.status, timer.print_status),
         (args.stop, timer.clear),
         (args.toggle, timer.toggle_pause),
         (args.unit, timer.cycle_unit),
         (args.up, lambda: timer.adjust(1)),
         (args.down, lambda: timer.adjust(-1)),
-    ]
-    for flag, action in actions:
-        if flag:
+    )
+
+    for enabled, action in actions:
+        if enabled:
             action()
-            break
-    else:
-        cmd = [
+            return 0
+
+    result = subprocess.run(
+        [
             "zenity",
             "--entry",
             "--width=450",
             "--title=Timer",
             "--text=Duration (e.g., 25m, 1h30m, 90)",
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        if res.returncode == 0 and res.stdout.strip():
-            timer.start(res.stdout.strip())
-        else:
-            return 0
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        timer.start(result.stdout.strip())
+
     return 0
 
 

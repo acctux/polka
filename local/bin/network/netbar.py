@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
+
 import json
 import subprocess
 from pathlib import Path
 
-CACHE = Path("/tmp/waybar-wifi.json")
 ICONS = ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"]
 
 
@@ -18,37 +18,31 @@ def run(cmd: list) -> str:
 
 def is_running(service_name: str) -> bool:
     try:
-        return (
-            subprocess.run(
-                ["systemctl", "is-active", service_name],
-                capture_output=True,
-                text=True,
-            ).returncode
-            == 0
-        )
+        code = subprocess.run(
+            ["systemctl", "is-active", service_name],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).returncode
+        return code == 0
     except subprocess.CalledProcessError:
         return False
 
 
 def get_ufw_status() -> str:
+    ufw_status = "UFW Missing"
     if is_running("ufw"):
-        conf = Path("/etc/ufw/ufw.conf")
-        if not conf.exists():
-            return "UFW Missing"
-        try:
-            for line in conf.read_text().splitlines():
-                line = line.strip()
-                if line.startswith("ENABLED="):
-                    enabled = line.split("=", 1)[1].lower()
-                    if enabled == "yes":
-                        return "UFW Enabled"
-                    elif enabled == "no":
-                        return "UFW Disabled"
-            return "UFW Unknown"
-        except Exception:
-            return "UFW Error"
+        for line in Path("/etc/ufw/ufw.conf").read_text().splitlines():
+            line = line.strip()
+            if line.startswith("ENABLED="):
+                enabled = line.split("=", 1)[1].lower()
+                if enabled == "yes":
+                    ufw_status = "UFW Enabled"
+                elif enabled == "no":
+                    ufw_status = "UFW Disabled"
     else:
-        return "UFW Not Running"
+        ufw_status = "UFW Not Running"
+    return ufw_status
 
 
 def find_interface() -> str:
@@ -109,16 +103,12 @@ def main():
         f"↑ : {int(rx)}M\t",
         f"↓ : {int(tx)}M\t",
     ]
-    print(
-        json.dumps(
-            {
-                "text": icon,
-                "tooltip": "\n".join(tooltip),
-                "class": "vpn" if vpn else "",
-            },
-            ensure_ascii=False,
-        )
-    )
+    waybar_info = {
+        "text": icon,
+        "tooltip": "\n".join(tooltip),
+        "class": "vpn" if vpn else "",
+    }
+    print(json.dumps(waybar_info, ensure_ascii=False))
 
 
 if __name__ == "__main__":

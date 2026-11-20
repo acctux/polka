@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from pathlib import Path
+
 import subprocess
+from pathlib import Path
 
 CONF_PATH = Path.home() / ".config" / "fuzzel" / "clipboard.ini"
 MAX_WIDTH = 44
@@ -68,4 +69,3 @@ def get_menu_map(max_entries: int = MAX_ENTRIES) -> dict[str, str]:
 if __name__ == "__main__":
     menu_map = get_menu_map()
     run_fuzz(menu_map)
-

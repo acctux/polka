@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-from pathlib import Path
-import time
+
 import subprocess
+import time
+from pathlib import Path
 
 HOME = Path.home()
 ONLINE_PATH = "/sys/class/power_supply/ADP0/online"
@@ -18,19 +19,20 @@ def get_ac_state(path: str) -> str:
 
 
 def notify(msg: str, profile: str):
-    cmd = [
-        "notify-send",
-        msg,
-        profile,
-        "-i",
-        "/usr/share/icons/WhiteSur-dark/devices/scalable/battery.svg",
-    ]
-    subprocess.run(cmd)
+    subprocess.run(
+        [
+            "notify-send",
+            msg,
+            profile,
+            "-i",
+            "/usr/share/icons/WhiteSur-dark/devices/scalable/battery.svg",
+        ],
+        check=False,
+    )
 
 
 def run_tuned(power_script: Path, msg: str, profile: str, hz: int):
-    cmd = [str(power_script), profile, str(hz)]
-    subprocess.run(cmd)
+    subprocess.run([str(power_script), profile, str(hz)], check=False)
     notify(msg, f"Profile: {profile} | Refresh rate: {hz}Hz")
 
 

@@ -1,86 +1,104 @@
 #!/usr/bin/env python3
+
 import asyncio
 import json
 import subprocess
-import os
 import time
 from pathlib import Path
+
 from dbus_fast import Variant
 from dbus_fast.aio import MessageBus
 from dbus_fast.constants import MessageType
 from dbus_fast.message import Message
 
+
 WAYBAR_SIGNAL = 6
+STATE_FILE = Path.home() / ".cache" / "emailcheck" / "last_email.json"
+MAX_EMAILS = 15
+NOTIFICATION_TIMEOUT = 30
 
 
-def run(cmd: list[str]) -> subprocess.CompletedProcess:
+def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, check=True, capture_output=True, text=True)
 
 
-def neomutt_running() -> bool:
-    for pid in os.listdir("/proc"):
-        if pid.isdigit():
-            try:
-                with open(os.path.join("/proc", pid, "comm"), "r") as f:
-                    process_name = f.read().strip()
-                    if process_name == "neomutt":
-                        return True
-            except Exception:
-                continue
-    return False
-
-
 def refresh_mail() -> None:
-    check_cmd = ["systemctl", "--user", "is-active", "--quiet", "protonmail-bridge"]
     try:
-        run(check_cmd)
+        run(["systemctl", "--user", "is-active", "--quiet", "protonmail-bridge"])
     except subprocess.CalledProcessError:
-        # If it raises an error (exit code 3), the service is NOT running.
-        start_cmd = ["systemctl", "--user", "start", "protonmail-bridge"]
-        run(start_cmd)
+        run(["systemctl", "--user", "start", "protonmail-bridge"])
         time.sleep(60)
-    cmd = ["mbsync", "-Va"]
-    run(cmd)
+
+    run(["mbsync", "-Va"])
     time.sleep(1)
-    cmd = ["notmuch", "new"]
-    run(cmd)
+    run(["notmuch", "new"])
 
 
-def remove_inbox_tag(msg_id: str):
-    run(["notmuch", "tag", "-inbox", f"id:{msg_id}"])
+def load_last_message_id() -> str:
+    try:
+        messages = json.loads(STATE_FILE.read_text())
+        return messages[0].get("id", "") if messages else ""
+    except (OSError, json.JSONDecodeError, AttributeError, TypeError):
+        return ""
 
 
-def get_msg_ids(
-    last_id: str, max_email: int
-) -> tuple[list[tuple[str, str, str]], list[tuple[str, str, str]]]:
-    cmd = [
-        "notmuch",
-        "search",
-        "--output=messages",
-        "--limit",
-        str(max_email),
-        "--format=json",
-        "tag:inbox and tag:unread",
+def save_unread_messages(messages: list[tuple[str, str, str]]) -> None:
+    data = [
+        {"id": msg_id, "sender": sender, "subject": subject}
+        for msg_id, sender, subject in messages
     ]
-    unread_emails = []
-    new_unread_emails = []
-    stop_counting = False
-    for msg_id in json.loads(run(cmd).stdout):
-        cmd = ["notmuch", "show", "--format=json", f"id:{msg_id}"]
-        raw = json.loads(run(cmd).stdout)[0][0][0]["headers"]
-        sender = raw.get("From", "")
-        subject = raw.get("Subject", "")
-        unread_emails.append((msg_id, sender, subject))
-        if msg_id == last_id:
-            stop_counting = True
-        if not stop_counting:
-            new_unread_emails.append((msg_id, sender, subject))
-    return new_unread_emails, unread_emails
+
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    temporary_file = STATE_FILE.with_suffix(".tmp")
+    temporary_file.write_text(json.dumps(data, indent=2))
+    temporary_file.replace(STATE_FILE)
 
 
-async def notify_and_listen(new_emails: list[tuple[str, str, str]]) -> None:
+def get_unread_messages(
+    last_message_id: str, limit: int
+) -> tuple[list[tuple[str, str, str]], list[tuple[str, str, str]]]:
+    result = run(
+        [
+            "notmuch",
+            "search",
+            "--output=messages",
+            "--limit",
+            str(limit),
+            "--format=json",
+            "tag:inbox and tag:unread",
+        ]
+    )
+    message_ids = json.loads(result.stdout)
+
+    unread: list[tuple[str, str, str]] = []
+    new_unread: list[tuple[str, str, str]] = []
+    found_last_message = False
+
+    for message_id in message_ids:
+        details = json.loads(
+            run(["notmuch", "show", "--format=json", f"id:{message_id}"]).stdout
+        )
+        headers = details[0][0][0]["headers"]
+        message = (
+            message_id,
+            headers.get("From", ""),
+            headers.get("Subject", ""),
+        )
+        unread.append(message)
+
+        if not found_last_message:
+            if message_id == last_message_id:
+                found_last_message = True
+            else:
+                new_unread.append(message)
+
+    return new_unread, unread
+
+
+async def notify_and_listen(emails: list[tuple[str, str, str]]) -> None:
     bus = await MessageBus().connect()
     match_rule = "type='signal',interface='org.freedesktop.Notifications'"
+
     await bus.call(
         Message(
             destination="org.freedesktop.DBus",
@@ -91,92 +109,92 @@ async def notify_and_listen(new_emails: list[tuple[str, str, str]]) -> None:
             body=[match_rule],
         )
     )
-    sent_ids = set()
-    loop_control = asyncio.get_running_loop().create_future()
 
-    def match_signal(msg: Message) -> None:
+    pending_notifications: set[int] = set()
+    finished = asyncio.get_running_loop().create_future()
+
+    def handle_signal(message: Message) -> None:
         if (
-            loop_control.done()
-            or msg.message_type != MessageType.SIGNAL
-            or not msg.body
-            or msg.body[0] not in sent_ids
+            finished.done()
+            or message.message_type != MessageType.SIGNAL
+            or not message.body
+            or message.body[0] not in pending_notifications
         ):
             return
-        msg_id = msg.body[0]
-        if msg.member == "ActionInvoked" and msg.body[1] == "default":
-            subprocess.Popen(["kitty", "neomutt"])
-            loop_control.set_result(True)
-        elif msg.member == "NotificationClosed":
-            sent_ids.discard(msg_id)
-            if not sent_ids:
-                loop_control.set_result(False)
 
-    bus.add_message_handler(match_signal)
-    hints = {"urgency": Variant("y", 1)}
-    actions = ["default", ""]
-    for _, sender, subject in reversed(new_emails):
-        reply = await bus.call(
-            Message(
-                destination="org.freedesktop.Notifications",
-                path="/org/freedesktop/Notifications",
-                interface="org.freedesktop.Notifications",
-                member="Notify",
-                signature="susssasa{sv}i",
-                body=[
-                    "Email Check",
-                    0,
-                    "thunderbird",
-                    sender,
-                    subject,
-                    actions,
-                    hints,
-                    -1,
-                ],
-            )
-        )
-        if reply.body:
-            sent_ids.add(reply.body[0])
+        notification_id = message.body[0]
+
+        if message.member == "ActionInvoked" and len(message.body) > 1:
+            if message.body[1] == "default":
+                subprocess.Popen(["kitty", "neomutt"])
+                finished.set_result(None)
+        elif message.member == "NotificationClosed":
+            pending_notifications.discard(notification_id)
+            if not pending_notifications:
+                finished.set_result(None)
+
+    bus.add_message_handler(handle_signal)
+
     try:
-        await asyncio.wait_for(loop_control, timeout=30.0)
-    except asyncio.TimeoutError:
-        pass
-    finally:
-        try:
-            await bus.call(
+        for _, sender, subject in reversed(emails):
+            reply = await bus.call(
                 Message(
-                    destination="org.freedesktop.DBus",
-                    path="/org/freedesktop/DBus",
-                    interface="org.freedesktop.DBus",
-                    member="RemoveMatch",
-                    signature="s",
-                    body=[match_rule],
+                    destination="org.freedesktop.Notifications",
+                    path="/org/freedesktop/Notifications",
+                    interface="org.freedesktop.Notifications",
+                    member="Notify",
+                    signature="susssasa{sv}i",
+                    body=[
+                        "Email Check",
+                        0,
+                        "thunderbird",
+                        sender,
+                        subject,
+                        ["default", ""],
+                        {"urgency": Variant("y", 1)},
+                        -1,
+                    ],
                 )
             )
-        except Exception:
+            if reply.body:
+                pending_notifications.add(reply.body[0])
+
+        if not pending_notifications:
+            return
+
+        try:
+            await asyncio.wait_for(finished, timeout=NOTIFICATION_TIMEOUT)
+        except TimeoutError:
             pass
+    finally:
+        await bus.call(
+            Message(
+                destination="org.freedesktop.DBus",
+                path="/org/freedesktop/DBus",
+                interface="org.freedesktop.DBus",
+                member="RemoveMatch",
+                signature="s",
+                body=[match_rule],
+            )
+        )
         bus.disconnect()
 
 
 async def main() -> None:
-    STATE_FILE = Path.home() / ".cache" / "emailcheck" / "last_email.json"
     refresh_mail()
-    try:
-        last_id = json.loads(STATE_FILE.read_text())[0].get("id", "")
-    except Exception:
-        last_id = ""
-    new_emails, unread_emails = get_msg_ids(last_id, max_email=15)
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    cache_list = []
-    for id, author, subject in unread_emails:
-        cache_list.append({"id": id, "sender": author, "subject": subject})
-    STATE_FILE.write_text(json.dumps(cache_list, indent=2))
-    if unread_emails:
-        subprocess.run(
-            ["pkill", f"-RTMIN+{WAYBAR_SIGNAL}", "waybar"], capture_output=True
-        )
+
+    new_emails, unread_emails = get_unread_messages(
+        load_last_message_id(),
+        limit=MAX_EMAILS,
+    )
+    save_unread_messages(unread_emails)
+
     if new_emails:
         await notify_and_listen(new_emails)
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+    subprocess.run(
+        ["pkill", f"-RTMIN+{WAYBAR_SIGNAL}", "waybar"], capture_output=True, check=False
+    )
