@@ -6,12 +6,14 @@
   transition: all 0.75s ease;
   font-feature-settings: '"zero","ss01","ss02","ss03","ss04","ss05","cv31"';
 }
+
 /* === Waybar Window === */
 window#waybar {
   background-color: transparent;
   padding: 0;
   border: 0;
 }
+
 button {
   padding: 0 4px;
   margin: 0;
@@ -19,31 +21,36 @@ button {
   min-height: 0;
   box-shadow: none;
 }
+
 /* === Tooltip === */
 tooltip {
-  background: rgba(16,16,19,0.7);
+  background: rgba(16, 16, 19, 0.7);
   padding: 0;
   border-radius: 10px;
   font-size: 15px;
   border: 1px solid rgba(51, 204, 255, 0.7);
 }
+
 tooltip label {
   font-size: 16px;
   background: transparent;
   font-weight: 400;
 }
+
 /* === Module Containers === */
 .modules-left,
 .modules-right {
-  border: 1px solid rgba(30,58,138,0.7);
-  background-color: rgba(16,16,19,0.7);
+  border: 1px solid rgba(30, 58, 138, 0.7);
+  background-color: rgba(16, 16, 19, 0.7);
   border-radius: 4px;
 }
+
 /* === Shared Spacing === */
 #workspaces button {
   padding: 0 2px;
   border-radius: 5px;
 }
+
 /* === Shared Borders === */
 #custom-kb-switch,
 #custom-weather,
@@ -53,11 +60,13 @@ tooltip label {
 #custom-updates {
   border-right: 1px solid #33ccff;
 }
+
 #custom-kb-switch,
 #custom-logo,
 #custom-line {
   border-left: 1px solid #33ccff;
 }
+
 /* === Shared Font Sizes === */
 #custom-volume,
 #custom-steam,
@@ -74,6 +83,7 @@ tooltip label {
 #custom-logo {
   font-size: 17px;
 }
+
 /* === Border Radius === */
 #custom-wifi,
 #custom-email,
@@ -88,6 +98,7 @@ tooltip label {
 #custom-kdeconnect {
   border-radius: 5px;
 }
+
 /* === Colors === */
 #custom-logo,
 #custom-weather.cyan,
@@ -95,9 +106,11 @@ tooltip label {
 #battery {
   color: #33ccff;
 }
+
 #custom-weather.grey {
   color: #828385;
 }
+
 #custom-tuned.active,
 #custom-updates,
 #custom-email,
@@ -108,12 +121,14 @@ tooltip label {
 #battery.charging {
   color: #00ff99;
 }
+
 #custom-updates.yellow,
 #custom-weather.yellow,
 #custom-logo.notification,
 #battery.warning {
   color: #ffee33;
 }
+
 #custom-taskwarrior.critical,
 #custom-updates.red,
 #custom-weather.red,
@@ -122,22 +137,27 @@ tooltip label {
 #battery.critical {
   color: #ff3232;
 }
+
 /* === Individual === */
 #battery {
   padding-right: 4px;
   padding-left: 4px;
 }
+
 #battery.warning {
   background-color: inherit;
 }
+
 #battery.critical {
   background-color: #ff3232;
   color: #ffee33;
 }
+
 #custom-fav {
   padding-right: 8px;
   padding-left: 5px;
 }
+
 #cpu,
 #temperature,
 #custom-sysinfo,
@@ -146,134 +166,162 @@ tooltip label {
   padding-right: 0;
   padding-left: 2px;
 }
+
 #temperature {
   padding-left: 4px;
 }
+
 #custom-sysinfo {
   padding-right: 8px;
   padding-left: 0;
 }
+
 #disk {
   padding-left: 5px;
 }
+
 #temperature {
   padding-right: 5px;
 }
+
 #custom-updates {
   padding-right: 9px;
   padding-left: 5px;
 }
+
 #custom-deluge {
   padding-right: 9px;
   padding-left: 5px;
 }
+
 #custom-email {
   padding-right: 9px;
   padding-left: 4px;
 }
+
 #custom-wifi {
   padding-right: 10px;
   padding-left: 3px;
 }
+
 #clock {
   padding: 0 4px;
 }
+
 #custom-telegram {
   padding-right: 9px;
   padding-left: 4px;
 }
- #custom-kb-switch {
+
+#custom-kb-switch {
   padding: 0 5px;
 }
+
 #custom-volume {
   padding-right: 7px;
   padding-left: 5px;
 }
+
 #custom-volume.playing {
- font-weight: 500;
+  font-weight: 500;
   padding-left: 3px;
   padding-right: 5px;
 }
+
 #custom-weather {
   padding-right: 4px;
   padding-left: 4px;
 }
+
 #custom-steam,
 #bluetooth {
   padding-right: 8px;
   padding-left: 5px;
 }
+
 #custom-tuned {
   padding-right: 10px;
   padding-left: 5px;
 }
+
 #backlight {
   padding-right: 8px;
   padding-left: 5px;
 }
+
 #custom-kdeconnect {
   padding-right: 10px;
   padding-left: 3px;
 }
+
 #custom-logo {
   padding-right: 9px;
   padding-left: 4px;
 }
+
 #custom-empty {
   font-size: 5px;
 }
+
 #custom-taskwarrior {
   padding-right: 4px;
   padding-left: 6px;
 }
+
 /* === Hover Effects === */
-#custom-kdeconnect:hover,
-#custom-timer:hover,
-#custom-email:hover,
-#custom-steam:hover,
+box:hover>#custom-kdeconnect,
+box:hover>#custom-timer,
+box:hover>#custom-email,
+box:hover>#custom-steam,
 #backlight:hover,
-#custom-tuned:hover,
-#custom-fav:hover,
-#custom-deluge:hover,
-#custom-telegram:hover,
+box:hover>#custom-tuned,
+box:hover>#custom-fav,
+box:hover>#custom-deluge,
+box:hover>#custom-telegram,
 #bluetooth:hover,
-#custom-wifi:hover,
-#custom-volume:hover {
+box:hover>#custom-wifi,
+box:hover>#custom-volume {
   box-shadow: inset 0 0 0 1px #00ff99;
-  background-color: rgba(16,16,19,0.3);
+  background-color: rgba(16, 16, 19, 0.3);
   color: #33ccff;
 }
+
 #workspaces button.active {
   padding-right: 4px;
   padding-left: 2px;
 }
+
 #custom-timer:hover {
   border-radius: 5px;
 }
+
 #workspaces button.active,
 #workspaces button:hover {
   background: inherit;
   border-radius: 5px;
   color: #00ff99;
 }
-#custom-weather:hover,
-#custom-logo:hover,
-#custom-updates:hover,
-#custom-kb-switch:hover,
+
+box:hover>#custom-weather,
+box:hover>#custom-logo,
+box:hover>#custom-updates,
+box:hover>#custom-kb-switch,
 #clock:hover,
-#custom-updates:hover,
-#custom-taskwarrior:hover,
+box:hover>#custom-updates,
+box:hover>#custom-taskwarrior,
 #cpu:hover,
 #memory:hover,
 #disk:hover,
 #temperature:hover {
-  background-color: rgba(16,16,19,0.3);
+  background-color: rgba(16, 16, 19, 0.3);
   color: #33ccff;
 }
+
 #battery:hover {
   color: #33ccff;
 }
+
 #custom-tuned.active,
-#custom-logo:hover {
+box:hover>#custom-logo {
   color: #00ff99;
 }

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+
+import os
+import re
+import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
-import os
-import shutil
-import re
 
 PHONE_PATH = Path.home() / "Phone"
 ANDROID_MOUNT = PHONE_PATH / "Internal"
@@ -19,7 +20,11 @@ PHONE_ICON = "/usr/share/icons/WhiteSur-dark/places/scalable/folder-android.svg"
 
 def run(cmd, check=False):
     result = subprocess.run(
-        cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        cmd,
+        shell=True,
+        text=True,
+        capture_output=True,
+        check=False,
     )
     if check and result.returncode != 0:
         raise subprocess.CalledProcessError(result.returncode, cmd)
@@ -29,7 +34,7 @@ def run(cmd, check=False):
 def select_device():
     output = run("kdeconnect-cli -l")
     if output:
-        devices = re.findall(r"- .*?: ([a-f0-9]{8,})", output, re.I)
+        devices = re.findall(r"- .*?: ([a-f0-9]{8,})", output, re.IGNORECASE)
         if not devices:
             sys.exit("No KDE Connect devices found.")
         if len(devices) == 1:

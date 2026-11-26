@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
-import yaml
+import json
 import random
 import subprocess
-from pathlib import Path
-import json
-from wand.image import Image as WandImage
-from wand.drawing import Drawing
-from wand.color import Color
 from dataclasses import dataclass
+from pathlib import Path
+
+import yaml
+from wand.color import Color
+from wand.drawing import Drawing
+from wand.image import Image as WandImage
 
 HOME = Path.home()
 CACHE_DIR = HOME / ".cache" / "wall"
@@ -55,9 +56,15 @@ def load_quotes_from_yaml(file_path: Path) -> list[Quote]:
 
 
 def load_cache(path: Path) -> dict:
+    # OSError = missing file or permission error; UnicodeError = text-decoding error
     try:
-        return json.loads(path.read_text())
-    except Exception:
+        text = path.read_text()
+    except (OSError, UnicodeError):
+        return {}
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
         return {}
 
 

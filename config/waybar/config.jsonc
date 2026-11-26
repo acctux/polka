@@ -240,7 +240,7 @@
     "tooltip": true,
     "on-click": "kitty wiremix & disown",
     "on-click-middle": "kitty rmpc & disown",
-    "on-click-right": "playerctl play-pause"
+    "on-click-right": "~/.local/bin/mpd/playpause.py"
   },
   "custom/deluge": {
     "format": "{}",

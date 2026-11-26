@@ -43,10 +43,9 @@ def load_last_message_id() -> str:
 
 
 def save_unread_messages(messages: list[tuple[str, str, str]]) -> None:
-    data = [
-        {"id": msg_id, "sender": sender, "subject": subject}
-        for msg_id, sender, subject in messages
-    ]
+    data = []
+    for msg_id, sender, subject in messages:
+        data.append({"id": msg_id, "sender": sender, "subject": subject})
 
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     temporary_file = STATE_FILE.with_suffix(".tmp")

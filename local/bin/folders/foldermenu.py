@@ -8,7 +8,7 @@ HOME = Path.home()
 DESKTOP = HOME / "Desktop"
 PLAIN_DIR = DESKTOP / "Decrypted"
 LOCKED_DIR = DESKTOP / "Private"
-FUZZEL_CONFIG = HOME / ".config/fuzzel/waybar.ini"
+FUZZEL_CONFIG = HOME / ".config" / "fuzzel" / "waybar.ini"
 UNLOCKED_ICON = Path(
     "/usr/share/icons/WhiteSur-dark/places/scalable/folder-unlocked.svg"
 )

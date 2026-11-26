@@ -6,8 +6,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-INDEX_FILE = Path.home() / ".cache/powerscroll/power_index"
-POWER_SCRIPT = Path.home() / ".local/bin/power/tuned.py"
+INDEX_FILE = Path.home() / ".cache" / "powerscroll" / "power_index"
+POWER_SCRIPT = Path.home() / ".local" / "bin" / "power" / "tuned.py"
 WAYBAR_SIGNAL = 2
 
 
@@ -42,7 +42,11 @@ def scroll_state(index: int, direction: str) -> None:
 def get_output(command: list[str]) -> str:
     try:
         result = subprocess.run(
-            command, capture_output=True, text=True, check=True, timeout=2
+            command,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=2,
         )
         return result.stdout.strip()
     except (OSError, subprocess.SubprocessError):

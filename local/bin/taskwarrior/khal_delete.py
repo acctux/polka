@@ -4,7 +4,7 @@ import re
 import subprocess
 from pathlib import Path
 
-CALENDAR_DIR = Path.home() / "Desktop/Calendar"
+CALENDAR_DIR = Path.home() / "Desktop" / "Calendar"
 SEPARATOR = "|"
 
 

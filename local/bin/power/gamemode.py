@@ -11,13 +11,15 @@ def manage_services(gamemode_action: str, services: list[str] = SERVICES) -> Non
         "start": "stop",
         "stop": "start",
     }
-    systemd_action = action_map[gamemode_action]
+    sysd_action = action_map[gamemode_action]
     for service in services:
-        cmd = ["systemctl", "--user", systemd_action, service]
         subprocess.run(
-            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
+            ["systemctl", "--user", sysd_action, service],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
         )
-        print(f"Service '{service}' has been {systemd_action}ed.")
+        print(f"Service '{service}' has been {sysd_action}ed.")
 
 
 if __name__ == "__main__":

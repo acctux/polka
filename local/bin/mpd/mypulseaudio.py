@@ -1,61 +1,128 @@
 #!/usr/bin/env python3
 
+import asyncio
 import html
 import json
-import subprocess
 import time
 from pathlib import Path
 
+from dbus_fast import BusType
+from dbus_fast.aio import MessageBus
+from dbus_fast.constants import MessageType
+from dbus_fast.message import Message
+
+
 TOOLTIP_FUNCTIONS = "\nLeft: Wiremix\t\nRight: Pause/Play\t\nMiddle: Rmpc\t"
-ICONS_MAP = [(0, "󰝟"), (29, "󰕿"), (64, "󰖀"), (100, "󰕾")]
-SEPERATOR = "  "
+ICONS_MAP = {0: "󰝟", 29: "󰕿", 64: "󰖀", 100: "󰕾"}
+SEPARATOR = "  "
+EXCLUDED_PLAYERS = {"JBL_Go_4"}
+DEFAULT_ICON = "󰕾"
+
 CACHE_FILE = Path.home() / ".cache" / "pulse_scroll" / "nowplaying_scroll.json"
+PLAYER_INTERFACE = "org.mpris.MediaPlayer2.Player"
+MPRIS_PREFIX = "org.mpris.MediaPlayer2."
+MPRIS_PATH = "/org/mpris/MediaPlayer2"
 
 
-def playerctl_info(cmd) -> str:
-    full_cmd = ["playerctl"] + cmd
-    return subprocess.run(
-        full_cmd, capture_output=True, text=True, check=False
-    ).stdout.strip()
+def unwrap(value):
+    while hasattr(value, "value"):
+        value = value.value
+    return value
 
 
-def get_active_player(excluded: list[str]) -> str:
-    running_player = ""
-    data = playerctl_info(["-l"]).splitlines()
-    for player in data:
-        if player == "No players found":
+async def get_active_track() -> str:
+    bus = await MessageBus(bus_type=BusType.SESSION).connect()
+
+    try:
+        reply = await bus.call(
+            Message(
+                destination="org.freedesktop.DBus",
+                path="/org/freedesktop/DBus",
+                interface="org.freedesktop.DBus",
+                member="ListNames",
+            )
+        )
+        if reply.message_type == MessageType.ERROR:
             return ""
-        if player in excluded:
-            continue
-        status = playerctl_info(["--player", player, "status"])
-        if status == "Playing":
-            running_player = player
-    return running_player
+
+        players = sorted(
+            name
+            for name in reply.body[0]
+            if name.startswith(MPRIS_PREFIX)
+            and name.removeprefix(MPRIS_PREFIX) not in EXCLUDED_PLAYERS
+        )
+
+        for player in players:
+            reply = await bus.call(
+                Message(
+                    destination=player,
+                    path=MPRIS_PATH,
+                    interface="org.freedesktop.DBus.Properties",
+                    member="GetAll",
+                    signature="s",
+                    body=[PLAYER_INTERFACE],
+                )
+            )
+            if reply.message_type == MessageType.ERROR:
+                continue
+
+            props = {key: unwrap(value) for key, value in reply.body[0].items()}
+            if props.get("PlaybackStatus") != "Playing":
+                continue
+
+            metadata = props.get("Metadata", {})
+            artist = unwrap(metadata.get("xesam:artist", []))
+            title = unwrap(metadata.get("xesam:title", ""))
+
+            if isinstance(artist, (list, tuple)):
+                artist = ", ".join(map(str, artist))
+
+            return f"{artist} – {title}" if artist and title else str(artist or title)
+
+        return ""
+    finally:
+        bus.disconnect()
 
 
-def get_metadata(player: str) -> str:
-    cmd = ["--player", player, "metadata", "xesam:artist"]
-    artist = playerctl_info(cmd)
-    cmd = ["--player", player, "metadata", "xesam:title"]
-    title = playerctl_info(cmd)
-    return f"{artist} – {title}" if artist else title
+def get_track() -> str:
+    try:
+        return asyncio.run(get_active_track())
+    except (OSError, RuntimeError):
+        return ""
 
 
-def load_state(cache_file: Path) -> tuple[str, int, int]:
+def window_len(
+    text_len: int,
+    min_len: int = 8,
+    max_len: int = 14,
+    div: int = 3,
+) -> int:
+    return max(min_len, min(text_len // div, max_len))
+
+
+def load_state(cache_file: Path) -> tuple[str, float, float]:
     try:
         data = json.loads(cache_file.read_text())
-        track = data.get("track", "")
-        position = data.get("pos", 0)
-        timestamp = data.get("ts", int(time.time()))
-        return (track, position, timestamp)
-    except (FileNotFoundError, json.JSONDecodeError, ValueError, TypeError):
-        return ("", 0, int(time.time()))
+        return (
+            str(data.get("track", "")),
+            float(data.get("pos", 0)),
+            float(data.get("ts", time.time())),
+        )
+    except (OSError, json.JSONDecodeError, ValueError, TypeError):
+        return "", 0.0, time.time()
 
 
-def save_state(cache_file: Path, track: str, pos: int) -> None:
+def save_state(cache_file: Path, track: str, pos: float) -> None:
     cache_file.parent.mkdir(parents=True, exist_ok=True)
-    audio_dict = {"track": track, "pos": pos, "ts": time.time()}
-    cache_file.write_text(json.dumps(audio_dict))
+    cache_file.write_text(
+        json.dumps(
+            {
+                "track": track,
+                "pos": pos,
+                "ts": time.time(),
+            }
+        )
+    )
 
 
 def scroll_text(
@@ -63,74 +130,84 @@ def scroll_text(
     text: str,
     position: float,
     delta: int,
-    seperator: str,
+    separator: str,
 ) -> tuple[float, str]:
     if len(text) <= win_length:
-        return 0.0, text[:win_length]
-    full_text = text + seperator
+        return 0.0, text
+
+    full_text = text + separator
     pos = (position + delta) % len(full_text)
     start = int(pos)
     return pos, (full_text * 2)[start : start + win_length]
 
 
-def get_volume_icon(volume_icons: list[tuple[int, str]]) -> tuple[int, str]:
-    cmd = ["pactl", "get-sink-volume", "@DEFAULT_SINK@"]
-    out = subprocess.check_output(cmd, text=True).split("/")
-    left_vol = int(out[1].strip().split("%")[0])
-    right_vol = int(out[3].strip().split("%")[0])
-    vol = (left_vol + right_vol) // 2
-    for max_vol, icon in volume_icons:
-        if vol <= max_vol:
-            return vol, icon
-    return vol, "󰕾"
+def get_volume_icon(volume_icons: dict[int, str]) -> tuple[int, str]:
+    try:
+        import re
+        import subprocess
+
+        output = subprocess.run(
+            ["pactl", "get-sink-volume", "@DEFAULT_SINK@"],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout
+        values = [int(value) for value in re.findall(r"(\d+)%", output)]
+        if not values:
+            return 0, DEFAULT_ICON
+
+        volume = sum(values) // len(values)
+        icon = next(
+            (icon for limit, icon in volume_icons.items() if volume <= limit),
+            DEFAULT_ICON,
+        )
+        return volume, icon
+    except OSError:
+        return 0, DEFAULT_ICON
 
 
 def print_waybar(text: str, tooltip: str, waybar_class: str) -> None:
-    dict = {
-        "text": text,
-        "tooltip": tooltip,
-        "class": waybar_class,
-    }
-    print(json.dumps(dict, ensure_ascii=False))
-
-
-def window_len(text_len: int, min_len=8, max_len=14, div=3) -> int:
-    value = text_len // div
-    return max(min_len, min(value, max_len))
-
-
-def main():
-    vol, icon = get_volume_icon(ICONS_MAP)
-    if active_player := get_active_player(["JBL_Go_4"]):
-        track = get_metadata(active_player)
-        saved_track, saved_pos, saved_ts = load_state(CACHE_FILE)
-        win_length = window_len(len(track))
-        if track != saved_track:
-            pos = 0.0
-            display = track[:win_length]
-        else:
-            now = time.time()
-            extra_d = 0
-            delta = int(now - saved_ts) + extra_d
-            pos, display = scroll_text(
-                win_length=win_length,
-                text=track,
-                position=saved_pos,
-                delta=delta,
-                seperator=SEPERATOR,
-            )
-        print_waybar(
-            f"{icon}<span size='4pt'> </span><span size='9pt'>{html.escape(display)}</span>",
-            f"󰕾 {vol}%\n󰐊 {html.escape(track)}\t\n{TOOLTIP_FUNCTIONS}",
-            "playing",
+    print(
+        json.dumps(
+            {
+                "text": text,
+                "tooltip": tooltip,
+                "class": waybar_class,
+            },
+            ensure_ascii=False,
         )
-        save_state(CACHE_FILE, track, int(pos))
+    )
+
+
+def main() -> None:
+    volume, icon = get_volume_icon(ICONS_MAP)
+    track = get_track()
+
+    if not track:
+        print_waybar(icon, f"󰕾 {volume}%\t\n{TOOLTIP_FUNCTIONS}", "stopped")
+        return
+
+    saved_track, saved_pos, saved_ts = load_state(CACHE_FILE)
+    win_length = window_len(len(track))
+
+    if track == saved_track:
+        pos, display = scroll_text(
+            win_length=win_length,
+            text=track,
+            position=saved_pos,
+            delta=int(time.time() - saved_ts),
+            separator=SEPARATOR,
+        )
     else:
-        print_waybar(
-            icon,
-            f"󰕾 {vol}%\t\n{TOOLTIP_FUNCTIONS}",
-            "stopped",
-        )
+        pos, display = 0.0, track[:win_length]
+
+    print_waybar(
+        f"{icon}<span size='4pt'> </span>"
+        f"<span size='9pt'>{html.escape(display)}</span>",
+        f"󰕾 {volume}%\n󰐊 {html.escape(track)}\t\n{TOOLTIP_FUNCTIONS}",
+        "playing",
+    )
+    save_state(CACHE_FILE, track, pos)
 
 
 if __name__ == "__main__":

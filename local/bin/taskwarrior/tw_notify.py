@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+
 import asyncio
 import json
 import subprocess
 import sys
+
 from dbus_fast import Variant
 from dbus_fast.aio import MessageBus
 from dbus_fast.constants import MessageType
@@ -10,7 +12,9 @@ from dbus_fast.message import Message
 
 
 def export_tasks() -> tuple[list[tuple[str, float]], bool]:
-    result = subprocess.run(["task", "export"], capture_output=True, text=True)
+    result = subprocess.run(
+        ["task", "export"], capture_output=True, text=True, check=False
+    )
     data = json.loads(result.stdout)
     tasks = []
     urgent = False
