@@ -7,19 +7,32 @@ from pathlib import Path
 
 from PIL import Image
 
+HOME = Path.home()
+DESKTOP = HOME / "Desktop"
+STORAGE_DIR = DESKTOP / "Pictures" / "Screenshots"
+PDF_STORAGE_DIR = DESKTOP / "Pictures" / "PDF Screenshots"
+CACHE_DIR = HOME / ".cache" / "screenshot_tool"
+OUTPUT_PDF = DESKTOP / "Documents" / "ocr_output.pdf"
+
 
 class ScreenshotManager:
-    def __init__(self, storage_dir: Path, cache_dir: Path) -> None:
+    def __init__(
+        self,
+        storage_dir: Path,
+        cache_dir: Path,
+        pdf_storage_dir: Path,
+        output_pdf: Path,
+    ) -> None:
         self.storage_dir = storage_dir
         self.cache_dir = cache_dir
+        self.pdf_storage_dir = pdf_storage_dir
         # Ensure directories exist
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         # Sub-paths
-        self.screens_dir = self.cache_dir / "screens"
         self.region_file = self.cache_dir / "region.txt"
         self.ocr_cache_png = self.cache_dir / "ocr_region.png"
-        self.output_pdf = Path.home() / "Desktop" / "Documents" / "ocr_output.pdf"
+        self.output_pdf = output_pdf
 
     def _generate_path(self) -> Path:
         ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -112,8 +125,7 @@ class ScreenshotManager:
         return self.region_file.read_text(encoding="utf-8").strip()
 
     def _next_index(self) -> int:
-        self.screens_dir.mkdir(parents=True, exist_ok=True)
-        pngs = sorted(self.screens_dir.glob("[0-9]*.png"))
+        pngs = sorted(self.pdf_storage_dir.glob("[0-9]*.png"))
         if not pngs:
             return 0
         last_png_num = int(pngs[-1].stem)
@@ -121,8 +133,8 @@ class ScreenshotManager:
 
     def capture_persistent_region(self) -> None:
         region = self._load_persistent_region()
-        self.screens_dir.mkdir(parents=True, exist_ok=True)
-        screen_path = self.screens_dir / f"{self._next_index():03d}.png"
+        self.pdf_storage_dir.mkdir(parents=True, exist_ok=True)
+        screen_path = self.pdf_storage_dir / f"{self._next_index():03d}.png"
         try:
             cmd = ["grim", "-g", region, str(screen_path)]
             subprocess.run(cmd, check=True)
@@ -158,7 +170,7 @@ class OCRProcessor:
             self.manager.ocr_cache_png.unlink(missing_ok=True)
 
     def compile_pdf(self) -> None:
-        screenshots = sorted(self.manager.screens_dir.glob("*.png"))
+        screenshots = sorted(self.manager.pdf_storage_dir.glob("*.png"))
         if not screenshots:
             self.manager._notify("No images found for PDF.", is_error=True)
             return
@@ -236,11 +248,11 @@ class ScreenshotApp:
             self.manager.handle_capture(is_region=True, edit=True)
         elif choice == "Region → Clipboard":
             self.ocr.extract_text_to_clipboard()
-        elif choice == "Freeze Target Region":
+        elif choice == "Region -> Cache File":
             self.manager.select_persistent_region()
-        elif choice == "Snapshot Target Region":
+        elif choice == "Cache File -> Snap Region":
             self.manager.capture_persistent_region()
-        elif choice == "Compile Snippets to PDF":
+        elif choice == "Snapshots -> PDF":
             self.ocr.compile_pdf()
         elif choice == "Open Screenshots Folder":
             self.manager.open_storage_folder()
@@ -266,9 +278,7 @@ class ScreenshotApp:
 
 
 def main() -> None:
-    storage_dir = Path.home() / "Desktop" / "Pictures" / "Screenshots"
-    cache_dir = Path.home() / ".cache" / "screenshot_tool"
-    manager = ScreenshotManager(storage_dir, cache_dir)
+    manager = ScreenshotManager(STORAGE_DIR, CACHE_DIR, PDF_STORAGE_DIR, OUTPUT_PDF)
     ocr = OCRProcessor(manager)
     worker_actions = {
         "region": manager.select_persistent_region,

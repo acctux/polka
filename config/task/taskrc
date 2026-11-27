@@ -1,4 +1,5 @@
 ### taskwarrior configuration options
+data.location=$HOME/.local/share/task
 verbose=affected,blank,context,edit,header,footnote,label,new-id,project,special,sync,recur
 uda.priority.values=H,M,L
 include holidays.en-US.rc

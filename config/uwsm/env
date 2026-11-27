@@ -24,12 +24,10 @@ export ELECTRON_OZONE_PLATFORM_HINT=auto
 export SSH_ASKPASS="/usr/lib/seahorse/ssh-askpass"
 export SUDO_ASKPASS="/usr/lib/seahorse/ssh-askpass"
 # Data dir
-export MPD_HOST=127.0.0.1
 export TASKRC="$XDG_CONFIG_HOME/task/taskrc"
-export TASKDATA="$XDG_CONFIG_HOME/task"
 export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
 export HISTFILE="$XDG_CONFIG_HOME/zsh/zsh_history"
 export STARSHIP_CONFIG="$XDG_CONFIG_HOME/starship/starship.toml"
+export NOTMUCH_CONFIG="$XDG_CONFIG_HOME/notmuch/config"
 export MCFLY_RESULTS=50
 export MCFLY_RESULTS_SORT=LAST_RUN
-export NOTMUCH_CONFIG="$XDG_CONFIG_HOME/notmuch/notmuch-config"

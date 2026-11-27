@@ -90,6 +90,7 @@ hl.bind(
 hl.bind("Print", hl.dsp.exec_cmd("hyprshot -zm output"))
 hl.bind(mainMod .. " + PRINT", hl.dsp.exec_cmd("hyprshot -zm window"))
 hl.bind(shiftMod .. " + PRINT", hl.dsp.exec_cmd("hyprshot -zm region"))
+hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("~/.local/bin/screenshots/screenshot_menu.py region"))
 hl.bind(mainMod .. " + Z", hl.dsp.exec_cmd("~/.local/bin/screenshots/screenshot_menu.py capture"))
 --##################################################
 -- WORKSPACES

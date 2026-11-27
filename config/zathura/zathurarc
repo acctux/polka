@@ -31,7 +31,7 @@ map p rotate rotate-ccw
 map , rotate rotate-cw
 map <C-s> search forward
 map <C-r> search backward
-map <A-g> goto
+map <C-g> goto
 map c recolor
 map u follow
 map <Return> toggle_presentation

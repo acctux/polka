@@ -8,6 +8,14 @@ from pathlib import Path
 
 import psutil
 
+FUZZEL_CONFIG = Path.home() / ".config" / "fuzzel" / "waybar.ini"
+RESOLVECONF_DIR = Path(__file__).resolve().parent / "resolvconf"
+VPN_LIST = Path("/var/cache/mysysinfo/vpn.list")
+WIFI_SERVICES = {
+    "iwd.service": "NetworkManager.service",
+    "NetworkManager.service": "iwd.service",
+}
+
 
 #########################
 # LOGGING
@@ -48,15 +56,11 @@ log = get_logger()
 # ALL-IN-ONE MANAGER
 #########################
 class NetworkManager:
-    fuzzel_config = Path.home() / ".config" / "fuzzel" / "waybar.ini"
-    resolvconf_dir = Path(__file__).resolve().parent / "resolvconf"
-    vpn_list = Path("/var/cache/mysysinfo/vpn.list")
-
-    def __init__(self):
-        self.wifi_services = {
-            "iwd.service": "NetworkManager.service",
-            "NetworkManager.service": "iwd.service",
-        }
+    def __init__(self, fuzzel_config, resolvconf_dir, vpn_list, wifi_services):
+        self.fuzzel_config = fuzzel_config
+        self.resolvconf_dir = resolvconf_dir
+        self.vpn_list = vpn_list
+        self.wifi_services = wifi_services
 
     def _run(
         self, cmd: list[str], sudo: bool, input: str | None = None
@@ -113,39 +117,29 @@ class NetworkManager:
     def set_network(self, ipv4: bool) -> None:
         val = "1" if ipv4 else "0"
         for iface in ["all", "default", "lo"]:
-            self._run(["sysctl", f"net.ipv6.conf.{iface}.disable_ipv6={val}"], True)
-        if ipv4:
-            interfaces = []
-            net_dir = Path("/sys/class/net")
-            for iface in net_dir.iterdir():
-                if iface.is_dir():
-                    interfaces.append(iface.name)
-            for name in interfaces:
-                self._run(["ip", "-6", "addr", "flush", "dev", name], True)
+            self._run(
+                ["sysctl", f"net.ipv6.conf.{iface}.disable_ipv6={val}"],
+                sudo=True,
+            )
         target_conf = self.resolvconf_dir / f"resolvconf{'4' if ipv4 else '6'}.conf"
-        print(target_conf)
-        self._run(["cp", str(target_conf), "/etc/resolvconf.conf"], True)
+        self._run(["cp", str(target_conf), "/etc/resolvconf.conf"], sudo=True)
         time.sleep(0.5)
-        self._run(["resolvconf", "-u"], True)
-        self._run(["systemctl", "stop" if ipv4 else "start", "named"], True)
+        self._run(["resolvconf", "-u"], sudo=True)
+        self._run(["systemctl", "stop" if ipv4 else "start", "named"], sudo=True)
 
     def connect_vpn(self, choice: str) -> None:
-        self._run(["systemctl", "restart", "systemd-networkd"], True)
-        time.sleep(1)
         status = self._run(["wg", "show"], True).stdout
-        for line in status.splitlines():
-            if line.startswith("interface:"):
-                iface = line.split(":", 1)[1].strip()
-                self._run(["wg-quick", "down", iface], sudo=False)
+        if current_vpn := status.splitlines()[0].split(":", 1)[1].strip():
+            self._run(["wg-quick", "down", current_vpn], sudo=False)
         self.set_network(ipv4=False)
-        time.sleep(1)
         if choice != "Disconnect":
+            time.sleep(0.5)
             ipv4 = True
             if self._run(["wg-quick", "up", choice], sudo=False).returncode != 0:
                 ipv4 = False
             self.set_network(ipv4=ipv4)
 
-    def main_menu(self) -> None:
+    def menu(self) -> None:
         options = ["Wi-Fi Manager", "VPN Menu", "Change Wi-Fi Backend", "Cancel"]
         choice = self.fuzzel_menu(options)
         if choice == "Wi-Fi Manager":
@@ -160,8 +154,7 @@ class NetworkManager:
             vpn_name = sys.argv[1] if len(sys.argv) > 1 else None
             if not vpn_name:
                 vpn_lines = self.vpn_list.read_text().splitlines()
-                default_lines = ["─────", "Disconnect", "Cancel"]
-                lines = vpn_lines + default_lines
+                lines = vpn_lines + ["───────────", "Disconnect", "Cancel"]
                 vpn_name = self.fuzzel_menu(lines)
             if vpn_name and vpn_name != "Cancel":
                 self.connect_vpn(vpn_name)
@@ -172,4 +165,9 @@ class NetworkManager:
 
 
 if __name__ == "__main__":
-    NetworkManager().main_menu()
+    NetworkManager(
+        FUZZEL_CONFIG,
+        RESOLVECONF_DIR,
+        VPN_LIST,
+        WIFI_SERVICES,
+    ).menu()

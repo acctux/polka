@@ -1,58 +1,95 @@
 #!/usr/bin/env python3
-import subprocess
-from pathlib import Path
-from textwrap import dedent
 
-HOME = Path.home()
-STATE_FILE = HOME / ".cache" / "sunsetcache" / "hyprsunset_state"
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class Profile:
+    temperature: int
+    gamma: float
+
+
 PROFILES = [
-    {"temperature": 1000, "gamma": 0.8},
-    {"temperature": 2000, "gamma": 0.85},
-    {"temperature": 8000, "gamma": 1.0},
+    Profile(
+        temperature=1000,
+        gamma=0.8,
+    ),
+    Profile(
+        temperature=2000,
+        gamma=0.85,
+    ),
+    Profile(
+        temperature=8000,
+        gamma=1.0,
+    ),
 ]
 
 
-def run_cmd(cmd: list[str], check=True):
-    subprocess.run(cmd, check=check, text=True)
+def toggle_profile(lines: list[str]) -> Profile:
+    in_profile = False
+    current: dict[str, int | float] = {}
+    value_lines: dict[str, int] = {}
 
+    for index, line in enumerate(lines):
+        text = line.strip()
 
-def restart_hyprsunset() -> None:
-    try:
-        run_cmd(["systemctl", "--user", "restart", "hyprsunset.service"])
-    except subprocess.CalledProcessError:
-        run_cmd(["pkill", "-f", "hyprsunset"], check=False)
-        run_cmd(["systemctl", "--user", "stop", "hyprsunset.service"], check=False)
-        run_cmd(["systemctl", "--user", "start", "hyprsunset.service"])
+        if text.startswith("profile") and "{" in text:
+            in_profile = True
+        elif in_profile and text == "}":
+            break
+        elif in_profile and "=" in text:
+            key, value = (part.strip() for part in text.split("=", 1))
+            if key in ("temperature", "gamma"):
+                if key == "temperature":
+                    current[key] = int(value)
+                else:
+                    current[key] = float(value)
+                value_lines[key] = index
 
-
-def render_config(profile: dict[str, float]) -> str:
-    return dedent(
-        f"""\
-        max-gamma = 150
-
-        profile {{
-            temperature = {profile["temperature"]}
-            gamma = {profile["gamma"]}
-        }}
-        """
-    )
-
-
-def main(
-    state_file: Path = STATE_FILE, profile: list[dict[str, int | float]] = PROFILES
-):
-    sunset_conf = HOME / ".config" / "hypr" / "hyprsunset.conf"
-    state_file.parent.mkdir(parents=True, exist_ok=True)
-    if state_file.exists():
-        current = int(state_file.read_text().strip())
-        state = (current + 1) % len(profile)
+    existing = Profile(int(current["temperature"]), float(current["gamma"]))
+    if existing in PROFILES:
+        next_index = (PROFILES.index(existing) + 1) % len(PROFILES)
     else:
-        state = 0
-    config_text = render_config(profile[state])
-    sunset_conf.write_text(config_text)
-    state_file.write_text(str(state))
-    restart_hyprsunset()
-    print(f"Applied profile {state}: {profile[state]}")
+        next_index = 0
+    profile = PROFILES[next_index]
+
+    for key, value in (("temperature", profile.temperature), ("gamma", profile.gamma)):
+        line_index = value_lines[key]
+        indent = lines[line_index][
+            : len(lines[line_index]) - len(lines[line_index].lstrip())
+        ]
+        lines[line_index] = f"{indent}{key} = {value}"
+
+    return profile
+
+
+def restart_service() -> None:
+    try:
+        subprocess.run(
+            ["systemctl", "--user", "restart", "hyprsunset.service"],
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        subprocess.run(["pkill", "-f", "hyprsunset"], check=False)
+        subprocess.run(
+            ["systemctl", "--user", "stop", "hyprsunset.service"],
+            check=False,
+        )
+        subprocess.run(
+            ["systemctl", "--user", "start", "hyprsunset.service"],
+            check=True,
+        )
+
+
+def main() -> None:
+    sunset_conf = Path.home() / ".config" / "hypr" / "hyprsunset.conf"
+    lines = sunset_conf.read_text().splitlines()
+    profile = toggle_profile(lines)
+    sunset_conf.write_text("\n".join(lines) + "\n")
+    restart_service()
+    print(f"Applied profile: {profile}")
 
 
 if __name__ == "__main__":
