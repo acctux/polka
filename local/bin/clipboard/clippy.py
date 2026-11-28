@@ -11,7 +11,7 @@ MAX_ENTRIES = 27
 def run_cmd(
     cmd: list[str],
     check: bool,
-    input_text: str | None = None,
+    input_text: str | None,
 ) -> str:
     try:
         out = subprocess.run(
@@ -29,37 +29,61 @@ def run_cmd(
 
 
 def run_fuzz(
-    menu_map: dict[str, str], max_w=MAX_WIDTH, clear_option="Clear History"
+    menu_map: dict[str, str],
+    fuzz_conf: Path = CONF_PATH,
+    max_entries: int = MAX_ENTRIES,
+    max_w: int = MAX_WIDTH,
+    clear_option: str = "Clear History",
+    xmargin: int = 10,
 ) -> None:
     lengths = [len(txt) for txt in menu_map]
     menu_width = min(max_w, max(lengths))
     separator = "—" * (menu_width)
     options = [clear_option, separator] + list(menu_map.keys())
-    fuzzel_cmd = [
-        "fuzzel",
-        "--dmenu",
-        f"--config={CONF_PATH}",
-        f"--lines={len(options)}",
-        f"--width={menu_width}",
-        "--x-margin=10",
-    ]
     input_data = "\n".join(options)
-    selection = run_cmd(fuzzel_cmd, check=False, input_text=input_data)
+    selection = run_cmd(
+        [
+            "fuzzel",
+            "--dmenu",
+            f"--config={fuzz_conf}",
+            f"--lines={max_entries}",
+            f"--width={menu_width}",
+            f"--x-margin={xmargin}",
+        ],
+        check=False,
+        input_text=input_data,
+    )
     if not selection or selection == separator:
         return
     elif selection == clear_option:
-        run_cmd(["cliphist", "wipe"], check=False)
+        run_cmd(
+            ["cliphist", "wipe"],
+            check=False,
+            input_text=None,
+        )
         return
     if line := menu_map.get(selection):
-        decoded = run_cmd(["cliphist", "decode"], check=True, input_text=line)
+        decoded = run_cmd(
+            ["cliphist", "decode"],
+            check=True,
+            input_text=line,
+        )
         if decoded:
-            run_cmd(["wl-copy"], check=True, input_text=decoded)
+            run_cmd(
+                ["wl-copy"],
+                check=True,
+                input_text=decoded,
+            )
 
 
-def get_menu_map(max_entries: int = MAX_ENTRIES) -> dict[str, str]:
-    raw_output = run_cmd(["cliphist", "list"], check=True)
+def get_menu_map() -> dict[str, str]:
+    raw_output = run_cmd(
+        ["cliphist", "list"],
+        check=True,
+        input_text=None,
+    )
     menu_map = {}
-    for line in raw_output.splitlines()[:max_entries]:
+    for line in raw_output.splitlines():
         parts = line.split(maxsplit=1)
         display_text = parts[1] if len(parts) > 1 else parts[0]
         menu_map[display_text] = line

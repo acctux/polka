@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
+
 import json
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+WAYBAR_SIGNAL = 9
+BASE = Path.home() / ".local" / "bin"
 
 
 @dataclass
@@ -24,8 +28,6 @@ class FavConf:
         }
 
 
-WAYBAR_SIGNAL = 9
-BASE = Path.home() / ".local" / "bin"
 COMMANDS = [
     FavConf(
         icon="󰅍",

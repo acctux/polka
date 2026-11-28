@@ -156,10 +156,7 @@
     "exec": "~/.local/bin/email/waybar_email.py",
     "return-type": "json",
     "signal": 6,
-    "on-click": "~/.local/bin/email/neomutt_launch.sh",
-    "on-click-right": "~/.local/bin/power/tuned_waybar.py up",
-    "on-scroll-up": "~/.local/bin/power/tuned_waybar.py up",
-    "on-scroll-down": "~/.local/bin/power/tuned_waybar.py down"
+    "on-click": "~/.local/bin/email/neomutt_launch.sh && pkill -RTMIN+6 waybar"
   },
   "custom/bigempty": {
     "tooltip": false,
@@ -187,6 +184,7 @@
       "custom/tuned",
       "custom/bigempty",
       "custom/line",
+      "custom/bigempty",
       "cpu",
       "memory",
       "disk",
@@ -221,9 +219,7 @@
     "exec": "~/.local/bin/network/netbar.py",
     "interval": 2,
     "return-type": "json",
-    "on-click": "~/.local/bin/network/vpnmenu.py & disown",
-    "on-click-middle": "firewall-config",
-    "on-click-right": "~/.local/bin/network/vpnmenu.py & disown"
+    "on-click": "~/.local/bin/network/vpnmenu.py & disown"
   },
   "custom/volume": {
     "exec": "~/.local/bin/mpd/mypulseaudio.py",
@@ -242,7 +238,7 @@
     "exec": "~/.local/bin/deluged/deluge_way.py",
     "return-type": "json",
     "hide-empty-text": true,
-    "interval": 10,
+    "interval": 6,
     "tooltip": true,
     "on-click": "deluge-gtk & disown",
     "on-click-right": "systemctl --user stop deluged.service"
@@ -275,7 +271,7 @@
     "format": "<span size='9pt'> </span>{}",
     "interval": 300,
     "signal": 8,
-    "on-click": "kitty taskwarrior-tui & disown",
+    "on-click": "kitty taskwarrior-tui && pkill -RTMIN+8 waybar",
     "on-click-right": "~/.local/bin/taskwarrior/tw_add.py & disown"
   },
   "custom/updates": {
@@ -284,18 +280,17 @@
     "exec": "~/.local/bin/waybar/updates.py",
     "interval": 1800,
     "hide-empty-text": true,
-    "signal": 10,
-    "on-click": "kitty paru && kill -SIGRTMIN+10 $(pidof waybar)"
+    "signal": 7,
+    "on-click": "kitty paru && pkill -RTMIN+7 waybar"
   },
   "custom/kdeconnect": {
     "format": "{}",
-    "escape": true,
     "return-type": "json",
     "exec": "~/.local/bin/android/kdewaybar.sh",
     "interval": 30,
     "hide-empty-text": true,
-    "on-click": "~/.local/bin/android/mountkde.py",
-    "on-click-middle": "~/.local/bin/android/scrcpy.sh",
+    "on-click": "~/.local/bin/android/mountkde.py & disown",
+    "on-click-middle": "~/.local/bin/android/scrcpy.sh & disown",
     "on-click-right": "kdeconnect-sms"
   },
   "custom/steam": {

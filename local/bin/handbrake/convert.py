@@ -4,54 +4,46 @@ import asyncio
 import os
 import sys
 from dataclasses import dataclass
-from urllib.parse import urlparse, unquote
-from dbus_next.aio import MessageBus
-from dbus_next import Message
-from dbus_next.constants import MessageType
+from urllib.parse import unquote, urlparse
+
+from dbus_fast import Message
+from dbus_fast.aio import MessageBus
+from dbus_fast.constants import MessageType
 
 
-# =========================================================
-# FILE URI HELPERS
-# =========================================================
 def uri_to_path(uri: str) -> str:
     if uri.startswith("file://"):
         uri = urlparse(uri).path
     return unquote(uri)
 
 
-def unwrap(v):
-    return v.value if hasattr(v, "value") else v
+def unwrap(value):
+    return value.value if hasattr(value, "value") else value
 
 
-# =========================================================
-# FILE PICKER (DESKTOP PORTAL VIA D-BUS)
-# =========================================================
 async def pick_file() -> str:
-    future = asyncio.get_running_loop().create_future()
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
     bus = await MessageBus().connect()
 
     def handler(msg):
+        if (
+            msg.message_type != MessageType.SIGNAL
+            or msg.interface != "org.freedesktop.portal.Request"
+            or msg.member != "Response"
+        ):
+            return
+
         try:
-            if msg.message_type != MessageType.SIGNAL:
-                return
-            if msg.interface != "org.freedesktop.portal.Request":
-                return
-            if msg.member != "Response":
-                return
             response_code, results = msg.body
             if response_code != 0:
-                if not future.done():
-                    future.set_result("")
-                return
-            uris = unwrap(results.get("uris", []))
-            if not uris:
-                if not future.done():
-                    future.set_result("")
-                return
-            uri = unwrap(uris[0])
-            path = uri_to_path(str(uri))
+                result = ""
+            else:
+                uris = unwrap(results.get("uris", []))
+                result = uri_to_path(str(unwrap(uris[0]))) if uris else ""
+
             if not future.done():
-                future.set_result(path)
+                future.set_result(result)
         except Exception:
             if not future.done():
                 future.set_result("")
@@ -70,25 +62,23 @@ async def pick_file() -> str:
             )
         )
         return await future
-    except Exception as e:
-        print(f"[!] D-Bus Portal Error: {e}", file=sys.stderr)
+    except Exception as exc:
+        print(f"[!] D-Bus Portal Error: {exc}", file=sys.stderr)
         return ""
     finally:
         bus.remove_message_handler(handler)
+        bus.disconnect()
 
 
-# =========================================================
-# HANDBRAKE CONFIG STRUCT
-# =========================================================
 @dataclass(frozen=True)
 class HandBrakeConfig:
     name: str
     quality: int
     encoder: str = "x264"
-    format: str = "mp4"  # Corrected from "av_mp4" to standard "mp4"
+    format: str = "mp4"
     optimize: bool = True
     markers: bool = True
-    audio_encoder: str = "aac"  # Corrected from "av_aac" to standard "aac"
+    audio_encoder: str = "aac"
     audio_bitrate: int = 128
 
 
@@ -108,14 +98,11 @@ PRESETS = {
         audio_bitrate=192,
     ),
     "MOBILE": HandBrakeConfig(
-        "Mobile Playback (H.265 / quality-24)", 24, encoder="x265", audio_bitrate=128
+        "Mobile Playback (H.265 / quality-24)", 24, encoder="x265"
     ),
 }
 
 
-# =========================================================
-# ZENITY MENUS
-# =========================================================
 async def zenity_choose_preset() -> HandBrakeConfig | None:
     cmd = [
         "zenity",
@@ -126,33 +113,20 @@ async def zenity_choose_preset() -> HandBrakeConfig | None:
         "--column=Select",
         "--column=ID",
         "--column=Description",
-        "TRUE",
-        "WEB",
-        PRESETS["WEB"].name,
-        "FALSE",
-        "FAST",
-        PRESETS["FAST"].name,
-        "FALSE",
-        "YOUTUBE",
-        PRESETS["YOUTUBE"].name,
-        "FALSE",
-        "ARCHIVE",
-        PRESETS["ARCHIVE"].name,
-        "FALSE",
-        "MOBILE",
-        PRESETS["MOBILE"].name,
     ]
+
+    for index, (preset_id, preset) in enumerate(PRESETS.items()):
+        cmd.extend(["TRUE" if index == 0 else "FALSE", preset_id, preset.name])
+
     proc = await asyncio.create_subprocess_exec(
-        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
     )
     stdout, _ = await proc.communicate()
-    selected_id = stdout.decode().strip()
-    return PRESETS.get(selected_id)
+    return PRESETS.get(stdout.decode().strip())
 
 
-# =========================================================
-# HANDBRAKE INTERFACE
-# =========================================================
 def build_command(inp: str, out: str, cfg: HandBrakeConfig) -> list[str]:
     cmd = [
         "HandBrakeCLI",
@@ -185,19 +159,18 @@ async def run_handbrake(inp: str, cfg: HandBrakeConfig) -> str:
     return out
 
 
-# =========================================================
-# MAIN EXECUTION
-# =========================================================
 async def main():
     inp = await pick_file()
     if not inp:
         print("No file selected or transaction canceled.")
         return
+
     print("Selected File:", inp)
     cfg = await zenity_choose_preset()
     if not cfg:
         print("No preset profile selected.")
         return
+
     print(f"Selected Profile: {cfg.name}")
     print("Encoding started...")
     out = await run_handbrake(inp, cfg)

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import re
+import subprocess
 import asyncio
 import html
 import json
@@ -13,15 +15,17 @@ from dbus_fast.message import Message
 
 
 TOOLTIP_FUNCTIONS = "\nLeft: Wiremix\t\nRight: Pause/Play\t\nMiddle: Rmpc\t"
-ICONS_MAP = {0: "󰝟", 29: "󰕿", 64: "󰖀", 100: "󰕾"}
+ICONS_MAP = {
+    0: "󰝟",
+    29: "󰕿",
+    64: "󰖀",
+    100: "󰕾",
+}
+DEFAULT_ICON = "󰕾"
 SEPARATOR = "  "
 EXCLUDED_PLAYERS = {"JBL_Go_4"}
-DEFAULT_ICON = "󰕾"
 
 CACHE_FILE = Path.home() / ".cache" / "pulse_scroll" / "nowplaying_scroll.json"
-PLAYER_INTERFACE = "org.mpris.MediaPlayer2.Player"
-MPRIS_PREFIX = "org.mpris.MediaPlayer2."
-MPRIS_PATH = "/org/mpris/MediaPlayer2"
 
 
 def unwrap(value):
@@ -48,19 +52,19 @@ async def get_active_track() -> str:
         players = sorted(
             name
             for name in reply.body[0]
-            if name.startswith(MPRIS_PREFIX)
-            and name.removeprefix(MPRIS_PREFIX) not in EXCLUDED_PLAYERS
+            if name.startswith("org.mpris.MediaPlayer2.")
+            and name.removeprefix("org.mpris.MediaPlayer2.") not in EXCLUDED_PLAYERS
         )
 
         for player in players:
             reply = await bus.call(
                 Message(
                     destination=player,
-                    path=MPRIS_PATH,
+                    path="/org/mpris/MediaPlayer2",
                     interface="org.freedesktop.DBus.Properties",
                     member="GetAll",
                     signature="s",
-                    body=[PLAYER_INTERFACE],
+                    body=["org.mpris.MediaPlayer2.Player"],
                 )
             )
             if reply.message_type == MessageType.ERROR:
@@ -143,9 +147,6 @@ def scroll_text(
 
 def get_volume_icon(volume_icons: dict[int, str]) -> tuple[int, str]:
     try:
-        import re
-        import subprocess
-
         output = subprocess.run(
             ["pactl", "get-sink-volume", "@DEFAULT_SINK@"],
             capture_output=True,

@@ -227,13 +227,13 @@ class ScreenshotApp:
             "Region → Copy",
             "Region → Edit",
             "",
-            "Region → Clipboard",
+            "Region Text → Clipboard",
             "",
             "Region -> Cache File",
-            "Cache File -> Snap Region",
-            "Snapshots -> PDF",
-            "",
+            "Cached Zone -> Screenshot",
+            "Screenshots -> PDF",
             "Open Screenshots Folder",
+            "",
             "Cancel",
         ]
 
@@ -246,13 +246,13 @@ class ScreenshotApp:
             self.manager.handle_capture(is_region=True, edit=False)
         elif choice == "Region → Edit":
             self.manager.handle_capture(is_region=True, edit=True)
-        elif choice == "Region → Clipboard":
+        elif choice == "Region Text → Clipboard":
             self.ocr.extract_text_to_clipboard()
         elif choice == "Region -> Cache File":
             self.manager.select_persistent_region()
-        elif choice == "Cache File -> Snap Region":
+        elif choice == "Cached Zone -> Screenshot":
             self.manager.capture_persistent_region()
-        elif choice == "Snapshots -> PDF":
+        elif choice == "Screenshots -> PDF":
             self.ocr.compile_pdf()
         elif choice == "Open Screenshots Folder":
             self.manager.open_storage_folder()

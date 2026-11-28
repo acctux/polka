@@ -29,9 +29,10 @@ def refresh_mail() -> None:
         run(["systemctl", "--user", "start", "protonmail-bridge"])
         time.sleep(60)
 
-    run(["mbsync", "-Va"])
+    run(["mbsync", "-a"])
     time.sleep(1)
     run(["notmuch", "new"])
+    run(["systemctl", "--user", "stop", "protonmail-bridge"])
 
 
 def load_last_message_id() -> str:
@@ -43,14 +44,16 @@ def load_last_message_id() -> str:
 
 
 def save_unread_messages(messages: list[tuple[str, str, str]]) -> None:
-    data = []
-    for msg_id, sender, subject in messages:
-        data.append({"id": msg_id, "sender": sender, "subject": subject})
-
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    data = [
+        {"id": msg_id, "sender": sender, "subject": subject}
+        for msg_id, sender, subject in messages
+    ]
+
     temporary_file = STATE_FILE.with_suffix(".tmp")
     temporary_file.write_text(json.dumps(data, indent=2))
     temporary_file.replace(STATE_FILE)
+    run(["pkill", f"-RTMIN+{WAYBAR_SIGNAL}", "waybar"])
 
 
 def get_unread_messages(
@@ -181,12 +184,11 @@ async def notify_and_listen(emails: list[tuple[str, str, str]]) -> None:
 
 async def main() -> None:
     refresh_mail()
+    last_id = load_last_message_id()
+    new_emails, unread_emails = get_unread_messages(last_id, limit=MAX_EMAILS)
 
-    new_emails, unread_emails = get_unread_messages(
-        load_last_message_id(),
-        limit=MAX_EMAILS,
-    )
-    save_unread_messages(unread_emails)
+    if unread_emails:
+        save_unread_messages(unread_emails)
 
     if new_emails:
         await notify_and_listen(new_emails)
@@ -194,6 +196,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-    subprocess.run(
-        ["pkill", f"-RTMIN+{WAYBAR_SIGNAL}", "waybar"], capture_output=True, check=False
-    )
