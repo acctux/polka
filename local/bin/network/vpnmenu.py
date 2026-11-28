@@ -9,7 +9,7 @@ from pathlib import Path
 import psutil
 
 FUZZEL_CONFIG = Path.home() / ".config" / "fuzzel" / "waybar.ini"
-RESOLVECONF_DIR = Path(__file__).resolve().parent / "resolvconf"
+CONF_DIR = Path(__file__).resolve().parent / "conf"
 VPN_LIST = Path("/var/cache/mysysinfo/vpn.list")
 WIFI_SERVICES = {
     "iwd.service": "NetworkManager.service",
@@ -56,9 +56,9 @@ log = get_logger()
 # ALL-IN-ONE MANAGER
 #########################
 class NetworkManager:
-    def __init__(self, fuzzel_config, resolvconf_dir, vpn_list, wifi_services):
+    def __init__(self, fuzzel_config, conf_dir, vpn_list, wifi_services):
         self.fuzzel_config = fuzzel_config
-        self.resolvconf_dir = resolvconf_dir
+        self.conf_dir = conf_dir
         self.vpn_list = vpn_list
         self.wifi_services = wifi_services
 
@@ -121,15 +121,18 @@ class NetworkManager:
                 ["sysctl", f"net.ipv6.conf.{iface}.disable_ipv6={val}"],
                 sudo=True,
             )
-        target_conf = self.resolvconf_dir / f"resolvconf{'4' if ipv4 else '6'}.conf"
-        self._run(["cp", str(target_conf), "/etc/resolvconf.conf"], sudo=True)
+        resolv_conf = self.conf_dir / f"resolvconf{'4' if ipv4 else '6'}.conf"
+        self._run(["cp", str(resolv_conf), "/etc/resolvconf.conf"], sudo=True)
+        named_conf = self.conf_dir / f"named{'4' if ipv4 else '6'}.conf"
+        self._run(["cp", str(named_conf), "/etc/named.conf"], sudo=True)
         time.sleep(0.5)
         self._run(["resolvconf", "-u"], sudo=True)
-        self._run(["systemctl", "stop" if ipv4 else "start", "named"], sudo=True)
+        self._run(["systemctl", "restart", "named"], sudo=True)
+        # self._run(["systemctl", "stop" if ipv4 else "start", "named"], sudo=True)
 
     def connect_vpn(self, choice: str) -> None:
-        status = self._run(["wg", "show"], True).stdout
-        if current_vpn := status.splitlines()[0].split(":", 1)[1].strip():
+        if status := self._run(["wg", "show"], True).stdout:
+            current_vpn = status.splitlines()[0].split(":", 1)[1].strip()
             self._run(["wg-quick", "down", current_vpn], sudo=False)
         self.set_network(ipv4=False)
         if choice != "Disconnect":
@@ -167,7 +170,7 @@ class NetworkManager:
 if __name__ == "__main__":
     NetworkManager(
         FUZZEL_CONFIG,
-        RESOLVECONF_DIR,
+        CONF_DIR,
         VPN_LIST,
         WIFI_SERVICES,
     ).menu()

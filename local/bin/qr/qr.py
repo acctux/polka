@@ -14,60 +14,114 @@ log = logging.getLogger("QR")
 
 
 def handle_decoded(raw_payload: str) -> None:
-    # zbarimg output: 'TYPE:content' Strip prefix.
-    decoded = raw_payload.split(":", 1)[1] if ":" in raw_payload else raw_payload
-    decoded = decoded.strip()
+    decoded = raw_payload.strip()
+    if decoded.startswith("QR-Code:"):
+        decoded = decoded.removeprefix("QR-Code:")
+
     if decoded.startswith(("http://", "https://")):
-        log.info(f"Opening URL: {decoded}")
+        log.info("Opening URL: %s", decoded)
         subprocess.run(["xdg-open", decoded], check=False)
     elif decoded.startswith("WIFI:"):
-        log.info("WiFi configuration detected.")
         connect_wifi(decoded)
     else:
-        log.info("Copying text to clipboard.")
-        subprocess.run(["wl-copy"], input=decoded, text=True, check=True)
+        log.info("Copying: %s", decoded)
+        subprocess.run(["wl-copy"], input=decoded, text=True, check=False)
 
 
-def connect_wifi(decoded: str, scan_sleep: int = 4) -> None:
-    ssid_match = re.search(r"S:([^;]+);", decoded)
-    pass_match = re.search(r"P:([^;]+);", decoded)
+def connect_wifi(decoded: str) -> None:
+    ssid_match = re.search(r"(?:^WIFI:|;)S:([^;]*)(?:;|$)", decoded)
+    pass_match = re.search(r"(?:^|;)P:([^;]*)(?:;|$)", decoded)
+
     if not ssid_match:
-        log.error("Could not parse SSID from WiFi string.")
+        log.error("Could not parse SSID.")
         return
+
     ssid = ssid_match.group(1)
-    if pass_match:
-        password = pass_match.group(1)
-    log.info(f"Scanning for network: {ssid}...")
-    cmd = ["iwctl", "station", "wlan0", "scan"]
-    subprocess.run(cmd, check=False)
-    time.sleep(scan_sleep)
+    password = pass_match.group(1) if pass_match else None
+
+    subprocess.run(["iwctl", "station", "wlan0", "scan"], check=False)
+    time.sleep(4)
+
     cmd = ["iwctl", "station", "wlan0", "connect", ssid]
     if password:
         cmd.extend(["--passphrase", password])
-    log.info(f"Connecting to {ssid} via iwd...")
+
+    log.info("Connecting to %s via iwd...", ssid)
     subprocess.run(cmd, check=False)
 
 
-def main():
-    slurp = subprocess.run(["slurp"], capture_output=True, text=True, check=False)
-    if slurp.returncode != 0 or not slurp.stdout.strip():
+def scan_camera() -> None:
+    scanner = subprocess.Popen(
+        ["zbarcam", "--raw"],
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        assert scanner.stdout is not None
+        for line in scanner.stdout:
+            if line.strip():
+                handle_decoded(line)
+                break
+    finally:
+        if scanner.poll() is None:
+            scanner.terminate()
+            scanner.wait()
+
+
+def scan_screen() -> None:
+    selection = subprocess.run(["slurp"], capture_output=True, text=True, check=False)
+    region = selection.stdout.strip()
+
+    if selection.returncode != 0 or not region:
         log.info("Selection cancelled.")
         return
-    region = slurp.stdout.strip()
-    log.info("Capturing and scanning region...")
-    cmd = ["grim", "-g", region, "-"]
-    grim = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    cmd = ["zbarimg", "--quiet", "-"]
-    zbar = subprocess.Popen(cmd, stdin=grim.stdout, stdout=subprocess.PIPE, text=True)
-    if grim.stdout:
-        grim.stdout.close()
-    stdout, _ = zbar.communicate()
-    if zbar.returncode == 0 and stdout:
-        handle_decoded(stdout.strip())
-    elif zbar.returncode == 4:
-        log.warning("No QR code found in selected region.")
+
+    grim = subprocess.Popen(["grim", "-g", region, "-"], stdout=subprocess.PIPE)
+    try:
+        if grim.stdout is None:
+            log.error("Could not capture grim output.")
+            return
+
+        scanner = subprocess.Popen(
+            ["zbarimg", "--quiet", "-"],
+            stdin=grim.stdout,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        grim.stdout.close()  # Let the scanner receive EOF when grim exits.
+
+        stdout, _ = scanner.communicate()
+        grim_status = grim.wait()
+
+        if scanner.returncode != 0:
+            log.warning("QR scanning failed (zbarimg exit %s).", scanner.returncode)
+        elif grim_status != 0:
+            log.warning("Screenshot capture failed (grim exit %s).", grim_status)
+        elif stdout.strip():
+            handle_decoded(stdout.strip())
+        else:
+            log.warning("No QR code found.")
+
+    finally:
+        if scanner is not None and scanner.poll() is None:
+            scanner.terminate()
+            scanner.wait()
+
+        if grim.poll() is None:
+            grim.terminate()
+            grim.wait()
+
+
+def main() -> None:
+    mode = sys.argv[1] if len(sys.argv) > 1 else "camera"
+
+    if mode == "camera":
+        scan_camera()
+    elif mode == "screen":
+        scan_screen()
     else:
-        log.error("Failed to process image or run scanning tools.")
+        print(f"Usage: {sys.argv[0]} [camera|screen]", file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == "__main__":
